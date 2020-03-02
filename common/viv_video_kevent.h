@@ -1,0 +1,124 @@
+/****************************************************************************
+ *
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2020 VeriSilicon Holdings Co., Ltd.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
+ *
+ *****************************************************************************
+ *
+ * The GPL License (GPL)
+ *
+ * Copyright (c) 2020 VeriSilicon Holdings Co., Ltd.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program;
+ *
+ *****************************************************************************
+ *
+ * Note: This software is released under dual MIT and GPL licenses. A
+ * recipient may use this file under the terms of either the MIT license or
+ * GPL License. If you wish to use only one license not the other, you can
+ * indicate your decision by deleting one of the above license notices in your
+ * version of this file.
+ *
+ *****************************************************************************/
+#ifndef _VIV_VIDEO_KEVENT_H_
+#define _VIV_VIDEO_KEVENT_H_
+#include <linux/videodev2.h>
+
+#ifndef __KERNEL__
+#include <stdint.h>
+typedef uint8_t	u8;
+typedef uint16_t u16;
+typedef uint32_t u32;
+typedef uint64_t u64;
+#endif
+
+enum {
+	VIV_VIDEO_EVENT_MIN = 0,
+	VIV_VIDEO_EVENT_NEW_STREAM,
+	VIV_VIDEO_EVENT_DEL_STREAM,
+	VIV_VIDEO_EVENT_START_STREAM,
+	VIV_VIDEO_EVENT_STOP_STREAM,
+	VIV_VIDEO_EVENT_SET_FMT,
+	VIV_VIDEO_EVENT_QBUF,
+	VIV_VIDEO_EVENT_QUERYCAPS,
+	VIV_VIDEO_EVENT_PASS_JSON,
+	VIV_VIDEO_EVENT_MAX,
+};
+
+/* max support to 64 bytes! */
+struct viv_video_event {
+	u32 id;
+	u32 stream_id;
+	u32 width;
+	u32 height;
+	int pixelformat;
+	void *file;
+	u64 addr;
+	u32 buf_index; // also use as json id.
+	u64 response;
+	u32 sync;
+};
+
+struct v4l2_user_buffer {
+	u64 addr;
+	int streamid;
+	void *file;
+};
+
+#define VIV_JSON_BUFFER_SIZE  (64*1024)
+struct viv_control_event {
+	/* physical address of json request, fixed size 16K*/
+	u64 request;
+	/* physical address of json response fixed size 16K*/
+	u64 response;
+	u32 id;
+};
+
+struct ext_buf_info {
+	u64 addr;
+	u64 size;
+};
+
+#define VIV_VIDEO_EVENT_TYPE	(V4L2_EVENT_PRIVATE_START + 0x2000)
+
+#define VIV_VIDEO_EVENT_TIMOUT_MS	10000
+
+#define VIV_VIDIOC_EVENT_COMPLETE		_IOW('V', BASE_VIDIOC_PRIVATE + 100, struct viv_video_event)
+#define VIV_VIDIOC_BUFFER_ALLOC			_IOWR('V', BASE_VIDIOC_PRIVATE + 101, struct ext_buf_info)
+#define VIV_VIDIOC_BUFFER_FREE			_IOWR('V', BASE_VIDIOC_PRIVATE + 102, struct ext_buf_info)
+#define VIV_VIDIOC_CONTROL_EVENT		_IOWR('V', BASE_VIDIOC_PRIVATE + 103, struct viv_control_event)
+#define VIV_VIDIOC_S_STREAMID			_IOW('V', BASE_VIDIOC_PRIVATE + 104, int)
+#define VIV_VIDIOC_BUFDONE				_IOW('V', BASE_VIDIOC_PRIVATE + 105, struct v4l2_user_buffer)
+#define VIV_VIDIOC_QUERY_EXTMEM			_IOWR('V', BASE_VIDIOC_PRIVATE + 106, struct ext_buf_info)
+
+#endif
