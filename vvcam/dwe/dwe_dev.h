@@ -64,19 +64,7 @@ typedef uint16_t u16;
 typedef uint32_t u32;
 typedef uint64_t u64;
 
-#define pr_info printf
-#define pr_err printf
-#define copy_from_user(a, b, c) dwe_copy_data(a, b, c)
-#define copy_to_user(a, b, c) dwe_copy_data(a, b, c)
-#define __user
 #define __iomem
-
-typedef bool(*pReadBar) (uint32_t bar, uint32_t * data);
-typedef bool(*pWriteBar) (uint32_t bar, uint32_t data);
-
-extern void dwe_set_func(pReadBar read_func, pWriteBar write_func);
-extern long dwe_copy_data(void *dst, void *src, int size);
-
 #endif
 
 #include "vvdefs.h"

@@ -437,7 +437,7 @@ static void ov2775_stop(struct ov2775 *sensor)
 #endif
 }
 
-static int init_device(struct ov2775 *sensor)
+int ov2775_init_device(struct ov2775 *sensor)
 {
 	int retval;
 
@@ -1010,12 +1010,6 @@ static int ov2775_probe(struct i2c_client *client,
 		return -ENODEV;
 	}
 
-	retval = init_device(sensor);
-	if (retval < 0) {
-		clk_disable_unprepare(sensor->sensor_clk);
-		pr_warn("camera ov2775 init fail\n");
-		return -ENODEV;
-	}
 	sd = &sensor->subdev;
 	v4l2_i2c_subdev_init(sd, client, &ov2775_subdev_ops);
 	sd->flags |= V4L2_SUBDEV_FL_HAS_DEVNODE;

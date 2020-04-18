@@ -163,10 +163,19 @@ int ov2775_g_version(void *dev, __u32 * version)
 	return 0;
 }
 
+static __u8 ov2775_pattern = 0;
+static __u32 ov2775_fps = 30;
 int ov2775_streamon(void *dev)
 {
 	struct ov2775 *sensor = dev;
 
+	/* FIXME: need add set_fmt interface
+	   and switch resolution dynamiclly */
+	ov2775_init_device(sensor);
+	ov2775_streamoff(dev);
+	ov2775_s_bayer_pattern(dev, ov2775_pattern);
+	ov2775_s_hdr(dev, sensor->hdr);
+	ov2775_s_fps(dev, ov2775_fps);
 	ov2775_write_reg(sensor, 0x3012, 0x01);
 	return 0;
 }
@@ -220,6 +229,7 @@ int ov2775_s_bayer_pattern(void *dev, __u8 pattern)
 	val_l = val & 0xff;
 	ov2775_write_reg(sensor, 0x30a6, val_h);
 	ov2775_write_reg(sensor, 0x30a7, val_l);
+	ov2775_pattern = pattern;
 	return 0;
 }
 
@@ -241,6 +251,7 @@ int ov2775_s_fps(void *dev, __u32 fps)
 	/* minimize to 5 fps */
 	if (fps < 0x04)
 		fps = 0x04;
+	ov2775_fps = fps;
 	ov2775_write_reg(sensor, 0x3005, fps);
 	return 0;
 }

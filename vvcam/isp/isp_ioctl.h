@@ -90,7 +90,6 @@ enum {
 	ISPIOC_DISABLE_LSC,
 	ISPIOC_S_LSC,
 	ISPIOC_S_DPF,
-	ISPIOC_S_EE,
 	ISPIOC_S_EXP,
 	ISPIOC_G_EXPMEAN,
 	ISPIOC_S_HIST,
@@ -105,12 +104,6 @@ enum {
 	ISPIOC_G_VSM,
 	ISPIOC_S_IE,
 	ISPIOC_S_WDR3,
-	ISPIOC_S_EXP2,
-	ISPIOC_S_2DNR,
-	ISPIOC_S_3DNR,
-	ISPIOC_G_3DNR,		/* get last avg */
-	ISPIOC_U_3DNR,		/* update */
-	ISPIOC_R_3DNR,		/* read back 3dnr reference image. */
 	ISPIOC_S_HDR,
 	ISPIOC_S_COMP,
 	ISPIOC_S_CPROC,
@@ -170,7 +163,6 @@ int isp_enable_gamma_out(struct isp_ic_dev *dev, bool bEnable);
 int isp_s_gamma_out(struct isp_ic_dev *dev);
 int isp_s_lsc(struct isp_ic_dev *dev);
 int isp_s_dpf(struct isp_ic_dev *dev);
-int isp_s_ee(struct isp_ic_dev *dev);
 int isp_s_exp(struct isp_ic_dev *dev);
 int isp_g_expmean(struct isp_ic_dev *dev, u8 * mean);
 int isp_s_hist(struct isp_ic_dev *dev);
@@ -191,11 +183,6 @@ int isp_s_hdr_wb(struct isp_ic_dev *dev);
 int isp_s_hdr_bls(struct isp_ic_dev *dev);
 int isp_enable_hdr(struct isp_ic_dev *dev);
 int isp_disable_hdr(struct isp_ic_dev *dev);
-int isp_s_2dnr(struct isp_ic_dev *dev);
-int isp_s_3dnr(struct isp_ic_dev *dev);
-int isp_g_3dnr(struct isp_ic_dev *dev, u32 * avg);
-int isp_u_3dnr(struct isp_ic_dev *dev, struct isp_3dnr_update *dnr3_update);
-int isp_r_3dnr(struct isp_ic_dev *dev);
 int isp_s_comp(struct isp_ic_dev *dev);
 int isp_s_simp(struct isp_ic_dev *dev);
 int isp_s_cproc(struct isp_ic_dev *dev);
@@ -204,9 +191,6 @@ int isp_s_elawb(struct isp_ic_dev *dev);
 int isp_enable_gcmono(struct isp_ic_dev *dev);
 int isp_disable_gcmono(struct isp_ic_dev *dev);
 int isp_s_gcmono(struct isp_ic_dev *dev, struct isp_gcmono_data *data);	/* set curve */
-int isp_enable_rgbgamma(struct isp_ic_dev *dev);
-int isp_disable_rgbgamma(struct isp_ic_dev *dev);
-int isp_s_rgbgamma(struct isp_ic_dev *dev, struct isp_rgbgamma_data *data);
 
 u32 isp_read_mi_irq(struct isp_ic_dev *dev);
 void isp_reset_mi_irq(struct isp_ic_dev *dev, u32 icr);

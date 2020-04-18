@@ -71,6 +71,7 @@ struct cma_mem_context {
 static struct cma_mem_context *g_cma_mem_ctx;
 static inline void add_free_blocks(struct block_list *free_item);
 static inline void add_used_blocks(struct block_list *used_item);
+struct mutex viv_cma_mutex;
 
 int cma_init(u64 base, u64 size, u64 align)
 {
@@ -102,6 +103,7 @@ int cma_init(u64 base, u64 size, u64 align)
 	g_cma_mem_ctx->free_blocks.next = item;
 	g_cma_mem_ctx->used_blocks.next = NULL;
 
+	mutex_init(&viv_cma_mutex);
 	return 0;
 }
 
@@ -125,6 +127,7 @@ int cma_release(void)
 	kzfree(g_cma_mem_ctx);
 	g_cma_mem_ctx = NULL;
 
+	mutex_destroy(&viv_cma_mutex);
 	return result;
 }
 
@@ -133,9 +136,11 @@ u64 cma_alloc(u64 size)
 	u64 addr = ~0U;
 	struct block_list *item;
 	struct block_list *found;
-
-	if (!size || (size > g_cma_mem_ctx->size))
+	mutex_lock(&viv_cma_mutex);
+	if (!size || (size > g_cma_mem_ctx->size)) {
+		mutex_unlock(&viv_cma_mutex);
 		return ~0U;
+	}
 
 	pr_info("enter %s\n", __func__);
 	pr_info("addr:0x%llx, size:0x%llx, alignment:0x%llx, reqsize:0x%llx.\n",
@@ -171,7 +176,7 @@ u64 cma_alloc(u64 size)
 	}
 
 	pr_info("block allocated: base_addr=0x%llx\n", addr);
-
+	mutex_unlock(&viv_cma_mutex);
 	return addr;
 }
 
@@ -179,7 +184,7 @@ void cma_free(u64 addr)
 {
 	pr_info("enter %s\n", __func__);
 	pr_info("block to free: base_addr=0x%llx\n", addr);
-
+	mutex_lock(&viv_cma_mutex);
 	if (addr) {
 		/*TODO: need to lock this block */
 		struct block_list *item, *free_item;
@@ -234,6 +239,7 @@ void cma_free(u64 addr)
 		}
 		add_free_blocks(free_item);
 	}
+	mutex_unlock(&viv_cma_mutex);
 }
 
 static inline void add_free_blocks(struct block_list *free_item)

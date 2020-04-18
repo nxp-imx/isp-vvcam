@@ -52,46 +52,14 @@
  *****************************************************************************/
 
 /* process public and sample isp command. for complex modules, need new files.*/
-#ifdef __KERNEL__
 #include "isp_driver.h"
 #include "cma.h"
-#endif
 #include "isp_ioctl.h"
 #include "mrv_all_bits.h"
 #include "isp_types.h"
 
 volatile MrvAllRegister_t *all_regs = NULL;
 
-#ifndef __KERNEL__
-#define ISP_REG_SIZE 0x10000
-static HalHandle_t hal_handle;
-
-void isp_ic_set_hal(HalHandle_t hal)
-{
-	hal_handle = hal;
-}
-
-void isp_write_reg(struct isp_ic_dev *dev, u32 offset, u32 val)
-{
-	if (offset >= ISP_REG_SIZE)
-		return;
-	HalWriteReg(hal_handle, offset, val);
-}
-
-u32 isp_read_reg(struct isp_ic_dev * dev, u32 offset)
-{
-	if (offset >= ISP_REG_SIZE)
-		return 0;
-	return HalReadReg(hal_handle, offset);
-}
-
-long isp_copy_data(void *dst, void *src, int size)
-{
-	if (dst != src)
-		memcpy(dst, src, size);
-	return 0;
-}
-#else
 void isp_write_reg(struct isp_ic_dev *dev, u32 offset, u32 val)
 {
 	if (offset >= ISP_REG_SIZE)
@@ -108,16 +76,9 @@ u32 isp_read_reg(struct isp_ic_dev * dev, u32 offset)
 	val = __raw_readl(dev->base + offset);
 	return val;
 }
-#endif
 
 int isp_reset(struct isp_ic_dev *dev)
 {
-#ifdef USE_FPGA
-	u32 reg = 0;
-	reg = isp_read_reg(dev, 0x308300);
-	__raw_writel(reg & 0xFEFFFFFF, dev->reset);
-	__raw_writel(reg | 0x01000000, dev->reset);
-#endif
 	pr_info("enter %s\n", __func__);
 	isp_write_reg(dev, REG_ADDR(vi_ircl), 0xFFFFFFFF);
 	isp_write_reg(dev, REG_ADDR(vi_ircl), 0x0);
@@ -813,36 +774,6 @@ int isp_g_awbmean(struct isp_ic_dev *dev, struct isp_awb_mean *mean)
 	return 0;
 }
 
-int isp_s_ee(struct isp_ic_dev *dev)
-{
-#ifndef ISP_EE
-	pr_err("unsupported function: %s", __func__);
-	return -EINVAL;
-#else
-	struct isp_ee_context *ee = &dev->ee;
-	u32 isp_ee_ctrl = isp_read_reg(dev, REG_ADDR(isp_ee_ctrl));
-	u32 gain = 0;
-
-	pr_info("enter %s\n", __func__);
-
-	if (!ee->enable) {
-		isp_write_reg(dev, REG_ADDR(isp_ee_ctrl),
-			      isp_ee_ctrl & ~EE_CTRL_ENABLE_MASK);
-		return 0;
-	}
-
-	REG_SET_SLICE(isp_ee_ctrl, EE_CTRL_INPUT_SEL, ee->input_sel);
-	REG_SET_SLICE(isp_ee_ctrl, EE_CTRL_SOURCE_STRENGTH, ee->src_strength);
-	REG_SET_SLICE(isp_ee_ctrl, EE_CTRL_STRENGTH, ee->strength);
-	REG_SET_SLICE(gain, EE_UV_GAIN, ee->uv_gain);
-	REG_SET_SLICE(gain, EE_EDGE_GAIN, ee->edge_gain);
-	isp_write_reg(dev, REG_ADDR(isp_ee_y_gain), ee->y_gain);
-	isp_write_reg(dev, REG_ADDR(isp_ee_uv_gain), gain);
-	isp_write_reg(dev, REG_ADDR(isp_ee_ctrl),
-		      isp_ee_ctrl | EE_CTRL_ENABLE_MASK);
-	return 0;
-#endif
-}
 
 int isp_s_exp(struct isp_ic_dev *dev)
 {
@@ -1727,18 +1658,8 @@ int isp_ioc_qcap(struct isp_ic_dev *dev, void *args)
 {
 
 	/* use public VIDIOC_QUERYCAP to query the type of v4l-subdevs. */
-#ifdef __KERNEL__
-#ifndef USE_FPGA
 	struct v4l2_capability *cap = (struct v4l2_capability *)args;
 	strcpy((char *)cap->driver, "viv_isp_subdev");
-#else
-	struct v4l2_capability cap;
-	strcpy((char *)cap.driver, "viv_isp_subdev");
-	pr_info("enter %s viv_isp_subdev\n", __func__);
-	viv_check_retval(copy_to_user
-			 ((struct v4l2_capability *)args, &cap, sizeof(cap)));
-#endif
-#endif
 	return 0;
 }
 
@@ -1753,27 +1674,14 @@ int isp_ioc_g_status(struct isp_ic_dev *dev, void *args)
 int isp_ioc_g_feature(struct isp_ic_dev *dev, void *args)
 {
 	u32 val = 0;
-
-#ifdef ISP_EE
-	val |= ISP_EE_SUPPORT;
-#endif
 #ifdef ISP_WDR3
 	val |= ISP_WDR3_SUPPORT;
-#endif
-#ifdef ISP_2DNR
-	val |= ISP_2DNR_SUPPORT;
-#endif
-#ifdef ISP_3DNR
-	val |= ISP_3DNR_SUPPORT;
 #endif
 #ifdef ISP_WDR_V3
 	val |= ISP_WDR3_SUPPORT;
 #endif
 #ifdef ISP_MIV2
 	val |= ISP_MIV2_SUPPORT;
-#endif
-#ifdef ISP_AEV2
-	val |= ISP_AEV2_SUPPORT;
 #endif
 #ifdef ISP_HDR_STITCH
 	val |= ISP_HDR_STITCH_SUPPORT;
@@ -1865,9 +1773,6 @@ long isp_priv_ioctl(struct isp_ic_dev *dev, unsigned int cmd, void *args)
 	case ISPIOC_DISABLE_GAMMA_OUT:
 		ret = isp_enable_gamma_out(dev, 0);
 		break;
-	case ISPIOC_R_3DNR:
-		ret = isp_r_3dnr(dev);
-		break;
 	case ISPIOC_S_IS:
 		viv_check_retval(copy_from_user
 				 (&dev->is, args, sizeof(dev->is)));
@@ -1882,11 +1787,6 @@ long isp_priv_ioctl(struct isp_ic_dev *dev, unsigned int cmd, void *args)
 		viv_check_retval(copy_from_user
 				 (&dev->cc, args, sizeof(dev->cc)));
 		ret = isp_s_cc(dev);
-		break;
-	case ISPIOC_S_EE:
-		viv_check_retval(copy_from_user
-				 (&dev->ee, args, sizeof(dev->ee)));
-		ret = isp_s_ee(dev);
 		break;
 	case ISPIOC_S_IE:
 		viv_check_retval(copy_from_user
@@ -1988,21 +1888,6 @@ long isp_priv_ioctl(struct isp_ic_dev *dev, unsigned int cmd, void *args)
 				 (&dev->wdr3, args, sizeof(dev->wdr3)));
 		ret = isp_s_wdr3(dev);
 		break;
-	case ISPIOC_S_EXP2:
-		viv_check_retval(copy_from_user
-				 (&dev->exp2, args, sizeof(dev->exp2)));
-		ret = isp_s_exp2(dev);
-		break;
-	case ISPIOC_S_2DNR:
-		viv_check_retval(copy_from_user
-				 (&dev->dnr2, args, sizeof(dev->dnr2)));
-		ret = isp_s_2dnr(dev);
-		break;
-	case ISPIOC_S_3DNR:
-		viv_check_retval(copy_from_user
-				 (&dev->dnr3, args, sizeof(dev->dnr3)));
-		ret = isp_s_3dnr(dev);
-		break;
 	case ISPIOC_S_SIMP:
 		viv_check_retval(copy_from_user
 				 (&dev->simp, args, sizeof(dev->simp)));
@@ -2081,13 +1966,6 @@ long isp_priv_ioctl(struct isp_ic_dev *dev, unsigned int cmd, void *args)
 			ret = isp_start_stream(dev, num);
 			break;
 		}
-	case ISPIOC_U_3DNR:{
-			struct isp_3dnr_update param;
-			viv_check_retval(copy_from_user
-					 (&param, args, sizeof(param)));
-			ret = isp_u_3dnr(dev, &param);
-			break;
-		}
 	case ISPIOC_G_AWBMEAN:{
 			struct isp_awb_mean mean;
 			ret = isp_g_awbmean(dev, &mean);
@@ -2121,12 +1999,6 @@ long isp_priv_ioctl(struct isp_ic_dev *dev, unsigned int cmd, void *args)
 			viv_check_retval(copy_to_user(args, &afm, sizeof(afm)));
 			break;
 		}
-	case ISPIOC_G_3DNR:{
-			u32 avg;
-			ret = isp_g_3dnr(dev, &avg);
-			viv_check_retval(copy_to_user(args, &avg, sizeof(avg)));
-			break;
-		}
 	case ISPIOC_G_STATUS:
 		ret = isp_ioc_g_status(dev, args);
 		break;
@@ -2136,12 +2008,9 @@ long isp_priv_ioctl(struct isp_ic_dev *dev, unsigned int cmd, void *args)
 	case ISPIOC_G_FEATURE_VERSION:
 		ret = isp_ioc_g_feature_veresion(dev, args);
 		break;
-
-#ifdef __KERNEL__
 	case VIDIOC_QUERYCAP:
 		ret = isp_ioc_qcap(dev, args);
 		break;
-#endif
 	default:
 		pr_err("unsupported command %d", cmd);
 		break;

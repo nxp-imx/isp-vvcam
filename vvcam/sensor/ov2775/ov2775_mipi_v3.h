@@ -164,5 +164,6 @@ int ov2775_hw_register(struct v4l2_device *vdev);
 void ov2775_hw_unregister(void);
 s32 ov2775_write_reg(struct ov2775 *sensor, u16 reg, u8 val);
 s32 ov2775_read_reg(struct ov2775 *sensor, u16 reg, u8 * val);
+int ov2775_init_device(struct ov2775 *sensor);
 
 #endif

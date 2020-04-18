@@ -104,32 +104,20 @@ int isp_s_comp(struct isp_ic_dev *dev)
 	}
 	if (comp->expand && comp->update_tbl) {
 		for (ri = 0; ri < 10; ri++) {
-			valr =
-			    comp->expand_tbl[ri * 6 +
-					     0] | (comp->expand_tbl[ri * 6 +
-								    1] << 5) |
-			    (comp->expand_tbl[ri * 6 +
-					      2] << 10) | (comp->expand_tbl[ri *
-									    6 +
-									    3]
-							   << 15)
-			    | (comp->expand_tbl[ri * 6 +
-						4] << 20) | (comp->
-							     expand_tbl[ri * 6 +
-									5] <<
-							     25);
+			valr = comp->expand_tbl[ri * 6 + 0] |
+				(comp->expand_tbl[ri * 6 + 1] << 5) |
+			    (comp->expand_tbl[ri * 6 +2] << 10) |
+				(comp->expand_tbl[ri * 6 + 3] << 15) |
+				(comp->expand_tbl[ri * 6 + 4] << 20) |
+				(comp->expand_tbl[ri * 6 + 5] << 25);
 			isp_write_reg(dev,
 				      REG_ADDR(isp_compand_expand_px_0) +
 				      ri * 4, valr);
 		}
-		valr =
-		    comp->expand_tbl[ri * 6 +
-				     0] | (comp->expand_tbl[ri * 6 +
-							    1] << 5) |
-		    (comp->
-		     expand_tbl[ri * 6 + 2] << 10) | (comp->expand_tbl[ri * 6 +
-								       3] <<
-						      15);
+		valr = comp->expand_tbl[ri * 6 +0] |
+			(comp->expand_tbl[ri * 6 + 1] << 5) |
+		    (comp->expand_tbl[ri * 6 + 2] << 10) |
+			(comp->expand_tbl[ri * 6 + 3] << 15);
 		isp_write_reg(dev, REG_ADDR(isp_compand_expand_px_0) + ri * 4,
 			      valr);
 		isp_write_reg(dev, REG_ADDR(isp_compand_expand_x_addr), 0);
@@ -173,28 +161,20 @@ int isp_s_comp(struct isp_ic_dev *dev)
 
 	if (comp->compress && comp->update_tbl) {
 		for (ri = 0; ri < 10; ri++) {
-			valr =
-			    comp->compress_tbl[ri * 6 +
-					       0] | (comp->compress_tbl[ri * 6 +
-									1] << 5)
-			    | (comp->compress_tbl[ri * 6 +
-						  2] << 10) |
-			    (comp->compress_tbl[ri * 6 + 3]
-			     << 15) | (comp->compress_tbl[ri * 6 +
-							  4] << 20) |
+			valr = comp->compress_tbl[ri * 6 + 0] |
+				(comp->compress_tbl[ri * 6 + 1] << 5) |
+				(comp->compress_tbl[ri * 6 + 2] << 10) |
+			    (comp->compress_tbl[ri * 6 + 3] << 15) |
+				(comp->compress_tbl[ri * 6 + 4] << 20) |
 			    (comp->compress_tbl[ri * 6 + 5] << 25);
 			isp_write_reg(dev,
 				      REG_ADDR(isp_compand_compress_px_0) +
 				      ri * 4, valr);
 		}
-		valr =
-		    comp->compress_tbl[ri * 6 +
-				       0] | (comp->compress_tbl[ri * 6 +
-								1] << 5) |
-		    (comp->compress_tbl[ri * 6 +
-					2] << 10) | (comp->compress_tbl[ri * 6 +
-									3] <<
-						     15);
+		valr = comp->compress_tbl[ri * 6 + 0] |
+			(comp->compress_tbl[ri * 6 + 1] << 5) |
+		    (comp->compress_tbl[ri * 6 + 2] << 10) |
+			(comp->compress_tbl[ri * 6 + 3] << 15);
 		isp_write_reg(dev, REG_ADDR(isp_compand_compress_px_0) + ri * 4,
 			      valr);
 		isp_write_reg(dev, REG_ADDR(isp_compand_compress_x_addr), 0);

@@ -50,74 +50,14 @@
  * version of this file.
  *
  *****************************************************************************/
-#ifdef __KERNEL__
 #include "dwe_driver.h"
-#else
-#include <linux/videodev2.h>
-#endif
-
 #include "dwe_ioctl.h"
 #include "dwe_regs.h"
 
 #undef ALIGN_UP
 #define ALIGN_UP(x, align) (((x) + ((align) - 1)) & ~((align)-1))
 
-#ifndef __KERNEL__
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
 
-#ifdef HAL_CMODEL
-#define DEWARP_REGISTER_OFFSET  0
-#else
-#define DEWARP_REGISTER_OFFSET  0x380000
-#endif
-
-#define DEWARP_REGISTER_CTL	 0x308250
-
-pReadBar g_read_func;
-pWriteBar g_write_func;
-
-void dwe_set_func(pReadBar read_func, pWriteBar write_func)
-{
-	g_read_func = read_func;
-	g_write_func = write_func;
-}
-
-void dwe_write_reg(struct dwe_ic_dev *dev, u32 offset, u32 val)
-{
-	g_write_func(DEWARP_REGISTER_OFFSET + offset, val);
-}
-
-u32 dwe_read_reg(struct dwe_ic_dev *dev, u32 offset)
-{
-	u32 data;
-
-	g_read_func(DEWARP_REGISTER_OFFSET + offset, &data);
-	return data;
-}
-
-void dwe_write_extreg(u32 offset, u32 val)
-{
-	g_write_func(DEWARP_REGISTER_CTL + offset, val);
-}
-
-u32 dwe_read_extreg(u32 offset)
-{
-	u32 data;
-
-	g_read_func(DEWARP_REGISTER_CTL + offset, &data);
-	return data;
-}
-
-long dwe_copy_data(void *dst, void *src, int size)
-{
-	if (dst != src)
-		memcpy(dst, src, size);
-	return 0;
-}
-
-#endif
 
 int dwe_reset(struct dwe_ic_dev *dev)
 {
@@ -323,11 +263,9 @@ long dwe_priv_ioctl(struct dwe_ic_dev *dev, unsigned int cmd, void *args)
 		viv_check_retval(copy_from_user(&addr, args, sizeof(addr)));
 		ret = dwe_set_lut(dev, addr);
 		break;
-#ifdef __KERNEL__
 	case VIDIOC_QUERYCAP:
 		ret = dwe_ioc_qcap(dev, args);
 		break;
-#endif
 	default:
 		pr_err("unsupported dwe command %d", cmd);
 		break;

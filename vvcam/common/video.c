@@ -196,9 +196,9 @@ static void stop_streaming(struct vb2_queue *vq)
 	if (!handle || handle->state != 2 || list_empty(&handle->entry))
 		return;
 
+	handle->state = 1;
 	viv_post_simple_event(VIV_VIDEO_EVENT_STOP_STREAM, handle->streamid,
 			      &handle->vfh, true);
-	handle->state = 1;
 	handle->sequence = 0;
 	list_for_each_entry(vb, &vq->queued_list, queued_entry) {
 		if (vb->state == VB2_BUF_STATE_DONE)
@@ -564,9 +564,14 @@ static long private_ioctl(struct file *file, void *fh,
 		v_event = (struct viv_video_event *)arg;
 		if (v_event->file) {
 			handle = priv_to_handle(v_event->file);
-			if (handle) {
-				complete(&handle->wait);
-			}
+            mutex_lock(&file_list_lock);
+            list_for_each_entry(ph, &file_list_head, entry) {
+                if (ph == handle) {
+                    complete(&handle->wait);
+                    break;
+                }
+            }
+            mutex_unlock(&file_list_lock);
 		}
 		break;
 	case VIV_VIDIOC_BUFDONE:

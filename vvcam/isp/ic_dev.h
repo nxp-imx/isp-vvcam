@@ -63,19 +63,7 @@ typedef uint16_t u16;
 typedef uint32_t u32;
 typedef uint64_t u64;
 
-#define pr_info printf
-#define pr_err printf
-#define copy_from_user(a, b, c) isp_copy_data(a, b, c)
-#define copy_to_user(a, b, c) isp_copy_data(a, b, c)
-#define __user
 #define __iomem
-
-#if defined(HAL_CMODEL) || defined(HAL_ALTERA)
-#include <hal/hal_api.h>
-
-void isp_ic_set_hal(HalHandle_t hal);
-#endif
-
 #else /* __KERNEL__ */
 
 /* if v4l2 */
@@ -294,14 +282,6 @@ struct isp_is_context {
 	u32 displace_x, displace_y;
 };
 
-struct isp_ee_context {
-	bool enable;
-	u8 src_strength;
-	u8 strength;
-	u8 input_sel;
-	u32 y_gain, uv_gain, edge_gain;
-};
-
 struct isp_exp_context {
 	bool enable;
 	u32 mode;
@@ -413,53 +393,6 @@ struct isp_wdr3_context {
 	u32 difference_weight[WDR3_BIN];
 };
 
-#define AEV2_DMA_SIZE 4096
-struct isp_exp2_context {
-	bool enable;
-	struct ic_window window;
-	/* weight; */
-	u8 r, gr, gb, b;
-	/* write 4096 EXPV2 mean value to dma by MI MP-JDP path. */
-	/* physical address, alloacte by user */
-	u64 pa;
-};
-
-struct isp_2dnr_context {
-	bool enable;
-	u32 pre_gamma;
-	u32 strength;
-	u16 sigma[59];
-};
-
-struct isp_3dnr_context {
-	bool enable;
-	bool update_bin;
-	bool enable_h, enable_v;
-	bool enable_temperal;
-	bool enable_dilate;
-	u32 spacial_curve[17];
-	u32 temperal_curve[17];
-	u32 strength;
-	/* write full denoise3d reference raw image to dma by MI SP2. */
-	/* physical address, alloacte by user */
-	u64 pa;
-	u32 size;
-};
-
-struct isp_3dnr_update {
-	u32 thr_edge_h_inv;
-	u32 thr_edge_v_inv;
-	u32 thr_motion_inv;
-	u32 thr_range_s_inv;
-	u32 range_t_h;
-	u32 range_t_v;
-	u32 range_d;
-	u32 thr_range_t_inv;
-	u32 thr_delta_h_inv;
-	u32 thr_delta_v_inv;
-	u32 thr_delta_t_inv;
-};
-
 struct isp_hdr_context {
 	bool enable;
 	/* hdr bls */
@@ -545,22 +478,6 @@ struct isp_gcmono_context {
 	u32 mode;
 };
 
-struct isp_rgbgamma_data {
-	u32 rgbgc_r_px[64];
-	u32 rgbgc_r_datax[63];
-	u32 rgbgc_r_datay[64];
-	u32 rgbgc_g_px[64];
-	u32 rgbgc_g_datax[63];
-	u32 rgbgc_g_datay[64];
-	u32 rgbgc_b_px[64];
-	u32 rgbgc_b_datax[63];
-	u32 rgbgc_b_datay[64];
-};
-
-struct isp_rgbgamma_context {
-	bool enable;
-};
-
 struct isp_irq_data {
 	uint32_t addr;
 	uint32_t val;
@@ -584,7 +501,6 @@ struct isp_ic_dev {
 	struct isp_is_context rawis;
 	struct isp_mi_context mi;
 	struct isp_dpf_context dpf;
-	struct isp_ee_context ee;
 	struct isp_exp_context exp;
 	struct isp_hist_context hist;
 	struct isp_dpcc_context dpcc;
@@ -595,16 +511,12 @@ struct isp_ic_dev {
 	struct isp_vsm_context vsm;
 	struct isp_afm_context afm;
 	struct isp_wdr3_context wdr3;
-	struct isp_exp2_context exp2;
 	struct isp_hdr_context hdr;
-	struct isp_2dnr_context dnr2;
-	struct isp_3dnr_context dnr3;
 	struct isp_comp_context comp;
 	struct isp_simp_context simp;
 	struct isp_cproc_context cproc;
 	struct isp_elawb_context elawb;
 	struct isp_gcmono_context gcmono;
-	struct isp_rgbgamma_context rgbgamma;
 };
 
 void isp_write_reg(struct isp_ic_dev *dev, u32 offset, u32 val);
