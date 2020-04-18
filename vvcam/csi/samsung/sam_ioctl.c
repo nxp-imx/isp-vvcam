@@ -63,6 +63,9 @@ int csis_s_fmt(struct v4l2_subdev *sd, struct csi_sam_format *fmt)
 	case V4L2_PIX_FMT_SBGGR12:
 		code = MEDIA_BUS_FMT_SBGGR12_1X12;
 		break;
+	case V4L2_PIX_FMT_SBGGR10:
+		code = MEDIA_BUS_FMT_SBGGR10_1X10;
+		break;
 	default:
 		return -EINVAL;
 	}
@@ -75,6 +78,21 @@ int csis_s_fmt(struct v4l2_subdev *sd, struct csi_sam_format *fmt)
 	state->format.height = fmt->height;
 	disp_mix_gasket_config(state);
 	mipi_csis_set_params(state);
+	return 0;
+}
+
+int csis_s_hdr(struct v4l2_subdev *sd, bool enable)
+{
+	struct csi_state *state = container_of(sd, struct csi_state, sd);
+	pr_info("%s: %d\n", __func__, enable);
+	state->hdr = enable;
+	return 0;
+}
+
+int csis_ioc_qcap(struct v4l2_subdev *dev, void *args)
+{
+	struct v4l2_capability *cap = (struct v4l2_capability *)args;
+	strcpy((char *)cap->driver, "csi_samsung_subdev");
 	return 0;
 }
 
@@ -103,11 +121,17 @@ long csis_priv_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 		break;
 	case CSIOC_S_FMT:
 		ret = csis_s_fmt(sd, (struct csi_sam_format *)arg);
+		break;
+	case CSIOC_S_HDR:
+		ret = csis_s_hdr(sd, *(bool *) arg);
+		break;
+	case VIDIOC_QUERYCAP:
+		ret = csis_ioc_qcap(sd, arg);
+		break;
 	default:
-		// pr_err("unsupported csi-sam command %d.", cmd);
+		pr_err("unsupported csi-sam command %d.", cmd);
 		break;
 	}
 
 	return ret;
 }
-

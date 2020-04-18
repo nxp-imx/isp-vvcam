@@ -80,6 +80,7 @@
 #ifdef CSI_SENSOR_KERNEL
 #include "mxc-mipi-csi2-sam.h"
 #include "ov2775_mipi_v3.h"
+#include "os08a20_mipi_v3.h"
 #endif
 
 #ifndef ALIGN_UP
@@ -97,13 +98,13 @@ struct viv_video_fmt {
 
 static struct viv_video_fmt formats[] = {
 	{
-		.fourcc = V4L2_PIX_FMT_YUYV,
-		.depth	= 16,
-	},
+	 .fourcc = V4L2_PIX_FMT_YUYV,
+	 .depth = 16,
+	 },
 	{
-		.fourcc = V4L2_PIX_FMT_NV12,
-		.depth	= 12,
-	},
+	 .fourcc = V4L2_PIX_FMT_NV12,
+	 .depth = 12,
+	 },
 };
 
 static struct viv_video_fmt *format_by_fourcc(unsigned int fourcc)
@@ -127,7 +128,9 @@ static int viv_post_event(struct v4l2_event *event, void *fh, bool sync)
 
 	if (sync) {
 		reinit_completion(&handle->wait);
-		rc = wait_for_completion_timeout(&handle->wait, msecs_to_jiffies(VIV_VIDEO_EVENT_TIMOUT_MS));
+		rc = wait_for_completion_timeout(&handle->wait,
+						 msecs_to_jiffies
+						 (VIV_VIDEO_EVENT_TIMOUT_MS));
 		if (rc == 0)
 			return -ETIMEDOUT;
 	}
@@ -140,7 +143,6 @@ static int viv_post_simple_event(int id, int streamid, void *fh, bool sync)
 	struct viv_video_event *v_event;
 
 	v_event = (struct viv_video_event *)&event.u.data[0];
-	v_event->id = id;
 	v_event->stream_id = streamid;
 	v_event->file = fh;
 	v_event->sync = sync;
@@ -149,13 +151,13 @@ static int viv_post_simple_event(int id, int streamid, void *fh, bool sync)
 	return viv_post_event(&event, fh, sync);
 }
 
-static int viv_post_control_event(int streamid, void *fh, struct viv_control_event *control_event)
+static int viv_post_control_event(int streamid, void *fh,
+				  struct viv_control_event *control_event)
 {
 	struct v4l2_event event;
 	struct viv_video_event *v_event;
 
 	v_event = (struct viv_video_event *)&event.u.data[0];
-	v_event->id = VIV_VIDEO_EVENT_PASS_JSON;
 	v_event->stream_id = streamid;
 	v_event->file = fh;
 	v_event->sync = true;
@@ -174,7 +176,8 @@ static int start_streaming(struct vb2_queue *vq, unsigned int count)
 
 	pr_info("enter %s\n", __func__);
 	if (handle->state != 2) {
-		viv_post_simple_event(VIV_VIDEO_EVENT_START_STREAM, handle->streamid, fh, true);
+		viv_post_simple_event(VIV_VIDEO_EVENT_START_STREAM,
+				      handle->streamid, fh, true);
 		handle->state = 2;
 	} else {
 		pr_err("can't start streaming, device busy!\n");
@@ -193,7 +196,8 @@ static void stop_streaming(struct vb2_queue *vq)
 	if (!handle || handle->state != 2 || list_empty(&handle->entry))
 		return;
 
-	viv_post_simple_event(VIV_VIDEO_EVENT_STOP_STREAM, handle->streamid, &handle->vfh, true);
+	viv_post_simple_event(VIV_VIDEO_EVENT_STOP_STREAM, handle->streamid,
+			      &handle->vfh, true);
 	handle->state = 1;
 	handle->sequence = 0;
 	list_for_each_entry(vb, &vq->queued_list, queued_entry) {
@@ -205,8 +209,8 @@ static void stop_streaming(struct vb2_queue *vq)
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 8, 0)
 static int queue_setup(struct vb2_queue *vq, const struct v4l2_format *fmt,
-				unsigned int *nbuffers, unsigned int *nplanes,
-				unsigned int sizes[], void *alloc_ctxs[])
+		       unsigned int *nbuffers, unsigned int *nplanes,
+		       unsigned int sizes[], void *alloc_ctxs[])
 {
 	struct viv_video_file *handle = queue_to_handle(vq);
 	unsigned long size = handle->fmt.fmt.pix.sizeimage;
@@ -221,8 +225,8 @@ static int queue_setup(struct vb2_queue *vq, const struct v4l2_format *fmt,
 }
 #else
 static int queue_setup(struct vb2_queue *q,
-	unsigned int *num_buffers, unsigned int *num_planes,
-	unsigned int sizes[], struct device *alloc_devs[])
+		       unsigned int *num_buffers, unsigned int *num_planes,
+		       unsigned int sizes[], struct device *alloc_devs[])
 {
 	struct viv_video_file *handle = queue_to_handle(q);
 	unsigned long size = handle->fmt.fmt.pix.sizeimage;
@@ -260,25 +264,24 @@ static void buffer_queue(struct vb2_buffer *vb)
 	if (!buf || !handle)
 		return;
 
-	// pr_info("buffer_queue %p  %d", buf->cookie, vb->index);
+	/* pr_info("buffer_queue %p  %d", buf->cookie, vb->index); */
 	v_event = (struct viv_video_event *)&event.u.data[0];
-	v_event->id = VIV_VIDEO_EVENT_QBUF;
 	v_event->stream_id = handle->streamid;
 	v_event->file = &handle->vfh;
-	v_event->addr = (u64)buf->cookie;
+	v_event->addr = (u64) buf->cookie;
 	v_event->buf_index = vb->index;
 	v_event->sync = false;
 	event.type = VIV_VIDEO_EVENT_TYPE;
-	event.id = v_event->id;
+	event.id = VIV_VIDEO_EVENT_QBUF;
 	viv_post_event(&event, &handle->vfh, false);
 }
 
 static struct vb2_ops buffer_ops = {
-	.queue_setup		= queue_setup,
-	.buf_init			= buffer_init,
-	.buf_queue			= buffer_queue,
-	.start_streaming	= start_streaming,
-	.stop_streaming		= stop_streaming,
+	.queue_setup = queue_setup,
+	.buf_init = buffer_init,
+	.buf_queue = buffer_queue,
+	.start_streaming = start_streaming,
+	.stop_streaming = stop_streaming,
 };
 
 static void vb2_cma_put(void *buf_priv)
@@ -296,23 +299,23 @@ static void vb2_cma_put(void *buf_priv)
 		return;
 #endif
 	pr_info("buf->cookie: %p\n", buf->cookie);
-	if ((u64)buf->cookie < RESERVED_MEM_BASE)
+	if ((u64) buf->cookie < RESERVED_MEM_BASE)
 		return;
-	cma_free((u64)buf->cookie);
+	cma_free((u64) buf->cookie);
 	put_device(buf->dev);
 	kfree(buf);
 }
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 8, 0)
 static void *vb2_cma_alloc(void *alloc_ctx, unsigned long size,
-			enum dma_data_direction dma_dir, gfp_t gfp_flags)
+			   enum dma_data_direction dma_dir, gfp_t gfp_flags)
 {
 	struct vb2_dc_buf *conf = alloc_ctx;
 	struct device *dev = conf->dev;
 #else
 static void *vb2_cma_alloc(struct device *dev, unsigned long attrs,
-			unsigned long size, enum dma_data_direction dma_dir,
-			gfp_t gfp_flags)
+			   unsigned long size, enum dma_data_direction dma_dir,
+			   gfp_t gfp_flags)
 {
 #endif
 	struct vb2_dc_buf *buf;
@@ -364,8 +367,8 @@ static int vb2_cma_mmap(void *buf_priv, struct vm_area_struct *vma)
 		(void *)(unsigned long)buf->cookie, buf->size, buf);
 	vma->vm_pgoff = 0;
 	if (remap_pfn_range(vma, vma->vm_start,
-		((unsigned long)buf->cookie) >> PAGE_SHIFT,
-		buf->size, vma->vm_page_prot)) {
+			    ((unsigned long)buf->cookie) >> PAGE_SHIFT,
+			    buf->size, vma->vm_page_prot)) {
 		pr_err("failed.\n");
 		return -EAGAIN;
 	}
@@ -384,19 +387,20 @@ static unsigned int vb2_cma_num_users(void *buf_priv)
 }
 
 const struct vb2_mem_ops cma_memops = {
-	.alloc		= vb2_cma_alloc,
-	.put		= vb2_cma_put,
-	.mmap		= vb2_cma_mmap,
-	.num_users	= vb2_cma_num_users,
+	.alloc = vb2_cma_alloc,
+	.put = vb2_cma_put,
+	.mmap = vb2_cma_mmap,
+	.num_users = vb2_cma_num_users,
 };
 
 static int video_open(struct file *file)
 {
 	struct viv_video_device *dev = video_drvdata(file);
 	struct viv_video_file *handle;
+	int rc;
 
 	pr_info("enter %s\n", __func__);
-	//isp_reset(&dev->isp->ic_dev);
+	/* isp_reset(&dev->isp->ic_dev); */
 	handle = kzalloc(sizeof(*handle), GFP_KERNEL);
 	memset(handle, 0, sizeof(*handle));
 
@@ -414,7 +418,14 @@ static int video_open(struct file *file)
 #if LINUX_VERSION_CODE > KERNEL_VERSION(4, 5, 0)
 	handle->queue.dev = &dev->video->dev;
 #endif
-	vb2_queue_init(&handle->queue);
+	rc = vb2_queue_init(&handle->queue);
+	if (rc) {
+		pr_err("can't init vb queue\n");
+		v4l2_fh_del(&handle->vfh);
+		v4l2_fh_exit(&handle->vfh);
+		kzfree(handle);
+		return rc;
+	}
 	mutex_init(&handle->event_mutex);
 	mutex_init(&handle->buffer_mutex);
 	init_completion(&handle->wait);
@@ -427,9 +438,12 @@ static int video_open(struct file *file)
 	handle->fmt.fmt.pix.height = 1080;
 	handle->fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV;
 	v4l_bound_align_image(&handle->fmt.fmt.pix.width, 48, 3840, 2,
-				&handle->fmt.fmt.pix.height, 32, 2160, 0, 0);
-	handle->fmt.fmt.pix.bytesperline = ALIGN_UP((handle->fmt.fmt.pix.width * 16) / 8, 16);
-	handle->fmt.fmt.pix.sizeimage = ALIGN_UP(handle->fmt.fmt.pix.height * handle->fmt.fmt.pix.bytesperline, 4096);
+			      &handle->fmt.fmt.pix.height, 32, 2160, 0, 0);
+	handle->fmt.fmt.pix.bytesperline =
+	    ALIGN_UP((handle->fmt.fmt.pix.width * 16) / 8, 16);
+	handle->fmt.fmt.pix.sizeimage =
+	    ALIGN_UP(handle->fmt.fmt.pix.height *
+		     handle->fmt.fmt.pix.bytesperline, 4096);
 	handle->fmt.fmt.pix.colorspace = V4L2_COLORSPACE_REC709;
 
 	INIT_LIST_HEAD(&handle->qlist);
@@ -447,11 +461,15 @@ static int video_close(struct file *file)
 	pr_info("enter %s\n", __func__);
 	if (handle) {
 		if (handle->streamid >= 0 && handle->state == 2) {
-			viv_post_simple_event(VIV_VIDEO_EVENT_STOP_STREAM, handle->streamid, &handle->vfh, false);
+			viv_post_simple_event(VIV_VIDEO_EVENT_STOP_STREAM,
+					      handle->streamid, &handle->vfh,
+					      false);
 			handle->state = 1;
 		}
 		if (handle->streamid >= 0 && handle->state == 1)
-			viv_post_simple_event(VIV_VIDEO_EVENT_DEL_STREAM, handle->streamid, &handle->vfh, false);
+			viv_post_simple_event(VIV_VIDEO_EVENT_DEL_STREAM,
+					      handle->streamid, &handle->vfh,
+					      false);
 
 		handle->state = 0;
 		handle->streamid = 0;
@@ -463,7 +481,8 @@ static int video_close(struct file *file)
 		v4l2_fh_exit(&handle->vfh);
 
 		while (!list_empty(&handle->queue.queued_list)) {
-			vb = list_first_entry(&handle->queue.queued_list, struct vb2_buffer, queued_entry);
+			vb = list_first_entry(&handle->queue.queued_list,
+					      struct vb2_buffer, queued_entry);
 			list_del(&vb->queued_entry);
 			vb2_buffer_done(vb, VB2_BUF_STATE_ERROR);
 		}
@@ -475,16 +494,18 @@ static int video_close(struct file *file)
 	return 0;
 }
 
-static int subscribe_event(struct v4l2_fh *fh, const struct v4l2_event_subscription *sub)
+static int subscribe_event(struct v4l2_fh *fh,
+			   const struct v4l2_event_subscription *sub)
 {
 	struct viv_video_file *handle = priv_to_handle(fh);
 
 	if (!handle || !sub)
 		return -EINVAL;
-	return v4l2_event_subscribe(fh, sub, 3, 0);
+	return v4l2_event_subscribe(fh, sub, 30, 0);
 }
 
-static int unsubscribe_event(struct v4l2_fh *fh, const struct v4l2_event_subscription *sub)
+static int unsubscribe_event(struct v4l2_fh *fh,
+			     const struct v4l2_event_subscription *sub)
 {
 	struct viv_video_file *handle = priv_to_handle(fh);
 	struct viv_video_file *ph;
@@ -513,7 +534,9 @@ static void viv_buffer_done(struct viv_video_file *handle, u64 addr)
 		if (buf && (buf->cookie == (void *)addr)) {
 			buf->vb.field = V4L2_FIELD_NONE;
 			vb->planes[0].bytesused = handle->fmt.fmt.pix.sizeimage;
+#if LINUX_VERSION_CODE > KERNEL_VERSION(5, 0, 0)
 			vb->timestamp = ktime_get_ns();
+#endif
 			vb2_buffer_done(vb, VB2_BUF_STATE_DONE);
 			mutex_unlock(&handle->buffer_mutex);
 			return;
@@ -523,7 +546,7 @@ static void viv_buffer_done(struct viv_video_file *handle, u64 addr)
 }
 
 static long private_ioctl(struct file *file, void *fh,
-		bool valid_prio, unsigned int cmd, void *arg)
+			  bool valid_prio, unsigned int cmd, void *arg)
 {
 	struct viv_video_file *handle;
 	struct viv_video_file *ph;
@@ -538,7 +561,6 @@ static long private_ioctl(struct file *file, void *fh,
 
 	switch (cmd) {
 	case VIV_VIDIOC_EVENT_COMPLETE:
-		// pr_info("priv ioctl VIV_VIDIOC_EVENT_COMPLETE\n");
 		v_event = (struct viv_video_event *)arg;
 		if (v_event->file) {
 			handle = priv_to_handle(v_event->file);
@@ -548,7 +570,7 @@ static long private_ioctl(struct file *file, void *fh,
 		}
 		break;
 	case VIV_VIDIOC_BUFDONE:
-		// pr_info("priv ioctl VIV_VIDIOC_BUFDONE\n");
+		/* pr_info("priv ioctl VIV_VIDIOC_BUFDONE\n"); */
 		user_buffer = (struct v4l2_user_buffer *)arg;
 		if (user_buffer->file) {
 			handle = priv_to_handle(user_buffer->file);
@@ -557,7 +579,8 @@ static long private_ioctl(struct file *file, void *fh,
 				mutex_lock(&file_list_lock);
 				list_for_each_entry(ph, &file_list_head, entry) {
 					if (ph == handle) {
-						viv_buffer_done(handle, user_buffer->addr);
+						viv_buffer_done(handle,
+								user_buffer->addr);
 						break;
 					}
 				}
@@ -584,9 +607,10 @@ static long private_ioctl(struct file *file, void *fh,
 		pr_info("priv ioctl VIV_VIDIOC_CONTROL_EVENT\n");
 		control_event = (struct viv_control_event *)arg;
 		handle = priv_to_handle(file->private_data);
-		rc = viv_post_control_event(handle->streamid, &handle->vfh, control_event);
+		rc = viv_post_control_event(handle->streamid, &handle->vfh,
+					    control_event);
 		break;
-	case VIV_VIDIOC_QUERY_EXTMEM: {
+	case VIV_VIDIOC_QUERY_EXTMEM:{
 			pr_info("priv ioctl VIV_VIDIOC_QUERY_EXTMEM\n");
 			ext_buf = (struct ext_buf_info *)arg;
 			ext_buf->addr = RESERVED_MEM_BASE;
@@ -597,20 +621,22 @@ static long private_ioctl(struct file *file, void *fh,
 	return rc;
 }
 
-static int video_querycap(struct file *file, void *fh, struct v4l2_capability *cap)
+static int video_querycap(struct file *file, void *fh,
+			  struct v4l2_capability *cap)
 {
 	pr_info("enter %s\n", __func__);
 	strcpy(cap->driver, "viv_v4l2_device");
 	strcpy(cap->card, "VIV");
 	strcpy((char *)cap->bus_info, "PCI:viv");
 
-	cap->capabilities = V4L2_CAP_VIDEO_CAPTURE | V4L2_CAP_STREAMING | V4L2_CAP_DEVICE_CAPS;
+	cap->capabilities =
+	    V4L2_CAP_VIDEO_CAPTURE | V4L2_CAP_STREAMING | V4L2_CAP_DEVICE_CAPS;
 	cap->device_caps = V4L2_CAP_VIDEO_CAPTURE | V4L2_CAP_STREAMING;
 	return 0;
 }
 
 static int vidioc_enum_fmt_vid_cap(struct file *file, void *priv,
-				struct v4l2_fmtdesc *f)
+				   struct v4l2_fmtdesc *f)
 {
 	if (unlikely(f->index >= ARRAY_SIZE(formats)))
 		return -EINVAL;
@@ -618,7 +644,8 @@ static int vidioc_enum_fmt_vid_cap(struct file *file, void *priv,
 	return 0;
 }
 
-static int vidioc_g_fmt_vid_cap(struct file *file, void *priv, struct v4l2_format *f)
+static int vidioc_g_fmt_vid_cap(struct file *file, void *priv,
+				struct v4l2_format *f)
 {
 	struct viv_video_file *handle = priv_to_handle(file->private_data);
 
@@ -630,7 +657,8 @@ static int vidioc_g_fmt_vid_cap(struct file *file, void *priv, struct v4l2_forma
 	return 0;
 }
 
-static int vidioc_try_fmt_vid_cap(struct file *file, void *priv, struct v4l2_format *f)
+static int vidioc_try_fmt_vid_cap(struct file *file, void *priv,
+				  struct v4l2_format *f)
 {
 	struct viv_video_fmt *format;
 
@@ -646,14 +674,17 @@ static int vidioc_try_fmt_vid_cap(struct file *file, void *priv, struct v4l2_for
 
 	f->fmt.pix.field = V4L2_FIELD_NONE;
 	v4l_bound_align_image(&f->fmt.pix.width, 48, 3840, 2,
-				&f->fmt.pix.height, 32, 2160, 0, 0);
-	f->fmt.pix.bytesperline = ALIGN_UP((f->fmt.pix.width * format->depth) / 8, 16);
-	f->fmt.pix.sizeimage	= ALIGN_UP(f->fmt.pix.height * f->fmt.pix.bytesperline, 4096);
+			      &f->fmt.pix.height, 32, 2160, 0, 0);
+	f->fmt.pix.bytesperline =
+	    ALIGN_UP((f->fmt.pix.width * format->depth) / 8, 16);
+	f->fmt.pix.sizeimage =
+	    ALIGN_UP(f->fmt.pix.height * f->fmt.pix.bytesperline, 4096);
 	f->fmt.pix.colorspace = V4L2_COLORSPACE_REC709;
 	return 0;
 }
 
-static int vidioc_s_fmt_vid_cap(struct file *file, void *priv, struct v4l2_format *f)
+static int vidioc_s_fmt_vid_cap(struct file *file, void *priv,
+				struct v4l2_format *f)
 {
 	struct viv_video_file *ph;
 	struct viv_video_file *handle = priv_to_handle(file->private_data);
@@ -676,7 +707,8 @@ static int vidioc_s_fmt_vid_cap(struct file *file, void *priv, struct v4l2_forma
 	return ret;
 }
 
-static int vidioc_reqbufs(struct file *file, void *priv, struct v4l2_requestbuffers *p)
+static int vidioc_reqbufs(struct file *file, void *priv,
+			  struct v4l2_requestbuffers *p)
 {
 	struct viv_video_file *handle = priv_to_handle(file->private_data);
 	struct viv_video_file *ph;
@@ -720,18 +752,19 @@ static int vidioc_reqbufs(struct file *file, void *priv, struct v4l2_requestbuff
 		return ret;
 	}
 	handle->state = 1;
-	ret = viv_post_simple_event(VIV_VIDEO_EVENT_NEW_STREAM, handle->streamid, &handle->vfh, true);
+	ret =
+	    viv_post_simple_event(VIV_VIDEO_EVENT_NEW_STREAM, handle->streamid,
+				  &handle->vfh, true);
 
 	v_event = (struct viv_video_event *)&event.u.data[0];
-	v_event->id = VIV_VIDEO_EVENT_SET_FMT;
 	v_event->stream_id = handle->streamid;
 	v_event->file = &handle->vfh;
-	v_event->width = handle->fmt.fmt.pix.width;
-	v_event->height = handle->fmt.fmt.pix.height;
-	v_event->pixelformat = handle->fmt.fmt.pix.pixelformat;
+	v_event->addr = handle->fmt.fmt.pix.width;
+	v_event->response = handle->fmt.fmt.pix.height;
+	v_event->buf_index = handle->fmt.fmt.pix.pixelformat;
 	v_event->sync = true;
 	event.type = VIV_VIDEO_EVENT_TYPE;
-	event.id = v_event->id;
+	event.id = VIV_VIDEO_EVENT_SET_FMT;
 	return viv_post_event(&event, &handle->vfh, true);
 
 }
@@ -801,7 +834,8 @@ static int vidioc_streamoff(struct file *file, void *priv, enum v4l2_buf_type i)
 	return rc;
 }
 
-static int vidioc_enum_input(struct file *filep, void *fh, struct v4l2_input *input)
+static int vidioc_enum_input(struct file *filep, void *fh,
+			     struct v4l2_input *input)
 {
 	if (input->index > 0)
 		return -EINVAL;
@@ -824,23 +858,23 @@ static int vidioc_s_input(struct file *filep, void *fh, unsigned int input)
 }
 
 static const struct v4l2_ioctl_ops video_ioctl_ops = {
-	.vidioc_querycap			= video_querycap,
-	.vidioc_enum_fmt_vid_cap		= vidioc_enum_fmt_vid_cap,
-	.vidioc_g_fmt_vid_cap			= vidioc_g_fmt_vid_cap,
-	.vidioc_try_fmt_vid_cap			= vidioc_try_fmt_vid_cap,
-	.vidioc_s_fmt_vid_cap			= vidioc_s_fmt_vid_cap,
-	.vidioc_reqbufs				= vidioc_reqbufs,
-	.vidioc_querybuf			= vidioc_querybuf,
-	.vidioc_qbuf				= vidioc_qbuf,
-	.vidioc_dqbuf				= vidioc_dqbuf,
-	.vidioc_streamon			= vidioc_streamon,
-	.vidioc_streamoff			= vidioc_streamoff,
-	.vidioc_subscribe_event			= subscribe_event,
-	.vidioc_unsubscribe_event		= unsubscribe_event,
-	.vidioc_default				= private_ioctl,
-	.vidioc_enum_input			= vidioc_enum_input,
-	.vidioc_g_input				= vidioc_g_input,
-	.vidioc_s_input				= vidioc_s_input,
+	.vidioc_querycap = video_querycap,
+	.vidioc_enum_fmt_vid_cap = vidioc_enum_fmt_vid_cap,
+	.vidioc_g_fmt_vid_cap = vidioc_g_fmt_vid_cap,
+	.vidioc_try_fmt_vid_cap = vidioc_try_fmt_vid_cap,
+	.vidioc_s_fmt_vid_cap = vidioc_s_fmt_vid_cap,
+	.vidioc_reqbufs = vidioc_reqbufs,
+	.vidioc_querybuf = vidioc_querybuf,
+	.vidioc_qbuf = vidioc_qbuf,
+	.vidioc_dqbuf = vidioc_dqbuf,
+	.vidioc_streamon = vidioc_streamon,
+	.vidioc_streamoff = vidioc_streamoff,
+	.vidioc_subscribe_event = subscribe_event,
+	.vidioc_unsubscribe_event = unsubscribe_event,
+	.vidioc_default = private_ioctl,
+	.vidioc_enum_input = vidioc_enum_input,
+	.vidioc_g_input = vidioc_g_input,
+	.vidioc_s_input = vidioc_s_input,
 };
 
 /* sys /dev/mem can't map large memory size */
@@ -848,7 +882,7 @@ static int isp_mmap(struct file *file, struct vm_area_struct *vma)
 {
 	/* Map reserved video memory. */
 	if (remap_pfn_range(vma, vma->vm_start, vma->vm_pgoff,
-				vma->vm_end - vma->vm_start, vma->vm_page_prot))
+			    vma->vm_end - vma->vm_start, vma->vm_page_prot))
 		return -EAGAIN;
 	return 0;
 }
@@ -865,7 +899,8 @@ int vidioc_mmap(struct file *file, struct vm_area_struct *vma)
 	return rc;
 }
 
-static unsigned int video_poll(struct file *file, struct poll_table_struct *wait)
+static unsigned int video_poll(struct file *file,
+			       struct poll_table_struct *wait)
 {
 	struct viv_video_file *handle = priv_to_handle(file->private_data);
 	int rc = 0;
@@ -884,12 +919,12 @@ static unsigned int video_poll(struct file *file, struct poll_table_struct *wait
 }
 
 static struct v4l2_file_operations video_ops = {
-	.owner			= THIS_MODULE,
-	.open			= video_open,
-	.release		= video_close,
-	.poll			= video_poll,
+	.owner = THIS_MODULE,
+	.open = video_open,
+	.release = video_close,
+	.poll = video_poll,
 	.unlocked_ioctl = video_ioctl2,
-	.mmap			= vidioc_mmap,
+	.mmap = vidioc_mmap,
 };
 
 static void pdev_release(struct device *dev)
@@ -900,10 +935,10 @@ static void pdev_release(struct device *dev)
 #ifdef CSI_SENSOR_KERNEL
 static struct resource mipi_resource[] = {
 	[0] = {
-		.start = CSI_REG_BASE,
-		.end = CSI_REG_BASE+CSI_REG_SIZE,
-		.flags = IORESOURCE_MEM,
-	},
+	       .start = CSI_REG_BASE,
+	       .end = CSI_REG_BASE + CSI_REG_SIZE,
+	       .flags = IORESOURCE_MEM,
+	       },
 };
 
 static struct platform_device viv_pdev = {
@@ -912,7 +947,7 @@ static struct platform_device viv_pdev = {
 		.dma_mask = 0x0,
 		.coherent_dma_mask = 0xffffffff,
 		.release = pdev_release,
-	},
+		},
 	.resource = mipi_resource,
 	.num_resources = 1,
 };
@@ -970,7 +1005,8 @@ static int viv_video_probe(struct platform_device *pdev)
 			isp_base = ISP_REG_BASE1;
 			break;
 		}
-		vdev->isp[i] = isp_hw_register(vdev->v4l2_dev, isp_base, ISP_REG_SIZE);
+		vdev->isp[i] =
+		    isp_hw_register(vdev->v4l2_dev, isp_base, ISP_REG_SIZE);
 	}
 
 #ifdef WITH_DWE
@@ -982,6 +1018,7 @@ static int viv_video_probe(struct platform_device *pdev)
 #ifdef CSI_SENSOR_KERNEL
 	rc = mipi_csi_sam_add(pdev, vdev->v4l2_dev);
 	rc = ov2775_hw_register(vdev->v4l2_dev);
+	/* rc = os08a20_hw_register(vdev->v4l2_dev); */
 #endif
 	rc = v4l2_device_register_subdev_nodes(vdev->v4l2_dev);
 	cma_init(RESERVED_MEM_BASE, RESERVED_MEM_SIZE, 4096);
@@ -990,7 +1027,7 @@ static int viv_video_probe(struct platform_device *pdev)
 	return 0;
 
 v4l2_fail:
-	//v4l2_device_unregister(vdev->video->v4l2_dev);
+	/* v4l2_device_unregister(vdev->video->v4l2_dev); */
 register_fail:
 	video_device_release(vdev->video);
 probe_end:
@@ -1018,13 +1055,13 @@ static int viv_video_remove(struct platform_device *pdev)
 #ifdef CSI_SENSOR_KERNEL
 	mipi_csi_sam_del(pdev);
 	ov2775_hw_unregister();
+	/* os08a20_hw_unregister(); */
 #endif
 	if (vdev->video) {
 		video_unregister_device(vdev->video);
 		v4l2_device_disconnect(vdev->video->v4l2_dev);
 		v4l2_device_put(vdev->video->v4l2_dev);
 	}
-
 	kzfree(vdev);
 	vdev = NULL;
 	cma_release();
@@ -1036,9 +1073,9 @@ static struct platform_driver viv_video_driver = {
 	.probe = viv_video_probe,
 	.remove = viv_video_remove,
 	.driver = {
-		.name = "viv_isp",
-		.owner = THIS_MODULE,
-	},
+		   .name = "viv_isp",
+		   .owner = THIS_MODULE,
+		   },
 };
 
 static int __init viv_isp_init_module(void)
@@ -1065,6 +1102,7 @@ static void __exit viv_isp_exit_module(void)
 {
 	pr_info("enter %s\n", __func__);
 	platform_driver_unregister(&viv_video_driver);
+	msleep(100);
 	platform_device_unregister(&viv_pdev);
 }
 

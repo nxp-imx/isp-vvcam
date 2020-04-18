@@ -106,9 +106,9 @@ int isp_s_rgbgammapx(struct isp_ic_dev *dev, struct isp_rgbgamma_data *data)
 	int i;
 	u32 gc_px_data = 0;
 
-	p_table = (u32 *)&data->rgbgc_r_px;
+	p_table = (u32 *) & data->rgbgc_r_px;
 	for (i = 0; i < 64; i++) {
-		gc_px_data |= (*(p_table + i) << (i % 6 * 5));  //
+		gc_px_data |= (*(p_table + i) << (i % 6 * 5));
 		if (i % 6 == 5 || i == 63) {
 			isp_write_reg(dev, isp_gc_px_reg, gc_px_data);
 			isp_gc_px_reg += 4;
@@ -117,9 +117,9 @@ int isp_s_rgbgammapx(struct isp_ic_dev *dev, struct isp_rgbgamma_data *data)
 	}
 
 	isp_gc_px_reg = REG_ADDR(isp_gcrgb_g_px_0);
-	p_table = (u32 *)&data->rgbgc_g_px;
+	p_table = (u32 *) & data->rgbgc_g_px;
 	for (i = 0; i < 64; i++) {
-		gc_px_data |= (*(p_table + i) << (i % 6 * 5));  //
+		gc_px_data |= (*(p_table + i) << (i % 6 * 5));
 		if (i % 6 == 5 || i == 63) {
 			isp_write_reg(dev, isp_gc_px_reg, gc_px_data);
 			isp_gc_px_reg += 4;
@@ -127,9 +127,9 @@ int isp_s_rgbgammapx(struct isp_ic_dev *dev, struct isp_rgbgamma_data *data)
 		}
 	}
 	isp_gc_px_reg = REG_ADDR(isp_gcrgb_b_px_0);
-	p_table = (u32 *)&data->rgbgc_b_px;
+	p_table = (u32 *) & data->rgbgc_b_px;
 	for (i = 0; i < 64; i++) {
-		gc_px_data |= (*(p_table + i) << (i % 6 * 5));  //
+		gc_px_data |= (*(p_table + i) << (i % 6 * 5));
 		if (i % 6 == 5 || i == 63) {
 			isp_write_reg(dev, isp_gc_px_reg, gc_px_data);
 			isp_gc_px_reg += 4;
@@ -140,7 +140,8 @@ int isp_s_rgbgammapx(struct isp_ic_dev *dev, struct isp_rgbgamma_data *data)
 #endif
 }
 
-int isp_s_rgbgammaWriteData(struct isp_ic_dev *dev, struct isp_rgbgamma_data *data)
+int isp_s_rgbgammaWriteData(struct isp_ic_dev *dev,
+			    struct isp_rgbgamma_data *data)
 {
 #ifndef ISP_RGBGC
 	pr_err("unsupported function %s", __func__);
@@ -165,32 +166,38 @@ int isp_s_rgbgammaWriteData(struct isp_ic_dev *dev, struct isp_rgbgamma_data *da
 	tblY = data->rgbgc_r_datay;
 	for (i = 0; i < 64; i++) {
 		isp_gc_y_data = *(tblY + i);
-		isp_write_reg(dev, REG_ADDR(isp_gcrgb_r_y_write_data), isp_gc_y_data);
+		isp_write_reg(dev, REG_ADDR(isp_gcrgb_r_y_write_data),
+			      isp_gc_y_data);
 	}
 	for (i = 0; i < 63; i++) {
 		isp_gc_x_data = *(tblX + i);
-		isp_write_reg(dev, REG_ADDR(isp_gcrgb_r_x_write_data), isp_gc_x_data);
+		isp_write_reg(dev, REG_ADDR(isp_gcrgb_r_x_write_data),
+			      isp_gc_x_data);
 	}
 
 	tblX = data->rgbgc_g_datax;
 	tblY = data->rgbgc_g_datay;
 	for (i = 0; i < 64; i++) {
 		isp_gc_y_data = *(tblY + i);
-		isp_write_reg(dev, REG_ADDR(isp_gcrgb_g_y_write_data), isp_gc_y_data);
+		isp_write_reg(dev, REG_ADDR(isp_gcrgb_g_y_write_data),
+			      isp_gc_y_data);
 	}
 	for (i = 0; i < 63; i++) {
 		isp_gc_x_data = *(tblX + i);
-		isp_write_reg(dev, REG_ADDR(isp_gcrgb_g_x_write_data), isp_gc_x_data);
+		isp_write_reg(dev, REG_ADDR(isp_gcrgb_g_x_write_data),
+			      isp_gc_x_data);
 	}
 	tblX = data->rgbgc_b_datax;
 	tblY = data->rgbgc_b_datay;
 	for (i = 0; i < 64; i++) {
 		isp_gc_y_data = *(tblY + i);
-		isp_write_reg(dev, REG_ADDR(isp_gcrgb_b_y_write_data), isp_gc_y_data);
+		isp_write_reg(dev, REG_ADDR(isp_gcrgb_b_y_write_data),
+			      isp_gc_y_data);
 	}
 	for (i = 0; i < 63; i++) {
 		isp_gc_x_data = *(tblX + i);
-		isp_write_reg(dev, REG_ADDR(isp_gcrgb_b_x_write_data), isp_gc_x_data);
+		isp_write_reg(dev, REG_ADDR(isp_gcrgb_b_x_write_data),
+			      isp_gc_x_data);
 	}
 #endif
 }

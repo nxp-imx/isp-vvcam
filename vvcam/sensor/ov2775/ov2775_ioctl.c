@@ -52,13 +52,14 @@
  *****************************************************************************/
 #include "ov2775_ioctl.h"
 #include "ov2775_mipi_v3.h"
+#include <linux/delay.h>
 
 int ov2775_s_gain(void *dev, struct ov2775_gain_context *gain)
 {
 	struct ov2775 *sensor = dev;
 	__u8 again = 0;
 
-	// pr_info("enter %s\n", __func__);
+	/* pr_info("enter %s\n", __func__); */
 	ov2775_write_reg(sensor, 0x3467, 0x00);
 	ov2775_write_reg(sensor, 0x3464, 0x04);
 
@@ -104,7 +105,7 @@ int ov2775_s_exp(void *dev, uint32_t exp)
 {
 	struct ov2775 *sensor = dev;
 
-	// pr_info("enter %s 0x%08x\n", __func__, exp);
+	/* pr_info("enter %s 0x%08x\n", __func__, exp); */
 	ov2775_write_reg(sensor, 0x3467, 0x00);
 	ov2775_write_reg(sensor, 0x3464, 0x04);
 
@@ -120,7 +121,7 @@ int ov2775_s_vsexp(void *dev, uint32_t exp)
 {
 	struct ov2775 *sensor = dev;
 
-	// pr_info("enter %s 0x%08x\n", __func__, exp);
+	/* pr_info("enter %s 0x%08x\n", __func__, exp); */
 	ov2775_write_reg(sensor, 0x3467, 0x00);
 	ov2775_write_reg(sensor, 0x3464, 0x04);
 
@@ -150,7 +151,7 @@ int ov2775_g_gain(void *dev, struct ov2775_gain_context *gain)
 	return 0;
 }
 
-int ov2775_g_version(void *dev, __u32 *version)
+int ov2775_g_version(void *dev, __u32 * version)
 {
 	struct ov2775 *sensor = dev;
 	__u8 val = 0;
@@ -182,7 +183,8 @@ int ov2775_s_bayer_pattern(void *dev, __u8 pattern)
 {
 	struct ov2775 *sensor = dev;
 	u8 h_shift = 0, v_shift = 0;
-	u8 val_h, val_l, val;
+	u8 val_h, val_l;
+	u16 val;
 
 	h_shift = pattern % 2;
 	v_shift = pattern / 2;
@@ -221,6 +223,28 @@ int ov2775_s_bayer_pattern(void *dev, __u8 pattern)
 	return 0;
 }
 
+int ov2775_s_hdr(void *dev, bool enable)
+{
+	struct ov2775 *sensor = dev;
+	pr_info("%s: %d\n", __func__, enable);
+	sensor->hdr = enable;
+	ov2775_write_reg(sensor, 0x3190, enable ? 0x05 : 0x08);
+	msleep(5);
+	return 0;
+}
+
+int ov2775_s_fps(void *dev, __u32 fps)
+{
+	struct ov2775 *sensor = dev;
+	pr_info("%s: %d\n", __func__, fps);
+
+	/* minimize to 5 fps */
+	if (fps < 0x04)
+		fps = 0x04;
+	ov2775_write_reg(sensor, 0x3005, fps);
+	return 0;
+}
+
 int ov2775_ioc_qcap(void *dev, void *args)
 {
 	struct v4l2_capability *cap = (struct v4l2_capability *)args;
@@ -234,26 +258,22 @@ long ov2775_priv_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct ov2775 *sensor = client_to_ov2775(client);
 	struct ov2775_reg_setting_t reg;
-	struct ov2775_gain_context *gain;
-	uint32_t val = 0;
 	int ret = -1;
 
-	// pr_info("enter %s\n", __func__);
+	/* pr_info("enter %s\n", __func__); */
 	switch (cmd) {
 	case OV2775IOC_G_GAIN:
-		gain = (struct ov2775_gain_context *)arg;
-		ret = ov2775_g_gain(sensor, gain);
+		ret = ov2775_g_gain(sensor, (struct ov2775_gain_context *)arg);
 		break;
 	case OV2775IOC_S_GAIN:
-		gain = (struct ov2775_gain_context *)arg;
-		ret = ov2775_s_gain(sensor, gain);
+		ret = ov2775_s_gain(sensor, (struct ov2775_gain_context *)arg);
 		break;
 	case OV2775IOC_S_VSGAIN:
-		gain = (struct ov2775_gain_context *)arg;
-		ret = ov2775_s_vsgain(sensor, gain);
+		ret =
+		    ov2775_s_vsgain(sensor, (struct ov2775_gain_context *)arg);
 		break;
 	case OV2775IOC_G_VERSION:
-		ret = ov2775_g_version(sensor, (__u32 *)arg);
+		ret = ov2775_g_version(sensor, (__u32 *) arg);
 		break;
 	case OV2775IOC_STREAMON:
 		ret = ov2775_streamon(sensor);
@@ -262,16 +282,13 @@ long ov2775_priv_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 		ret = ov2775_streamoff(sensor);
 		break;
 	case OV2775IOC_S_EXP:
-		val = *(uint32_t *)arg;
-		ret = ov2775_s_exp(sensor, val);
+		ret = ov2775_s_exp(sensor, *(uint32_t *) arg);
 		break;
 	case OV2775IOC_S_VSEXP:
-		val = *(uint32_t *)arg;
-		ret = ov2775_s_vsexp(sensor, val);
+		ret = ov2775_s_vsexp(sensor, *(uint32_t *) arg);
 		break;
 	case OV2775IOC_S_PATTERN:
-		val = *(uint32_t *)arg;
-		ret = ov2775_s_bayer_pattern(sensor, val);
+		ret = ov2775_s_bayer_pattern(sensor, *(__u8 *) arg);
 		break;
 	case OV2775IOC_WRITE_REG:
 		reg = *(struct ov2775_reg_setting_t *)arg;
@@ -284,11 +301,16 @@ long ov2775_priv_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 	case VIDIOC_QUERYCAP:
 		ret = ov2775_ioc_qcap(NULL, arg);
 		break;
+	case OV2775IOC_S_HDR:
+		ret = ov2775_s_hdr(sensor, *(bool *) arg);
+		break;
+	case OV2775IOC_S_FPS:
+		ret = ov2775_s_fps(sensor, *(__u32 *) arg);
+		break;
 	default:
-		// pr_err("unsupported ov2775 command %d.", cmd);
+		/* pr_err("unsupported ov2775 command %d.", cmd); */
 		break;
 	}
 
 	return ret;
 }
-

@@ -64,13 +64,15 @@ extern MrvAllRegister_t *all_regs;
 int isp_s_hdr(struct isp_ic_dev *dev)
 {
 	struct isp_hdr_context *hdr = &dev->hdr;
-	u32 isp_stitching_ctrl = isp_read_reg(dev, REG_ADDR(isp_stitching_ctrl));
+	u32 isp_stitching_ctrl =
+	    isp_read_reg(dev, REG_ADDR(isp_stitching_ctrl));
 	u32 val;
 	int i;
 
 	pr_info("enter %s\n", __func__);
 
 	val = 0;
+#if 0
 	REG_SET_SLICE(val, STITCHING_FRAME_WIDTH, hdr->width);
 	isp_write_reg(dev, REG_ADDR(isp_stitching_frame_width), val);
 
@@ -92,13 +94,17 @@ int isp_s_hdr(struct isp_ic_dev *dev)
 	isp_write_reg(dev, REG_ADDR(isp_stitching_color_weight), val);
 
 	val = 0;
-	REG_SET_SLICE(val, STITCHING_TRANS_RANGE_START_LINEAR, hdr->start_linear);
-	REG_SET_SLICE(val, STITCHING_TRANS_RANGE_NORM_FACTOR_MUL_LINEAR, hdr->norm_factor_mul_linear);
+	REG_SET_SLICE(val, STITCHING_TRANS_RANGE_START_LINEAR,
+		      hdr->start_linear);
+	REG_SET_SLICE(val, STITCHING_TRANS_RANGE_NORM_FACTOR_MUL_LINEAR,
+		      hdr->norm_factor_mul_linear);
 	isp_write_reg(dev, REG_ADDR(isp_stitching_trans_range_linear), val);
 
 	val = 0;
-	REG_SET_SLICE(val, STITCHING_TRANS_RANGE_START_NONLINEAR, hdr->start_nonlinear);
-	REG_SET_SLICE(val, STITCHING_TRANS_RANGE_NORM_FACTOR_MUL_NONLINEAR, hdr->norm_factor_mul_nonlinear);
+	REG_SET_SLICE(val, STITCHING_TRANS_RANGE_START_NONLINEAR,
+		      hdr->start_nonlinear);
+	REG_SET_SLICE(val, STITCHING_TRANS_RANGE_NORM_FACTOR_MUL_NONLINEAR,
+		      hdr->norm_factor_mul_nonlinear);
 	isp_write_reg(dev, REG_ADDR(isp_stitching_trans_range_nonlinear), val);
 
 	val = 0;
@@ -119,13 +125,14 @@ int isp_s_hdr(struct isp_ic_dev *dev)
 	isp_write_reg(dev, REG_ADDR(isp_stitching_short_exposure), val);
 
 	val = 0;
-	REG_SET_SLICE(val, STITCHING_VERY_SHORT_EXPOSURE_TIME, hdr->very_short_exp);
+	REG_SET_SLICE(val, STITCHING_VERY_SHORT_EXPOSURE_TIME,
+		      hdr->very_short_exp);
 	isp_write_reg(dev, REG_ADDR(isp_stitching_very_short_exposure), val);
 
 	val = 0;
 	REG_SET_SLICE(val, STITCHING_LONG_EXPOSURE_TIME, hdr->long_exp);
 	isp_write_reg(dev, REG_ADDR(isp_stitching_long_exposure), val);
-
+#endif
 	val = 0;
 	REG_SET_SLICE(val, STITCHING_RATIO_LONG_SHORT_1, hdr->ls1);
 	REG_SET_SLICE(val, STITCHING_RATIO_LONG_SHORT_0, hdr->ls0);
@@ -144,14 +151,20 @@ int isp_s_hdr(struct isp_ic_dev *dev)
 
 	for (i = 0; i < 5; i++) {
 		val = 0;
-		REG_SET_SLICE(val, STITCHING_COMPRESS_LUT_2, hdr->compress_lut[i*3+2]);
-		REG_SET_SLICE(val, STITCHING_COMPRESS_LUT_1, hdr->compress_lut[i*3+1]);
-		REG_SET_SLICE(val, STITCHING_COMPRESS_LUT_0, hdr->compress_lut[i*3]);
-		isp_write_reg(dev, REG_ADDR(isp_stitching_compress_lut_0)+i*4, val);
+		REG_SET_SLICE(val, STITCHING_COMPRESS_LUT_2,
+			      hdr->compress_lut[i * 3 + 2]);
+		REG_SET_SLICE(val, STITCHING_COMPRESS_LUT_1,
+			      hdr->compress_lut[i * 3 + 1]);
+		REG_SET_SLICE(val, STITCHING_COMPRESS_LUT_0,
+			      hdr->compress_lut[i * 3]);
+		isp_write_reg(dev,
+			      REG_ADDR(isp_stitching_compress_lut_0) + i * 4,
+			      val);
 	}
 	val = 0;
 	REG_SET_SLICE(val, STITCHING_LONG_SAT_THRESH, hdr->sat_thresh);
-	REG_SET_SLICE(val, STITCHING_LONG_SAT_COMBINE_WEIGHT, hdr->combine_weight);
+	REG_SET_SLICE(val, STITCHING_LONG_SAT_COMBINE_WEIGHT,
+		      hdr->combine_weight);
 	isp_write_reg(dev, REG_ADDR(isp_stitching_long_sat_params), val);
 
 	REG_SET_SLICE(isp_stitching_ctrl, COMBINE_ENABLE_BIT, 1);
@@ -166,7 +179,8 @@ int isp_s_hdr_wb(struct isp_ic_dev *dev)
 {
 	struct isp_hdr_context *hdr = &dev->hdr;
 	u32 val = 0;
-	u32 isp_stitching_ctrl = isp_read_reg(dev, REG_ADDR(isp_stitching_ctrl));
+	u32 isp_stitching_ctrl =
+	    isp_read_reg(dev, REG_ADDR(isp_stitching_ctrl));
 
 	pr_info("enter %s\n", __func__);
 	REG_SET_SLICE(val, STITCHING_EXP0_AWB_GAIN_GR, hdr->gr);
@@ -190,7 +204,8 @@ int isp_s_hdr_wb(struct isp_ic_dev *dev)
 int isp_s_hdr_bls(struct isp_ic_dev *dev)
 {
 	struct isp_hdr_context *hdr = &dev->hdr;
-	u32 isp_stitching_ctrl = isp_read_reg(dev, REG_ADDR(isp_stitching_ctrl));
+	u32 isp_stitching_ctrl =
+	    isp_read_reg(dev, REG_ADDR(isp_stitching_ctrl));
 	u32 val = 0;
 	int i;
 
@@ -198,8 +213,9 @@ int isp_s_hdr_bls(struct isp_ic_dev *dev)
 
 	for (i = 0; i < 12; i++) {
 		val = 0;
-		REG_SET_SLICE(val, STITCHING_BLS_EXP_0_A, hdr->bls[i%4]);
-		isp_write_reg(dev, REG_ADDR(isp_stitching_bls_exp_0_a) + i*4, val);
+		REG_SET_SLICE(val, STITCHING_BLS_EXP_0_A, hdr->bls[i % 4]);
+		isp_write_reg(dev, REG_ADDR(isp_stitching_bls_exp_0_a) + i * 4,
+			      val);
 	}
 	REG_SET_SLICE(isp_stitching_ctrl, CFG_UPD, 1);
 	isp_write_reg(dev, REG_ADDR(isp_stitching_ctrl), 0x4c0221);
@@ -211,10 +227,17 @@ int isp_enable_hdr(struct isp_ic_dev *dev)
 {
 	u32 addr, isp_stitching_ctrl;
 	u32 dpcl;
+	int val = 0;
 
 	pr_info("enter %s\n", __func__);
 	addr = REG_ADDR(isp_stitching_ctrl);
 	isp_stitching_ctrl = isp_read_reg(dev, addr);
+	REG_SET_SLICE(val, STITCHING_FRAME_WIDTH, dev->ctx.acqWindow.width);
+	isp_write_reg(dev, REG_ADDR(isp_stitching_frame_width), val);
+	val = 0;
+	REG_SET_SLICE(val, STITCHING_FRAME_HEIGHT, dev->ctx.acqWindow.height);
+	isp_write_reg(dev, REG_ADDR(isp_stitching_frame_height), val);
+
 	REG_SET_SLICE(isp_stitching_ctrl, COMBINE_ENABLE_BIT, 0);
 	isp_write_reg(dev, addr, isp_stitching_ctrl);
 	dpcl = isp_read_reg(dev, REG_ADDR(vi_dpcl));

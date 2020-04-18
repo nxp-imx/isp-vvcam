@@ -55,7 +55,7 @@
 #ifdef __KERNEL__
 
 struct block_list {
-	struct block_list  *next;
+	struct block_list *next;
 	u64 base_addr;
 	u64 size;
 };
@@ -82,13 +82,12 @@ int cma_init(u64 base, u64 size, u64 align)
 	g_cma_mem_ctx = kzalloc(sizeof(struct cma_mem_context), GFP_KERNEL);
 	memset(g_cma_mem_ctx, 0, sizeof(*g_cma_mem_ctx));
 
-	g_cma_mem_ctx->base = (base + align-1) & ~(align-1);
+	g_cma_mem_ctx->base = (base + align - 1) & ~(align - 1);
 	g_cma_mem_ctx->size = size - (g_cma_mem_ctx->base - base);
 	g_cma_mem_ctx->align = align;
 
 	pr_info("addr:0x%llx, size:0x%llx, alignment:0x%llx.\n",
-		g_cma_mem_ctx->base, g_cma_mem_ctx->size,
-		g_cma_mem_ctx->align);
+		g_cma_mem_ctx->base, g_cma_mem_ctx->size, g_cma_mem_ctx->align);
 
 	item = kzalloc(sizeof(struct block_list), GFP_KERNEL);
 	if (!item) {
@@ -97,8 +96,8 @@ int cma_init(u64 base, u64 size, u64 align)
 	}
 
 	item->next = NULL;
-	item->base_addr  = g_cma_mem_ctx->base;
-	item->size  = g_cma_mem_ctx->size;
+	item->base_addr = g_cma_mem_ctx->base;
+	item->size = g_cma_mem_ctx->size;
 
 	g_cma_mem_ctx->free_blocks.next = item;
 	g_cma_mem_ctx->used_blocks.next = NULL;
@@ -112,8 +111,8 @@ int cma_release(void)
 	struct block_list *item, *pFree;
 
 	if (!g_cma_mem_ctx->free_blocks.next
-		|| g_cma_mem_ctx->free_blocks.next->next
-		|| g_cma_mem_ctx->used_blocks.next) {
+	    || g_cma_mem_ctx->free_blocks.next->next
+	    || g_cma_mem_ctx->used_blocks.next) {
 		pr_err("Warning memory is not free.\n");
 	}
 
@@ -121,7 +120,7 @@ int cma_release(void)
 	while (item) {
 		pFree = item;
 		item = item->next;
-	//	kzfree(pFree);
+		/*      kzfree(pFree); */
 	}
 	kzfree(g_cma_mem_ctx);
 	g_cma_mem_ctx = NULL;
@@ -145,7 +144,7 @@ u64 cma_alloc(u64 size)
 
 	size += g_cma_mem_ctx->align - 1;
 	size &= ~(g_cma_mem_ctx->align - 1);
-	//TODO: need to lock this block
+	/*TODO: need to lock this block */
 	item = &g_cma_mem_ctx->free_blocks;
 	while (item->next && (item->next->size < size))
 		item = item->next;
@@ -153,12 +152,11 @@ u64 cma_alloc(u64 size)
 	found = item->next;
 	if (found) {
 		item->next = found->next;
-		if ((found->size - size) >=
-			g_cma_mem_ctx->align) {
+		if ((found->size - size) >= g_cma_mem_ctx->align) {
 			item = kzalloc(sizeof(struct block_list), GFP_KERNEL);
 			if (item) {
-				item->base_addr  = found->base_addr + size;
-				item->size  = found->size - size;
+				item->base_addr = found->base_addr + size;
+				item->size = found->size - size;
 				found->size = size;
 				pr_info("new free block: base_addr=0x%llx,\n",
 					item->base_addr);
@@ -183,7 +181,7 @@ void cma_free(u64 addr)
 	pr_info("block to free: base_addr=0x%llx\n", addr);
 
 	if (addr) {
-		//TODO: need to lock this block
+		/*TODO: need to lock this block */
 		struct block_list *item, *free_item;
 
 		item = &g_cma_mem_ctx->used_blocks;
@@ -193,21 +191,25 @@ void cma_free(u64 addr)
 		free_item = item->next;
 		item->next = free_item->next;
 		if (((item->base_addr + item->size) != free_item->base_addr) ||
-			((free_item->base_addr + item->size) != ((free_item->next) ?
-			free_item->next->base_addr :
-			(g_cma_mem_ctx->base + g_cma_mem_ctx->size)))) {
+		    ((free_item->base_addr + item->size) != ((free_item->next) ?
+							     free_item->next->
+							     base_addr
+							     : (g_cma_mem_ctx->
+								base +
+								g_cma_mem_ctx->
+								size)))) {
 			struct block_list *loc_item;
 			struct block_list *pre_item = NULL;
 			struct block_list *success_item = NULL;
 			loc_item = &g_cma_mem_ctx->free_blocks;
 			while (loc_item->next) {
 				if ((loc_item->next->base_addr +
-					loc_item->next->size) ==
-					free_item->base_addr) {
+				     loc_item->next->size) ==
+				    free_item->base_addr) {
 					pre_item = loc_item;
 				}
 				if ((free_item->base_addr + free_item->size) ==
-					loc_item->next->base_addr) {
+				    loc_item->next->base_addr) {
 					success_item = loc_item;
 				}
 				loc_item = loc_item->next;
@@ -222,7 +224,7 @@ void cma_free(u64 addr)
 
 			if (pre_item) {
 				loc_item = pre_item->next;
-				free_item->base_addr  = loc_item->base_addr;
+				free_item->base_addr = loc_item->base_addr;
 				free_item->size += loc_item->size;
 				pre_item->next = loc_item->next;
 				kzfree(loc_item);
@@ -243,7 +245,7 @@ static inline void add_free_blocks(struct block_list *free_item)
 		item = item->next;
 
 	free_item->next = item->next;
-	item->next  = free_item;
+	item->next = free_item;
 
 	item = &g_cma_mem_ctx->free_blocks;
 	while (item->next)

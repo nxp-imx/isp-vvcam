@@ -74,7 +74,8 @@ int isp_enable_gcmono(struct isp_ic_dev *dev)
 
 	pr_info("enter %s\n", __func__);
 	REG_SET_SLICE(isp_gcmono_ctrl, ISP_GCMONO_CFG_DONE, 1);
-	REG_SET_SLICE(isp_gcmono_ctrl, ISP_GCMONO_SWITCH, ISP_GCMONO_SWITCH_ENABLE);
+	REG_SET_SLICE(isp_gcmono_ctrl, ISP_GCMONO_SWITCH,
+		      ISP_GCMONO_SWITCH_ENABLE);
 	isp_write_reg(dev, REG_ADDR(isp_gcmono_ctrl), isp_gcmono_ctrl);
 	REG_SET_SLICE(isp_ctrl, ISP_GCMONO_MODE, dev->gcmono.mode);
 	REG_SET_SLICE(isp_ctrl, ISP_GCMONO_ENABLE, 1);
@@ -94,7 +95,8 @@ int isp_disable_gcmono(struct isp_ic_dev *dev)
 	u32 isp_ctrl = isp_read_reg(dev, REG_ADDR(isp_ctrl));
 
 	pr_info("enter %s\n", __func__);
-	REG_SET_SLICE(isp_gcmono_ctrl, ISP_GCMONO_SWITCH, ISP_GCMONO_SWITCH_DISABLE);
+	REG_SET_SLICE(isp_gcmono_ctrl, ISP_GCMONO_SWITCH,
+		      ISP_GCMONO_SWITCH_DISABLE);
 	isp_write_reg(dev, REG_ADDR(isp_gcmono_ctrl), isp_gcmono_ctrl);
 	REG_SET_SLICE(isp_ctrl, ISP_GCMONO_ENABLE, 0);
 	isp_write_reg(dev, REG_ADDR(isp_ctrl), isp_ctrl);
@@ -115,9 +117,9 @@ int isp_s_gcmonopx(struct isp_ic_dev *dev, struct isp_gcmono_data *data)
 	u32 gc_px_data = 0;
 
 	pr_info("enter %s\n", __func__);
-	p_table = (u32 *)&data->px;
+	p_table = (u32 *) & data->px;
 	for (i = 0; i < 64; i++) {
-		gc_px_data |= (*(p_table + i) << (i % 6 * 5));  //
+		gc_px_data |= (*(p_table + i) << (i % 6 * 5));
 		if (i % 6 == 5 || i == 63) {
 			isp_write_reg(dev, isp_gc_px_reg, gc_px_data);
 			isp_gc_px_reg += 4;
@@ -127,7 +129,7 @@ int isp_s_gcmonopx(struct isp_ic_dev *dev, struct isp_gcmono_data *data)
 #endif
 }
 
-int isp_s_gcmonoWriteData(struct isp_ic_dev *dev, u32 *tblX, u32 *tblY)
+int isp_s_gcmonoWriteData(struct isp_ic_dev *dev, u32 * tblX, u32 * tblY)
 {
 #ifndef ISP_GCMONO
 	pr_err("unsupported function %s", __func__);
@@ -143,11 +145,13 @@ int isp_s_gcmonoWriteData(struct isp_ic_dev *dev, u32 *tblX, u32 *tblY)
 	isp_write_reg(dev, REG_ADDR(isp_gcmono_x_addr), 0);
 	for (i = 0; i < 64; i++) {
 		isp_gc_y_data = *(tblY + i);
-		isp_write_reg(dev, REG_ADDR(isp_gcmono_y_write_data), isp_gc_y_data);
+		isp_write_reg(dev, REG_ADDR(isp_gcmono_y_write_data),
+			      isp_gc_y_data);
 	}
 	for (i = 0; i < 63; i++) {
 		isp_gc_x_data = *(tblX + i);
-		isp_write_reg(dev, REG_ADDR(isp_gcmono_x_write_data), isp_gc_x_data);
+		isp_write_reg(dev, REG_ADDR(isp_gcmono_x_write_data),
+			      isp_gc_x_data);
 	}
 #endif
 }
@@ -164,14 +168,17 @@ int isp_s_gcmono(struct isp_ic_dev *dev, struct isp_gcmono_data *data)
 	int i;
 
 	pr_info("enter %s\n", __func__);
-	REG_SET_SLICE(isp_gcmono_ctrl, ISP_GCMONO_SWITCH, ISP_GCMONO_SWITCH_DISABLE);
-	REG_SET_SLICE(isp_gcmono_ctrl, ISP_GCMONO_CFG_DONE, ISP_GCMONO_CFG_DONE_SET_CURVE);
+	REG_SET_SLICE(isp_gcmono_ctrl, ISP_GCMONO_SWITCH,
+		      ISP_GCMONO_SWITCH_DISABLE);
+	REG_SET_SLICE(isp_gcmono_ctrl, ISP_GCMONO_CFG_DONE,
+		      ISP_GCMONO_CFG_DONE_SET_CURVE);
 	isp_write_reg(dev, REG_ADDR(isp_gcmono_ctrl), isp_gcmono_ctrl);
-	p_table = (u8 *)&data->basePara;
+	p_table = (u8 *) & data->basePara;
 	for (i = 0; i < 1024; i++) {
-		isp_gc_para_base |= (*(p_table + i) << (i % 4*8));
+		isp_gc_para_base |= (*(p_table + i) << (i % 4 * 8));
 		if (i % 4 == 3) {
-			isp_write_reg(dev, REG_ADDR(isp_gcmono_para_base), isp_gc_para_base);
+			isp_write_reg(dev, REG_ADDR(isp_gcmono_para_base),
+				      isp_gc_para_base);
 			isp_gc_para_base = 0;
 		}
 	}

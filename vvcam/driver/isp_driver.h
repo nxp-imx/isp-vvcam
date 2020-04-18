@@ -64,7 +64,8 @@ struct isp_device {
 	u32 isp_open_cnt;
 };
 
-struct isp_device *isp_hw_register(struct v4l2_device *vdev, u64 base, u64 size);
+struct isp_device *isp_hw_register(struct v4l2_device *vdev, u64 base,
+				   u64 size);
 int isp_hw_unregister(struct isp_device *isp);
 
-#endif  // _ISP_DRIVER_H_
+#endif /* _ISP_DRIVER_H_ */

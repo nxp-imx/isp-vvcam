@@ -73,11 +73,13 @@ int isp_s_dpf(struct isp_ic_dev *dev)
 	pr_info("enter %s\n", __func__);
 
 	if (!dpf->enable) {
-		isp_write_reg(dev, REG_ADDR(isp_dpf_mode), isp_dpf_mode & ~MRV_DPF_DPF_ENABLE_MASK);
+		isp_write_reg(dev, REG_ADDR(isp_dpf_mode),
+			      isp_dpf_mode & ~MRV_DPF_DPF_ENABLE_MASK);
 		return 0;
 	}
 
-	isp_dpf_mode &= (MRV_DPF_DPF_ENABLE_MASK | MRV_DPF_NLL_SEGMENTATION_MASK);
+	isp_dpf_mode &=
+	    (MRV_DPF_DPF_ENABLE_MASK | MRV_DPF_NLL_SEGMENTATION_MASK);
 
 	switch (dpf->gain_usage) {
 	case IC_DPF_GAIN_USAGE_DISABLED:
@@ -111,7 +113,7 @@ int isp_s_dpf(struct isp_ic_dev *dev)
 		REG_SET_SLICE(isp_dpf_mode, MRV_DPF_AWB_GAIN_COMP, 1);
 		break;
 	default:
-		pr_err("%s: unsupported gain usage\n",  __func__);
+		pr_err("%s: unsupported gain usage\n", __func__);
 		break;
 	}
 
@@ -123,7 +125,9 @@ int isp_s_dpf(struct isp_ic_dev *dev)
 		REG_SET_SLICE(isp_dpf_mode, MRV_DPF_RB_FILTER_SIZE, 1U);
 		break;
 	default:
-		pr_err("%s: unsupported filter kernel size for red/blue pixel\n",  __func__);
+		pr_err
+		    ("%s: unsupported filter kernel size for red/blue pixel\n",
+		     __func__);
 		break;
 	}
 
@@ -151,17 +155,22 @@ int isp_s_dpf(struct isp_ic_dev *dev)
 	REG_SET_SLICE(value, MRV_DPF_S_WEIGHT_RB5, dpf->weight_rb[4]);
 	REG_SET_SLICE(value, MRV_DPF_S_WEIGHT_RB6, dpf->weight_rb[5]);
 	isp_write_reg(dev, REG_ADDR(isp_dpf_s_weight_rb_5_6), value);
-	isp_write_reg(dev, REG_ADDR(isp_dpf_nf_gain_r),  dpf->nf_gain_r);
+	isp_write_reg(dev, REG_ADDR(isp_dpf_nf_gain_r), dpf->nf_gain_r);
 	isp_write_reg(dev, REG_ADDR(isp_dpf_nf_gain_gr), dpf->nf_gain_gr);
 	isp_write_reg(dev, REG_ADDR(isp_dpf_nf_gain_gb), dpf->nf_gain_gb);
-	isp_write_reg(dev, REG_ADDR(isp_dpf_nf_gain_b),  dpf->nf_gain_b);
-	isp_write_reg(dev, REG_ADDR(isp_dpf_strength_r), (MRV_DPF_INV_WEIGHT_R_MASK & dpf->strength_r));
-	isp_write_reg(dev, REG_ADDR(isp_dpf_strength_g), (MRV_DPF_INV_WEIGHT_G_MASK & dpf->strength_g));
-	isp_write_reg(dev, REG_ADDR(isp_dpf_strength_b), (MRV_DPF_INV_WEIGHT_B_MASK & dpf->strength_b));
+	isp_write_reg(dev, REG_ADDR(isp_dpf_nf_gain_b), dpf->nf_gain_b);
+	isp_write_reg(dev, REG_ADDR(isp_dpf_strength_r),
+		      (MRV_DPF_INV_WEIGHT_R_MASK & dpf->strength_r));
+	isp_write_reg(dev, REG_ADDR(isp_dpf_strength_g),
+		      (MRV_DPF_INV_WEIGHT_G_MASK & dpf->strength_g));
+	isp_write_reg(dev, REG_ADDR(isp_dpf_strength_b),
+		      (MRV_DPF_INV_WEIGHT_B_MASK & dpf->strength_b));
 
 	for (i = 0; i < 17; i++) {
 		if (dpf->denoise_talbe[i] <= MRV_DPF_NLL_COEFF_N_MASK) {
-			isp_write_reg(dev, REG_ADDR(nlf_lookup_table_block_arr[i]), dpf->denoise_talbe[i]);
+			isp_write_reg(dev,
+				      REG_ADDR(nlf_lookup_table_block_arr[i]),
+				      dpf->denoise_talbe[i]);
 		}
 	}
 
@@ -177,7 +186,8 @@ int isp_s_dpf(struct isp_ic_dev *dev)
 	}
 
 	isp_write_reg(dev, REG_ADDR(isp_dpf_mode), isp_dpf_mode);
-	isp_write_reg(dev, REG_ADDR(isp_dpf_mode), isp_dpf_mode | MRV_DPF_DPF_ENABLE_MASK);
+	isp_write_reg(dev, REG_ADDR(isp_dpf_mode),
+		      isp_dpf_mode | MRV_DPF_DPF_ENABLE_MASK);
 
 	return 0;
 }

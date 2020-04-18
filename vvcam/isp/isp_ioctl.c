@@ -51,7 +51,7 @@
  *
  *****************************************************************************/
 
-// process public and sample isp command. for complex modules, need new files.
+/* process public and sample isp command. for complex modules, need new files.*/
 #ifdef __KERNEL__
 #include "isp_driver.h"
 #include "cma.h"
@@ -64,10 +64,13 @@ volatile MrvAllRegister_t *all_regs = NULL;
 
 #ifndef __KERNEL__
 #define ISP_REG_SIZE 0x10000
+static HalHandle_t hal_handle;
+
 void isp_ic_set_hal(HalHandle_t hal)
 {
 	hal_handle = hal;
 }
+
 void isp_write_reg(struct isp_ic_dev *dev, u32 offset, u32 val)
 {
 	if (offset >= ISP_REG_SIZE)
@@ -75,17 +78,18 @@ void isp_write_reg(struct isp_ic_dev *dev, u32 offset, u32 val)
 	HalWriteReg(hal_handle, offset, val);
 }
 
-u32 isp_read_reg(struct isp_ic_dev *dev, u32 offset)
+u32 isp_read_reg(struct isp_ic_dev * dev, u32 offset)
 {
 	if (offset >= ISP_REG_SIZE)
 		return 0;
 	return HalReadReg(hal_handle, offset);
 }
 
-void isp_copy_data(void *dst, void *src, int size)
+long isp_copy_data(void *dst, void *src, int size)
 {
 	if (dst != src)
 		memcpy(dst, src, size);
+	return 0;
 }
 #else
 void isp_write_reg(struct isp_ic_dev *dev, u32 offset, u32 val)
@@ -95,7 +99,7 @@ void isp_write_reg(struct isp_ic_dev *dev, u32 offset, u32 val)
 	__raw_writel(val, dev->base + offset);
 }
 
-u32 isp_read_reg(struct isp_ic_dev *dev, u32 offset)
+u32 isp_read_reg(struct isp_ic_dev * dev, u32 offset)
 {
 	u32 val = 0;
 
@@ -108,13 +112,13 @@ u32 isp_read_reg(struct isp_ic_dev *dev, u32 offset)
 
 int isp_reset(struct isp_ic_dev *dev)
 {
-	pr_info("enter %s\n", __func__);
 #ifdef USE_FPGA
 	u32 reg = 0;
 	reg = isp_read_reg(dev, 0x308300);
 	__raw_writel(reg & 0xFEFFFFFF, dev->reset);
 	__raw_writel(reg | 0x01000000, dev->reset);
 #endif
+	pr_info("enter %s\n", __func__);
 	isp_write_reg(dev, REG_ADDR(vi_ircl), 0xFFFFFFFF);
 	isp_write_reg(dev, REG_ADDR(vi_ircl), 0x0);
 	return 0;
@@ -149,7 +153,8 @@ int isp_enable_bls(struct isp_ic_dev *dev)
 	u32 isp_bls_ctrl = isp_read_reg(dev, REG_ADDR(isp_bls_ctrl));
 
 	pr_info("enter %s\n", __func__);
-	REG_SET_SLICE(isp_bls_ctrl, MRV_BLS_BLS_ENABLE, MRV_BLS_BLS_ENABLE_PROCESS);
+	REG_SET_SLICE(isp_bls_ctrl, MRV_BLS_BLS_ENABLE,
+		      MRV_BLS_BLS_ENABLE_PROCESS);
 	isp_write_reg(dev, REG_ADDR(isp_bls_ctrl), isp_bls_ctrl);
 	return 0;
 }
@@ -159,7 +164,8 @@ int isp_disable_bls(struct isp_ic_dev *dev)
 	u32 isp_bls_ctrl = isp_read_reg(dev, REG_ADDR(isp_bls_ctrl));
 
 	pr_info("enter %s\n", __func__);
-	REG_SET_SLICE(isp_bls_ctrl, MRV_BLS_BLS_ENABLE, MRV_BLS_BLS_ENABLE_BYPASS);
+	REG_SET_SLICE(isp_bls_ctrl, MRV_BLS_BLS_ENABLE,
+		      MRV_BLS_BLS_ENABLE_BYPASS);
 	isp_write_reg(dev, REG_ADDR(isp_bls_ctrl), isp_bls_ctrl);
 	return 0;
 }
@@ -231,14 +237,19 @@ int isp_s_input(struct isp_ic_dev *dev)
 	REG_SET_SLICE(isp_ctrl, MRV_ISP_ISP_MODE, isp_ctx.mode);
 	isp_acq_prop = isp_read_reg(dev, REG_ADDR(isp_acq_prop));
 	REG_SET_SLICE(isp_acq_prop, MRV_ISP_SAMPLE_EDGE, isp_ctx.sample_edge);
-	REG_SET_SLICE(isp_acq_prop, MRV_ISP_HSYNC_POL, isp_ctx.hSyncLowPolarity);
-	REG_SET_SLICE(isp_acq_prop, MRV_ISP_VSYNC_POL, isp_ctx.vSyncLowPolarity);
+	REG_SET_SLICE(isp_acq_prop, MRV_ISP_HSYNC_POL,
+		      isp_ctx.hSyncLowPolarity);
+	REG_SET_SLICE(isp_acq_prop, MRV_ISP_VSYNC_POL,
+		      isp_ctx.vSyncLowPolarity);
 	REG_SET_SLICE(isp_acq_prop, MRV_ISP_BAYER_PAT, isp_ctx.bayer_pattern);
 	REG_SET_SLICE(isp_acq_prop, MRV_ISP_CONV_422, isp_ctx.sub_sampling);
 	REG_SET_SLICE(isp_acq_prop, MRV_ISP_CCIR_SEQ, isp_ctx.seq_ccir);
-	REG_SET_SLICE(isp_acq_prop, MRV_ISP_FIELD_SELECTION, isp_ctx.field_selection);
-	REG_SET_SLICE(isp_acq_prop, MRV_ISP_INPUT_SELECTION, isp_ctx.input_selection);
-	REG_SET_SLICE(isp_acq_prop, MRV_ISP_LATENCY_FIFO_SELECTION, isp_ctx.latency_fifo);
+	REG_SET_SLICE(isp_acq_prop, MRV_ISP_FIELD_SELECTION,
+		      isp_ctx.field_selection);
+	REG_SET_SLICE(isp_acq_prop, MRV_ISP_INPUT_SELECTION,
+		      isp_ctx.input_selection);
+	REG_SET_SLICE(isp_acq_prop, MRV_ISP_LATENCY_FIFO_SELECTION,
+		      isp_ctx.latency_fifo);
 
 	isp_write_reg(dev, REG_ADDR(isp_acq_prop), isp_acq_prop);
 	isp_write_reg(dev, REG_ADDR(isp_acq_h_offs), isp_ctx.acqWindow.x);
@@ -246,22 +257,46 @@ int isp_s_input(struct isp_ic_dev *dev)
 	isp_write_reg(dev, REG_ADDR(isp_acq_h_size), isp_ctx.acqWindow.width);
 	isp_write_reg(dev, REG_ADDR(isp_acq_v_size), isp_ctx.acqWindow.height);
 
-	isp_write_reg(dev, REG_ADDR(isp_out_h_offs), (isp_ctx.ofWindow.x & MRV_ISP_ISP_OUT_H_OFFS_MASK));
-	isp_write_reg(dev, REG_ADDR(isp_out_v_offs), (isp_ctx.ofWindow.y & MRV_ISP_ISP_OUT_V_OFFS_MASK));
-	isp_write_reg(dev, REG_ADDR(isp_out_h_size), (isp_ctx.ofWindow.width & MRV_ISP_ISP_OUT_H_SIZE_MASK));
-	isp_write_reg(dev, REG_ADDR(isp_out_v_size), (isp_ctx.ofWindow.height & MRV_ISP_ISP_OUT_V_SIZE_MASK));
+	isp_write_reg(dev, REG_ADDR(isp_out_h_offs),
+		      (isp_ctx.ofWindow.x & MRV_ISP_ISP_OUT_H_OFFS_MASK));
+	isp_write_reg(dev, REG_ADDR(isp_out_v_offs),
+		      (isp_ctx.ofWindow.y & MRV_ISP_ISP_OUT_V_OFFS_MASK));
+	isp_write_reg(dev, REG_ADDR(isp_out_h_size),
+		      (isp_ctx.ofWindow.width & MRV_ISP_ISP_OUT_H_SIZE_MASK));
+	isp_write_reg(dev, REG_ADDR(isp_out_v_size),
+		      (isp_ctx.ofWindow.height & MRV_ISP_ISP_OUT_V_SIZE_MASK));
 
-	isp_write_reg(dev, REG_ADDR(isp_is_h_offs), (isp_ctx.isWindow.x & MRV_IS_IS_H_OFFS_MASK));
-	isp_write_reg(dev, REG_ADDR(isp_is_v_offs), (isp_ctx.isWindow.y & MRV_IS_IS_V_OFFS_MASK));
-	isp_write_reg(dev, REG_ADDR(isp_is_h_size), (isp_ctx.isWindow.width & MRV_IS_IS_H_SIZE_MASK));
-	isp_write_reg(dev, REG_ADDR(isp_is_v_size), (isp_ctx.isWindow.height & MRV_IS_IS_V_SIZE_MASK));
+	isp_write_reg(dev, REG_ADDR(isp_is_h_offs),
+		      (isp_ctx.isWindow.x & MRV_IS_IS_H_OFFS_MASK));
+	isp_write_reg(dev, REG_ADDR(isp_is_v_offs),
+		      (isp_ctx.isWindow.y & MRV_IS_IS_V_OFFS_MASK));
+	isp_write_reg(dev, REG_ADDR(isp_is_h_size),
+		      (isp_ctx.isWindow.width & MRV_IS_IS_H_SIZE_MASK));
+	isp_write_reg(dev, REG_ADDR(isp_is_v_size),
+		      (isp_ctx.isWindow.height & MRV_IS_IS_V_SIZE_MASK));
 
 	isp_demosaic = isp_read_reg(dev, REG_ADDR(isp_demosaic));
-	REG_SET_SLICE(isp_demosaic, MRV_ISP_DEMOSAIC_BYPASS, isp_ctx.bypass_mode);
-	REG_SET_SLICE(isp_demosaic, MRV_ISP_DEMOSAIC_TH, isp_ctx.demosaic_threshold);
+	REG_SET_SLICE(isp_demosaic, MRV_ISP_DEMOSAIC_BYPASS,
+		      isp_ctx.bypass_mode);
+	REG_SET_SLICE(isp_demosaic, MRV_ISP_DEMOSAIC_TH,
+		      isp_ctx.demosaic_threshold);
 	isp_write_reg(dev, REG_ADDR(isp_demosaic), isp_demosaic);
 	isp_write_reg(dev, REG_ADDR(isp_ctrl), isp_ctrl);
 	return 0;
+}
+
+int isp_s_demosaic(struct isp_ic_dev *dev)
+{
+	struct isp_context isp_ctx = *(&dev->ctx);
+	u32 isp_demosaic;
+	pr_info("enter %s\n", __func__);
+	isp_demosaic = isp_read_reg(dev, REG_ADDR(isp_demosaic));
+	REG_SET_SLICE(isp_demosaic, MRV_ISP_DEMOSAIC_BYPASS,
+		      isp_ctx.bypass_mode);
+	REG_SET_SLICE(isp_demosaic, MRV_ISP_DEMOSAIC_TH,
+		      isp_ctx.demosaic_threshold);
+	isp_write_reg(dev, REG_ADDR(isp_demosaic), isp_demosaic);
+	return 0;;
 }
 
 int isp_s_tpg(struct isp_ic_dev *dev)
@@ -349,7 +384,8 @@ int isp_enable_awb(struct isp_ic_dev *dev)
 	pr_info("enter %s\n", __func__);
 	REG_SET_SLICE(isp_awb_prop, MRV_ISP_AWB_MODE, MRV_ISP_AWB_MODE_MEAS);
 	isp_write_reg(dev, REG_ADDR(isp_awb_prop), isp_awb_prop);
-	isp_write_reg(dev, REG_ADDR(isp_imsc), isp_imsc | MRV_ISP_IMSC_AWB_DONE_MASK);
+	isp_write_reg(dev, REG_ADDR(isp_imsc),
+		      isp_imsc | MRV_ISP_IMSC_AWB_DONE_MASK);
 	return 0;
 }
 
@@ -361,7 +397,8 @@ int isp_disable_awb(struct isp_ic_dev *dev)
 	pr_info("enter %s\n", __func__);
 	REG_SET_SLICE(isp_awb_prop, MRV_ISP_AWB_MODE, MRV_ISP_AWB_MODE_NOMEAS);
 	isp_write_reg(dev, REG_ADDR(isp_awb_prop), isp_awb_prop);
-	isp_write_reg(dev, REG_ADDR(isp_imsc), isp_imsc & ~MRV_ISP_IMSC_AWB_DONE_MASK);
+	isp_write_reg(dev, REG_ADDR(isp_imsc),
+		      isp_imsc & ~MRV_ISP_IMSC_AWB_DONE_MASK);
 	return 0;
 }
 
@@ -377,19 +414,26 @@ int isp_s_awb(struct isp_ic_dev *dev)
 	isp_awb_prop = isp_read_reg(dev, REG_ADDR(isp_awb_prop));
 
 	if (awb.mode == MRV_ISP_AWB_MEAS_MODE_YCBCR) {
-		REG_SET_SLICE(isp_awb_prop, MRV_ISP_AWB_MEAS_MODE, MRV_ISP_AWB_MEAS_MODE_YCBCR);
+		REG_SET_SLICE(isp_awb_prop, MRV_ISP_AWB_MEAS_MODE,
+			      MRV_ISP_AWB_MEAS_MODE_YCBCR);
 		if (awb.max_y == 0) {
-			REG_SET_SLICE(isp_awb_prop, MRV_ISP_AWB_MAX_EN, MRV_ISP_AWB_MAX_EN_DISABLE);
+			REG_SET_SLICE(isp_awb_prop, MRV_ISP_AWB_MAX_EN,
+				      MRV_ISP_AWB_MAX_EN_DISABLE);
 		} else {
-			REG_SET_SLICE(isp_awb_prop, MRV_ISP_AWB_MAX_EN, MRV_ISP_AWB_MAX_EN_ENABLE);
+			REG_SET_SLICE(isp_awb_prop, MRV_ISP_AWB_MAX_EN,
+				      MRV_ISP_AWB_MAX_EN_ENABLE);
 		}
 	} else if (awb.mode == MRV_ISP_AWB_MEAS_MODE_RGB) {
-		 REG_SET_SLICE(isp_awb_prop, MRV_ISP_AWB_MAX_EN, MRV_ISP_AWB_MAX_EN_DISABLE);
-		 REG_SET_SLICE(isp_awb_prop, MRV_ISP_AWB_MEAS_MODE, MRV_ISP_AWB_MEAS_MODE_RGB);
+		REG_SET_SLICE(isp_awb_prop, MRV_ISP_AWB_MAX_EN,
+			      MRV_ISP_AWB_MAX_EN_DISABLE);
+		REG_SET_SLICE(isp_awb_prop, MRV_ISP_AWB_MEAS_MODE,
+			      MRV_ISP_AWB_MEAS_MODE_RGB);
 	}
+	isp_write_reg(dev, REG_ADDR(isp_awb_prop), isp_awb_prop);
 
 	REG_SET_SLICE(isp_awb_thresh, MRV_ISP_AWB_MAX_Y, awb.max_y);
-	REG_SET_SLICE(isp_awb_thresh, MRV_ISP_AWB_MIN_Y__MAX_G, awb.min_y_max_g);
+	REG_SET_SLICE(isp_awb_thresh, MRV_ISP_AWB_MIN_Y__MAX_G,
+		      awb.min_y_max_g);
 	REG_SET_SLICE(isp_awb_thresh, MRV_ISP_AWB_MAX_CSUM, awb.max_c_sum);
 	REG_SET_SLICE(isp_awb_thresh, MRV_ISP_AWB_MIN_C, awb.min_c);
 	isp_write_reg(dev, REG_ADDR(isp_awb_thresh), isp_awb_thresh);
@@ -398,14 +442,20 @@ int isp_s_awb(struct isp_ic_dev *dev)
 	REG_SET_SLICE(isp_awb_ref, MRV_ISP_AWB_REF_CB__MAX_B, awb.refcb_max_b);
 	isp_write_reg(dev, REG_ADDR(isp_awb_ref), isp_awb_ref);
 	isp_write_reg(dev, REG_ADDR(isp_awb_frames), 0);
-	isp_write_reg(dev, REG_ADDR(isp_awb_h_offs), (MRV_ISP_AWB_H_OFFS_MASK & awb.window.x));
-	isp_write_reg(dev, REG_ADDR(isp_awb_v_offs), (MRV_ISP_AWB_V_OFFS_MASK & awb.window.y));
-	isp_write_reg(dev, REG_ADDR(isp_awb_h_size), (MRV_ISP_AWB_H_SIZE_MASK & awb.window.width));
-	isp_write_reg(dev, REG_ADDR(isp_awb_v_size), (MRV_ISP_AWB_V_SIZE_MASK & awb.window.height));
-	isp_write_reg(dev, REG_ADDR(isp_awb_prop), isp_awb_prop);
+	isp_write_reg(dev, REG_ADDR(isp_awb_h_offs),
+		      (MRV_ISP_AWB_H_OFFS_MASK & awb.window.x));
+	isp_write_reg(dev, REG_ADDR(isp_awb_v_offs),
+		      (MRV_ISP_AWB_V_OFFS_MASK & awb.window.y));
+	isp_write_reg(dev, REG_ADDR(isp_awb_h_size),
+		      (MRV_ISP_AWB_H_SIZE_MASK & awb.window.width));
+	isp_write_reg(dev, REG_ADDR(isp_awb_v_size),
+		      (MRV_ISP_AWB_V_SIZE_MASK & awb.window.height));
+
+	gain_data = 0UL;
 	REG_SET_SLICE(gain_data, MRV_ISP_AWB_GAIN_R, awb.gain_r);
 	REG_SET_SLICE(gain_data, MRV_ISP_AWB_GAIN_B, awb.gain_b);
 	isp_write_reg(dev, REG_ADDR(isp_awb_gain_rb), gain_data);
+
 	gain_data = 0UL;
 	REG_SET_SLICE(gain_data, MRV_ISP_AWB_GAIN_GR, awb.gain_gr);
 	REG_SET_SLICE(gain_data, MRV_ISP_AWB_GAIN_GB, awb.gain_gb);
@@ -435,7 +485,8 @@ int isp_s_is(struct isp_ic_dev *dev)
 	isp_write_reg(dev, REG_ADDR(isp_is_v_offs), is.window.y);
 	isp_write_reg(dev, REG_ADDR(isp_is_h_size), is.window.width);
 	isp_write_reg(dev, REG_ADDR(isp_is_v_size), is.window.height);
-	isp_write_reg(dev, REG_ADDR(isp_is_recenter), is.recenter & MRV_IS_IS_RECENTER_MASK);
+	isp_write_reg(dev, REG_ADDR(isp_is_recenter),
+		      is.recenter & MRV_IS_IS_RECENTER_MASK);
 	isp_write_reg(dev, REG_ADDR(isp_is_max_dx), is.max_dx);
 	isp_write_reg(dev, REG_ADDR(isp_is_max_dy), is.max_dy);
 	isp_is_displace = isp_read_reg(dev, REG_ADDR(isp_is_displace));
@@ -445,13 +496,12 @@ int isp_s_is(struct isp_ic_dev *dev)
 	isp_write_reg(dev, REG_ADDR(isp_is_ctrl), isp_is_ctrl);
 	if (is.update) {
 		isp_ctrl = isp_read_reg(dev, REG_ADDR(isp_ctrl));
-		REG_SET_SLICE(isp_ctrl, MRV_ISP_ISP_CFG_UPD, 1);
+		REG_SET_SLICE(isp_ctrl, MRV_ISP_ISP_GEN_CFG_UPD, 1);
 		isp_write_reg(dev, REG_ADDR(isp_ctrl), isp_ctrl);
 		is.update = false;
 	}
 	return 0;
 }
-
 
 int isp_s_raw_is(struct isp_ic_dev *dev)
 {
@@ -469,8 +519,10 @@ int isp_s_raw_is(struct isp_ic_dev *dev)
 	isp_raw_is_ctrl = isp_read_reg(dev, REG_ADDR(isp_raw_is_ctrl));
 
 	if (!rawis.enable) {
-		isp_write_reg(dev, REG_ADDR(isp_raw_is_h_size), rawis.window.width);
-		isp_write_reg(dev, REG_ADDR(isp_raw_is_v_size), rawis.window.height);
+		isp_write_reg(dev, REG_ADDR(isp_raw_is_h_size),
+			      rawis.window.width);
+		isp_write_reg(dev, REG_ADDR(isp_raw_is_v_size),
+			      rawis.window.height);
 
 		REG_SET_SLICE(isp_raw_is_ctrl, MRV_ISP_RAW_IS_EN, 0);
 		isp_write_reg(dev, REG_ADDR(isp_raw_is_ctrl), isp_raw_is_ctrl);
@@ -482,7 +534,8 @@ int isp_s_raw_is(struct isp_ic_dev *dev)
 	isp_write_reg(dev, REG_ADDR(isp_raw_is_v_offs), rawis.window.y);
 	isp_write_reg(dev, REG_ADDR(isp_raw_is_h_size), rawis.window.width);
 	isp_write_reg(dev, REG_ADDR(isp_raw_is_v_size), rawis.window.height);
-	isp_write_reg(dev, REG_ADDR(isp_raw_is_recenter), rawis.recenter & MRV_IS_IS_RECENTER_MASK);
+	isp_write_reg(dev, REG_ADDR(isp_raw_is_recenter),
+		      rawis.recenter & MRV_IS_IS_RECENTER_MASK);
 	isp_write_reg(dev, REG_ADDR(isp_raw_is_max_dx), rawis.max_dx);
 	isp_write_reg(dev, REG_ADDR(isp_raw_is_max_dy), rawis.max_dy);
 	isp_raw_is_displace = isp_read_reg(dev, REG_ADDR(isp_raw_is_displace));
@@ -528,10 +581,13 @@ int isp_start_stream(struct isp_ic_dev *dev, u32 numFrames)
 
 	pr_info("enter %s\n", __func__);
 	isp_write_reg(dev, REG_ADDR(isp_sh_ctrl), 0x10);
-	isp_write_reg(dev, REG_ADDR(isp_acq_nr_frames), (MRV_ISP_ACQ_NR_FRAMES_MASK & numFrames));
+	isp_write_reg(dev, REG_ADDR(isp_acq_nr_frames),
+		      (MRV_ISP_ACQ_NR_FRAMES_MASK & numFrames));
 	isp_imsc = isp_read_reg(dev, REG_ADDR(isp_imsc));
-	isp_imsc |= (MRV_ISP_IMSC_ISP_OFF_MASK | MRV_ISP_IMSC_FRAME_MASK | MRV_ISP_IMSC_DATA_LOSS_MASK | MRV_ISP_IMSC_FRAME_IN_MASK);
-	//isp_imsc |= (MRV_ISP_IMSC_FRAME_MASK | MRV_ISP_IMSC_DATA_LOSS_MASK | MRV_ISP_IMSC_FRAME_IN_MASK);
+	isp_imsc |=
+	    (MRV_ISP_IMSC_ISP_OFF_MASK | MRV_ISP_IMSC_FRAME_MASK |
+	     MRV_ISP_IMSC_FRAME_IN_MASK);
+	/* isp_imsc |= (MRV_ISP_IMSC_FRAME_MASK | MRV_ISP_IMSC_DATA_LOSS_MASK | MRV_ISP_IMSC_FRAME_IN_MASK); */
 	isp_write_reg(dev, REG_ADDR(isp_icr), 0xFFFFFFFF);
 	isp_write_reg(dev, REG_ADDR(isp_imsc), isp_imsc);
 	isp_ctrl = isp_read_reg(dev, REG_ADDR(isp_ctrl));
@@ -566,7 +622,8 @@ int isp_s_cc(struct isp_ic_dev *dev)
 	if (cc->update_curve) {
 		addr = REG_ADDR(isp_cc_coeff_0);
 		for (i = 0; i < 9; i++) {
-			isp_write_reg(dev, addr + i*4, MRV_ISP_CC_COEFF_0_MASK & cc->lCoeff[i]);
+			isp_write_reg(dev, addr + i * 4,
+				      MRV_ISP_CC_COEFF_0_MASK & cc->lCoeff[i]);
 		}
 	}
 	return 0;
@@ -580,12 +637,16 @@ int isp_s_xtalk(struct isp_ic_dev *dev)
 	pr_info("enter %s\n", __func__);
 
 	for (i = 0; i < 9; i++) {
-		isp_write_reg(dev, REG_ADDR(cross_talk_coef_block_arr[i]), MRV_ISP_CT_COEFF_MASK & xtalk.lCoeff[i]);
+		isp_write_reg(dev, REG_ADDR(cross_talk_coef_block_arr[i]),
+			      MRV_ISP_CT_COEFF_MASK & xtalk.lCoeff[i]);
 	}
 
-	isp_write_reg(dev, REG_ADDR(isp_ct_offset_r), (MRV_ISP_CT_OFFSET_R_MASK & xtalk.r));
-	isp_write_reg(dev, REG_ADDR(isp_ct_offset_g), (MRV_ISP_CT_OFFSET_G_MASK & xtalk.g));
-	isp_write_reg(dev, REG_ADDR(isp_ct_offset_b), (MRV_ISP_CT_OFFSET_B_MASK & xtalk.b));
+	isp_write_reg(dev, REG_ADDR(isp_ct_offset_r),
+		      (MRV_ISP_CT_OFFSET_R_MASK & xtalk.r));
+	isp_write_reg(dev, REG_ADDR(isp_ct_offset_g),
+		      (MRV_ISP_CT_OFFSET_G_MASK & xtalk.g));
+	isp_write_reg(dev, REG_ADDR(isp_ct_offset_b),
+		      (MRV_ISP_CT_OFFSET_B_MASK & xtalk.b));
 	return 0;
 }
 
@@ -620,7 +681,8 @@ int isp_s_gamma_out(struct isp_ic_dev *dev)
 	isp_write_reg(dev, REG_ADDR(isp_gamma_out_mode), isp_gamma_out_mode);
 
 	for (i = 0; i < 17; i++) {
-		isp_write_reg(dev, REG_ADDR(gamma_out_y_block_arr[i]), MRV_ISP_ISP_GAMMA_OUT_Y_MASK & gamma.curve[i]);
+		isp_write_reg(dev, REG_ADDR(gamma_out_y_block_arr[i]),
+			      MRV_ISP_ISP_GAMMA_OUT_Y_MASK & gamma.curve[i]);
 	}
 	return 0;
 }
@@ -635,45 +697,73 @@ int isp_s_lsc(struct isp_ic_dev *dev)
 
 	pr_info("enter %s\n", __func__);
 
-	//Enable isp to enable ram clock for write correct table to ram.
+	/* Enable isp to enable ram clock for write correct table to ram. */
 	if (!(isp_ctrl & 0x01)) {
 		isp_write_reg(dev, REG_ADDR(isp_ctrl), isp_ctrl | 0x01);
 	}
 
 	for (i = 0; i < CAEMRIC_GRAD_TBL_SIZE; i += 2) {
-		isp_write_reg(dev, REG_ADDR(isp_lsc_xsize_01) + i*2, (lsc->x_size[i] & MRV_LSC_Y_SECT_SIZE_0_MASK) |
-					((lsc->x_size[i+1]<<MRV_LSC_X_SECT_SIZE_1_SHIFT) & MRV_LSC_X_SECT_SIZE_1_MASK));
-		isp_write_reg(dev, REG_ADDR(isp_lsc_ysize_01) + i*2, (lsc->y_size[i] & MRV_LSC_Y_SECT_SIZE_0_MASK) |
-					((lsc->y_size[i+1]<<MRV_LSC_Y_SECT_SIZE_1_SHIFT) & MRV_LSC_Y_SECT_SIZE_1_MASK));
-		isp_write_reg(dev, REG_ADDR(isp_lsc_xgrad_01) + i*2, (lsc->x_grad[i] & MRV_LSC_XGRAD_0_MASK) |
-					((lsc->x_grad[i+1]<<MRV_LSC_XGRAD_1_SHIFT) & MRV_LSC_XGRAD_1_MASK));
-		isp_write_reg(dev, REG_ADDR(isp_lsc_ygrad_01) + i*2, (lsc->y_grad[i] & MRV_LSC_YGRAD_0_MASK) |
-					((lsc->y_grad[i+1]<<MRV_LSC_YGRAD_1_SHIFT) & MRV_LSC_YGRAD_1_MASK));
+		isp_write_reg(dev, REG_ADDR(isp_lsc_xsize_01) + i * 2,
+			      (lsc->x_size[i] & MRV_LSC_Y_SECT_SIZE_0_MASK) |
+			      ((lsc->x_size[i + 1]
+				<< MRV_LSC_X_SECT_SIZE_1_SHIFT)
+			       & MRV_LSC_X_SECT_SIZE_1_MASK));
+		isp_write_reg(dev, REG_ADDR(isp_lsc_ysize_01) + i * 2,
+			      (lsc->y_size[i] & MRV_LSC_Y_SECT_SIZE_0_MASK) |
+			      ((lsc->y_size[i + 1]
+				<< MRV_LSC_Y_SECT_SIZE_1_SHIFT)
+			       & MRV_LSC_Y_SECT_SIZE_1_MASK));
+		isp_write_reg(dev, REG_ADDR(isp_lsc_xgrad_01) + i * 2,
+			      (lsc->x_grad[i] & MRV_LSC_XGRAD_0_MASK) |
+			      ((lsc->x_grad[i + 1]
+				<< MRV_LSC_XGRAD_1_SHIFT)
+			       & MRV_LSC_XGRAD_1_MASK));
+		isp_write_reg(dev, REG_ADDR(isp_lsc_ygrad_01) + i * 2,
+			      (lsc->y_grad[i] & MRV_LSC_YGRAD_0_MASK) |
+			      ((lsc->y_grad[i + 1]
+				<< MRV_LSC_YGRAD_1_SHIFT)
+			       & MRV_LSC_YGRAD_1_MASK));
 	}
 
 	isp_lsc_status = isp_read_reg(dev, REG_ADDR(isp_lsc_status));
 	sram_addr = (isp_lsc_status & 0x2U) ? 0U : 153U;
-	isp_write_reg(dev, REG_ADDR(isp_lsc_r_table_addr),  sram_addr);
+	isp_write_reg(dev, REG_ADDR(isp_lsc_r_table_addr), sram_addr);
 	isp_write_reg(dev, REG_ADDR(isp_lsc_gr_table_addr), sram_addr);
 	isp_write_reg(dev, REG_ADDR(isp_lsc_gb_table_addr), sram_addr);
-	isp_write_reg(dev, REG_ADDR(isp_lsc_b_table_addr),  sram_addr);
+	isp_write_reg(dev, REG_ADDR(isp_lsc_b_table_addr), sram_addr);
 
-	for (n = 0; n < ((CAMERIC_MAX_LSC_SECTORS + 1) * (CAMERIC_MAX_LSC_SECTORS + 1)); n += CAMERIC_MAX_LSC_SECTORS + 1) {
+	for (n = 0;
+	     n <
+	     ((CAMERIC_MAX_LSC_SECTORS + 1) * (CAMERIC_MAX_LSC_SECTORS + 1));
+	     n += CAMERIC_MAX_LSC_SECTORS + 1) {
 		/* 17 sectors with 2 values in one DWORD = 9 DWORDs (8 steps + 1 outside loop) */
 		for (i = 0; i < (CAMERIC_MAX_LSC_SECTORS); i += 2) {
-			isp_write_reg(dev, REG_ADDR(isp_lsc_r_table_data),  lsc->r[n+i]  | (lsc->r[n+i+1]  << 12));
-			isp_write_reg(dev, REG_ADDR(isp_lsc_gr_table_data), lsc->gr[n+i] | (lsc->gr[n+i+1] << 12));
-			isp_write_reg(dev, REG_ADDR(isp_lsc_gb_table_data), lsc->gb[n+i] | (lsc->gb[n+i+1] << 12));
-			isp_write_reg(dev, REG_ADDR(isp_lsc_b_table_data),  lsc->b[n+i]  | (lsc->b[n+i+1]  << 12));
+			isp_write_reg(dev, REG_ADDR(isp_lsc_r_table_data),
+				      lsc->r[n +
+					     i] | (lsc->r[n + i + 1] << 12));
+			isp_write_reg(dev, REG_ADDR(isp_lsc_gr_table_data),
+				      lsc->gr[n +
+					      i] | (lsc->gr[n + i + 1] << 12));
+			isp_write_reg(dev, REG_ADDR(isp_lsc_gb_table_data),
+				      lsc->gb[n +
+					      i] | (lsc->gb[n + i + 1] << 12));
+			isp_write_reg(dev, REG_ADDR(isp_lsc_b_table_data),
+				      lsc->b[n +
+					     i] | (lsc->b[n + i + 1] << 12));
 		}
-		isp_write_reg(dev, REG_ADDR(isp_lsc_r_table_data), lsc->r[n+CAMERIC_MAX_LSC_SECTORS]);
-		isp_write_reg(dev, REG_ADDR(isp_lsc_gr_table_data), lsc->gr[n+CAMERIC_MAX_LSC_SECTORS]);
-		isp_write_reg(dev, REG_ADDR(isp_lsc_gb_table_data), lsc->gb[n+CAMERIC_MAX_LSC_SECTORS]);
-		isp_write_reg(dev, REG_ADDR(isp_lsc_b_table_data), lsc->b[n+CAMERIC_MAX_LSC_SECTORS]);
+		isp_write_reg(dev, REG_ADDR(isp_lsc_r_table_data),
+			      lsc->r[n + CAMERIC_MAX_LSC_SECTORS]);
+		isp_write_reg(dev, REG_ADDR(isp_lsc_gr_table_data),
+			      lsc->gr[n + CAMERIC_MAX_LSC_SECTORS]);
+		isp_write_reg(dev, REG_ADDR(isp_lsc_gb_table_data),
+			      lsc->gb[n + CAMERIC_MAX_LSC_SECTORS]);
+		isp_write_reg(dev, REG_ADDR(isp_lsc_b_table_data),
+			      lsc->b[n + CAMERIC_MAX_LSC_SECTORS]);
 	}
 
-	isp_write_reg(dev, REG_ADDR(isp_lsc_table_sel), (isp_lsc_status & 0x2U) ? 0U : 1U);
-	//restore isp
+	isp_write_reg(dev, REG_ADDR(isp_lsc_table_sel),
+		      (isp_lsc_status & 0x2U) ? 0U : 1U);
+	/* restore isp */
 	isp_write_reg(dev, REG_ADDR(isp_ctrl), isp_ctrl);
 
 	return 0;
@@ -683,9 +773,9 @@ int isp_ioc_read_reg(struct isp_ic_dev *dev, void *__user args)
 {
 	struct isp_reg_t reg;
 
-	copy_from_user(&reg, args, sizeof(reg));
+	viv_check_retval(copy_from_user(&reg, args, sizeof(reg)));
 	reg.val = isp_read_reg(dev, reg.offset);
-	copy_to_user(args, &reg, sizeof(reg));
+	viv_check_retval(copy_to_user(args, &reg, sizeof(reg)));
 	return 0;
 }
 
@@ -693,7 +783,7 @@ int isp_ioc_write_reg(struct isp_ic_dev *dev, void *__user args)
 {
 	struct isp_reg_t reg;
 
-	copy_from_user(&reg, args, sizeof(reg));
+	viv_check_retval((copy_from_user(&reg, args, sizeof(reg))));
 	isp_write_reg(dev, reg.offset, reg.val);
 	return 0;
 }
@@ -714,7 +804,7 @@ int isp_g_awbmean(struct isp_ic_dev *dev, struct isp_awb_mean *mean)
 {
 	u32 reg = isp_read_reg(dev, REG_ADDR(isp_awb_mean));
 
-	// pr_info("enter %s\n", __func__);
+	/* pr_info("enter %s\n", __func__); */
 	mean->g = REG_GET_SLICE(reg, MRV_ISP_AWB_MEAN_Y__G);
 	mean->b = REG_GET_SLICE(reg, MRV_ISP_AWB_MEAN_CB__B);
 	mean->r = REG_GET_SLICE(reg, MRV_ISP_AWB_MEAN_CR__R);
@@ -736,7 +826,8 @@ int isp_s_ee(struct isp_ic_dev *dev)
 	pr_info("enter %s\n", __func__);
 
 	if (!ee->enable) {
-		isp_write_reg(dev, REG_ADDR(isp_ee_ctrl), isp_ee_ctrl & ~EE_CTRL_ENABLE_MASK);
+		isp_write_reg(dev, REG_ADDR(isp_ee_ctrl),
+			      isp_ee_ctrl & ~EE_CTRL_ENABLE_MASK);
 		return 0;
 	}
 
@@ -747,7 +838,8 @@ int isp_s_ee(struct isp_ic_dev *dev)
 	REG_SET_SLICE(gain, EE_EDGE_GAIN, ee->edge_gain);
 	isp_write_reg(dev, REG_ADDR(isp_ee_y_gain), ee->y_gain);
 	isp_write_reg(dev, REG_ADDR(isp_ee_uv_gain), gain);
-	isp_write_reg(dev, REG_ADDR(isp_ee_ctrl), isp_ee_ctrl | EE_CTRL_ENABLE_MASK);
+	isp_write_reg(dev, REG_ADDR(isp_ee_ctrl),
+		      isp_ee_ctrl | EE_CTRL_ENABLE_MASK);
 	return 0;
 #endif
 }
@@ -757,44 +849,53 @@ int isp_s_exp(struct isp_ic_dev *dev)
 	struct isp_exp_context *exp = &dev->exp;
 	u32 isp_exp_ctrl = isp_read_reg(dev, REG_ADDR(isp_exp_ctrl));
 	u32 isp_imsc = isp_read_reg(dev, REG_ADDR(isp_imsc));
-	return 0;
 
 	pr_info("enter %s\n", __func__);
 
 	if (!exp->enable) {
 		REG_SET_SLICE(isp_exp_ctrl, MRV_AE_EXP_START, 0);
 		isp_write_reg(dev, REG_ADDR(isp_exp_ctrl), isp_exp_ctrl);
-		isp_write_reg(dev, REG_ADDR(isp_imsc), isp_imsc & ~MRV_ISP_IMSC_EXP_END_MASK);
+		isp_write_reg(dev, REG_ADDR(isp_imsc),
+			      isp_imsc & ~MRV_ISP_IMSC_EXP_END_MASK);
 		return 0;
 	}
 
-	isp_write_reg(dev, REG_ADDR(isp_exp_h_offset), (MRV_AE_ISP_EXP_H_OFFSET_MASK & exp->window.x));
-	isp_write_reg(dev, REG_ADDR(isp_exp_v_offset), (MRV_AE_ISP_EXP_V_OFFSET_MASK & exp->window.y));
-	isp_write_reg(dev, REG_ADDR(isp_exp_h_size), (MRV_AE_ISP_EXP_H_SIZE_MASK & exp->window.width));
-	isp_write_reg(dev, REG_ADDR(isp_exp_v_size), (MRV_AE_ISP_EXP_V_SIZE_MASK & exp->window.height));
+	isp_write_reg(dev, REG_ADDR(isp_exp_h_offset),
+		      (MRV_AE_ISP_EXP_H_OFFSET_MASK & exp->window.x));
+	isp_write_reg(dev, REG_ADDR(isp_exp_v_offset),
+		      (MRV_AE_ISP_EXP_V_OFFSET_MASK & exp->window.y));
+	isp_write_reg(dev, REG_ADDR(isp_exp_h_size),
+		      (MRV_AE_ISP_EXP_H_SIZE_MASK & exp->window.width));
+	isp_write_reg(dev, REG_ADDR(isp_exp_v_size),
+		      (MRV_AE_ISP_EXP_V_SIZE_MASK & exp->window.height));
 #ifdef ISP_AE_SHADOW
-	isp_write_reg(dev, REG_ADDR(isp_exp_h_offset_shd), (MRV_AE_ISP_EXP_H_OFFSET_MASK & exp->window.x));
-	isp_write_reg(dev, REG_ADDR(isp_exp_v_offset_shd), (MRV_AE_ISP_EXP_V_OFFSET_MASK & exp->window.y));
-	isp_write_reg(dev, REG_ADDR(isp_exp_h_size_shd), (MRV_AE_ISP_EXP_H_SIZE_MASK & exp->window.width));
-	isp_write_reg(dev, REG_ADDR(isp_exp_v_size_shd), (MRV_AE_ISP_EXP_V_SIZE_MASK & exp->window.height));
+	isp_write_reg(dev, REG_ADDR(isp_exp_h_offset_shd),
+		      (MRV_AE_ISP_EXP_H_OFFSET_MASK & exp->window.x));
+	isp_write_reg(dev, REG_ADDR(isp_exp_v_offset_shd),
+		      (MRV_AE_ISP_EXP_V_OFFSET_MASK & exp->window.y));
+	isp_write_reg(dev, REG_ADDR(isp_exp_h_size_shd),
+		      (MRV_AE_ISP_EXP_H_SIZE_MASK & exp->window.width));
+	isp_write_reg(dev, REG_ADDR(isp_exp_v_size_shd),
+		      (MRV_AE_ISP_EXP_V_SIZE_MASK & exp->window.height));
 #endif
 	REG_SET_SLICE(isp_exp_ctrl, MRV_AE_EXP_MEAS_MODE, exp->mode);
 	REG_SET_SLICE(isp_exp_ctrl, MRV_AE_EXP_START, 1);
 	isp_write_reg(dev, REG_ADDR(isp_exp_ctrl), isp_exp_ctrl);
-	isp_write_reg(dev, REG_ADDR(isp_imsc), isp_imsc | MRV_ISP_IMSC_EXP_END_MASK);
+	isp_write_reg(dev, REG_ADDR(isp_imsc),
+		      isp_imsc | MRV_ISP_IMSC_EXP_END_MASK);
 
 	return 0;
 }
 
-int isp_g_expmean(struct isp_ic_dev *dev, u8 *mean)
+int isp_g_expmean(struct isp_ic_dev *dev, u8 * mean)
 {
 	int i = 0;
 
-	// pr_info("enter %s\n", __func__);
+	/* pr_info("enter %s\n", __func__); */
 	if (!dev || !mean)
 		return -EINVAL;
 	for (; i < 25; i++) {
-		mean[i] = isp_read_reg(dev, REG_ADDR(isp_exp_mean_00) + i*4);
+		mean[i] = isp_read_reg(dev, REG_ADDR(isp_exp_mean_00) + i * 4);
 	}
 
 	return 0;
@@ -816,29 +917,40 @@ int isp_s_hist(struct isp_ic_dev *dev)
 	int i;
 
 	if (!hist->enable) {
-		REG_SET_SLICE(isp_hist256_prop, MRV_HIST_MODE, MRV_HIST_MODE_NONE);
-		isp_write_reg(dev, REG_ADDR(isp_hist256_prop), isp_hist256_prop);
-		isp_write_reg(dev, REG_ADDR(isp_imsc), isp_imsc & ~MRV_ISP_IMSC_HIST_MEASURE_RDY_MASK);
+		REG_SET_SLICE(isp_hist256_prop, MRV_HIST_MODE,
+			      MRV_HIST_MODE_NONE);
+		isp_write_reg(dev, REG_ADDR(isp_hist256_prop),
+			      isp_hist256_prop);
+		isp_write_reg(dev, REG_ADDR(isp_imsc),
+			      isp_imsc & ~MRV_ISP_IMSC_HIST_MEASURE_RDY_MASK);
 		return 0;
 	}
 
-	isp_write_reg(dev, REG_ADDR(isp_hist256_h_offs), (MRV_HIST_H_OFFSET_MASK & hist->window.x));
-	isp_write_reg(dev, REG_ADDR(isp_hist256_v_offs), (MRV_HIST_V_OFFSET_MASK & hist->window.y));
-	isp_write_reg(dev, REG_ADDR(isp_hist256_h_size), (MRV_HIST_H_SIZE_MASK & hist->window.width));
-	isp_write_reg(dev, REG_ADDR(isp_hist256_v_size), (MRV_HIST_V_SIZE_MASK & hist->window.height));
+	isp_write_reg(dev, REG_ADDR(isp_hist256_h_offs),
+		      (MRV_HIST_H_OFFSET_MASK & hist->window.x));
+	isp_write_reg(dev, REG_ADDR(isp_hist256_v_offs),
+		      (MRV_HIST_V_OFFSET_MASK & hist->window.y));
+	isp_write_reg(dev, REG_ADDR(isp_hist256_h_size),
+		      (MRV_HIST_H_SIZE_MASK & hist->window.width));
+	isp_write_reg(dev, REG_ADDR(isp_hist256_v_size),
+		      (MRV_HIST_V_SIZE_MASK & hist->window.height));
 
 	for (i = 0; i < 24; i += 4) {
-		isp_write_reg(dev, REG_ADDR(isp_hist256_weight_00to30)+i, hist->weight[i+0] |
-						(hist->weight[i+1] << 8)  |
-						(hist->weight[i+2] << 16) |
-						(hist->weight[i+3] << 24));
+		isp_write_reg(dev, REG_ADDR(isp_hist256_weight_00to30) + i,
+			      hist->weight[i +
+					   0] | (hist->weight[i +
+							      1] << 8) |
+			      (hist->weight[i + 2] << 16) | (hist->weight[i +
+									  3] <<
+							     24));
 	}
 
 	isp_write_reg(dev, REG_ADDR(isp_hist256_weight_44), hist->weight[24]);
 	REG_SET_SLICE(isp_hist256_prop, MRV_HIST_STEPSIZE, hist->step_size);
 	REG_SET_SLICE(isp_hist256_prop, MRV_HIST_MODE, hist->mode);
 	isp_write_reg(dev, REG_ADDR(isp_hist256_prop), isp_hist256_prop);
-	isp_write_reg(dev, REG_ADDR(isp_imsc), isp_imsc | MRV_ISP_IMSC_HIST_MEASURE_RDY_MASK);
+	isp_write_reg(dev, REG_ADDR(isp_imsc),
+		      isp_imsc | MRV_ISP_IMSC_HIST_MEASURE_RDY_MASK);
 #else
 	u32 isp_hist_prop = isp_read_reg(dev, REG_ADDR(isp_hist_prop));
 	u32 isp_imsc = isp_read_reg(dev, REG_ADDR(isp_imsc));
@@ -848,32 +960,41 @@ int isp_s_hist(struct isp_ic_dev *dev)
 	if (!hist->enable) {
 		REG_SET_SLICE(isp_hist_prop, MRV_HIST_MODE, MRV_HIST_MODE_NONE);
 		isp_write_reg(dev, REG_ADDR(isp_hist_prop), isp_hist_prop);
-		isp_write_reg(dev, REG_ADDR(isp_imsc), isp_imsc & ~MRV_ISP_IMSC_HIST_MEASURE_RDY_MASK);
+		isp_write_reg(dev, REG_ADDR(isp_imsc),
+			      isp_imsc & ~MRV_ISP_IMSC_HIST_MEASURE_RDY_MASK);
 		return 0;
 	}
 
-	isp_write_reg(dev, REG_ADDR(isp_hist_h_offs), (MRV_HIST_H_OFFSET_MASK & hist->window.x));
-	isp_write_reg(dev, REG_ADDR(isp_hist_v_offs), (MRV_HIST_V_OFFSET_MASK & hist->window.y));
-	isp_write_reg(dev, REG_ADDR(isp_hist_h_size), (MRV_HIST_H_SIZE_MASK & hist->window.width));
-	isp_write_reg(dev, REG_ADDR(isp_hist_v_size), (MRV_HIST_V_SIZE_MASK & hist->window.height));
+	isp_write_reg(dev, REG_ADDR(isp_hist_h_offs),
+		      (MRV_HIST_H_OFFSET_MASK & hist->window.x));
+	isp_write_reg(dev, REG_ADDR(isp_hist_v_offs),
+		      (MRV_HIST_V_OFFSET_MASK & hist->window.y));
+	isp_write_reg(dev, REG_ADDR(isp_hist_h_size),
+		      (MRV_HIST_H_SIZE_MASK & hist->window.width));
+	isp_write_reg(dev, REG_ADDR(isp_hist_v_size),
+		      (MRV_HIST_V_SIZE_MASK & hist->window.height));
 
 	for (i = 0; i < 24; i += 4) {
-		isp_write_reg(dev, REG_ADDR(isp_hist_weight_00to30)+i, hist->weight[i+0] |
-						(hist->weight[i+1] << 8)  |
-						(hist->weight[i+2] << 16) |
-						(hist->weight[i+3] << 24));
+		isp_write_reg(dev, REG_ADDR(isp_hist_weight_00to30) + i,
+			      hist->weight[i +
+					   0] | (hist->weight[i +
+							      1] << 8) |
+			      (hist->weight[i + 2] << 16) | (hist->weight[i +
+									  3] <<
+							     24));
 	}
 
 	isp_write_reg(dev, REG_ADDR(isp_hist_weight_44), hist->weight[24]);
 	REG_SET_SLICE(isp_hist_prop, MRV_HIST_STEPSIZE, hist->step_size);
 	REG_SET_SLICE(isp_hist_prop, MRV_HIST_MODE, hist->mode);
 	isp_write_reg(dev, REG_ADDR(isp_hist_prop), isp_hist_prop);
-	isp_write_reg(dev, REG_ADDR(isp_imsc), isp_imsc | MRV_ISP_IMSC_HIST_MEASURE_RDY_MASK);
+	isp_write_reg(dev, REG_ADDR(isp_imsc),
+		      isp_imsc | MRV_ISP_IMSC_HIST_MEASURE_RDY_MASK);
 #endif
 	return 0;
 }
 
-int isp_g_histmean(struct isp_ic_dev *dev, u32 *mean)
+int isp_g_histmean(struct isp_ic_dev *dev, u32 * mean)
 {
 	int i = 0;
 
@@ -886,7 +1007,10 @@ int isp_g_histmean(struct isp_ic_dev *dev, u32 *mean)
 	}
 #else
 	for (; i < HIST_BIN_TOTAL; i++) {
-		mean[i] = isp_read_reg(dev, REG_ADDR(histogram_measurement_result_arr[i]) + i*4);
+		mean[i] =
+		    isp_read_reg(dev,
+				 REG_ADDR(histogram_measurement_result_arr[i]) +
+				 i * 4);
 	}
 #endif
 	return 0;
@@ -912,12 +1036,21 @@ int isp_s_dpcc(struct isp_ic_dev *dev)
 	isp_write_reg(dev, REG_ADDR(isp_dpcc_set_use), dpcc->set_use);
 
 	for (i = 0; i < 3; i++) {
-		isp_write_reg(dev, REG_ADDR(isp_dpcc_methods_set_1) + i*4, 0x1FFF & dpcc->methods_set[i]);
-		isp_write_reg(dev, REG_ADDR(isp_dpcc_line_thresh_1) + i*reg_gap, 0xFFFF & dpcc->params[i].line_thresh);
-		isp_write_reg(dev, REG_ADDR(isp_dpcc_line_mad_fac_1) + i*reg_gap, 0x3F3F & dpcc->params[i].line_mad_fac);
-		isp_write_reg(dev, REG_ADDR(isp_dpcc_pg_fac_1) + i*reg_gap, 0x3F3F & dpcc->params[i].pg_fac);
-		isp_write_reg(dev, REG_ADDR(isp_dpcc_rnd_thresh_1) + i*reg_gap, 0xFFFF & dpcc->params[i].rnd_thresh);
-		isp_write_reg(dev, REG_ADDR(isp_dpcc_rg_fac_1) + i*reg_gap, 0x3F3F & dpcc->params[i].rg_fac);
+		isp_write_reg(dev, REG_ADDR(isp_dpcc_methods_set_1) + i * 4,
+			      0x1FFF & dpcc->methods_set[i]);
+		isp_write_reg(dev,
+			      REG_ADDR(isp_dpcc_line_thresh_1) + i * reg_gap,
+			      0xFFFF & dpcc->params[i].line_thresh);
+		isp_write_reg(dev,
+			      REG_ADDR(isp_dpcc_line_mad_fac_1) + i * reg_gap,
+			      0x3F3F & dpcc->params[i].line_mad_fac);
+		isp_write_reg(dev, REG_ADDR(isp_dpcc_pg_fac_1) + i * reg_gap,
+			      0x3F3F & dpcc->params[i].pg_fac);
+		isp_write_reg(dev,
+			      REG_ADDR(isp_dpcc_rnd_thresh_1) + i * reg_gap,
+			      0xFFFF & dpcc->params[i].rnd_thresh);
+		isp_write_reg(dev, REG_ADDR(isp_dpcc_rg_fac_1) + i * reg_gap,
+			      0x3F3F & dpcc->params[i].rg_fac);
 	}
 
 	isp_write_reg(dev, REG_ADDR(isp_dpcc_ro_limits), dpcc->ro_limits);
@@ -942,18 +1075,30 @@ int isp_s_flt(struct isp_ic_dev *dev)
 	};
 
 	static struct flt_denoise_type denoise_tbl[] = {
-		{0, 0, 0, 0, 6,				MRV_FILT_FILT_CHR_V_MODE_STATIC8,  MRV_FILT_FILT_CHR_H_MODE_BYPASS},
-		{18, 33, 8, 2, 6,			MRV_FILT_FILT_CHR_V_MODE_STATIC12, MRV_FILT_FILT_CHR_H_MODE_DYN_2},
-		{26, 44, 13, 5, 4,			MRV_FILT_FILT_CHR_V_MODE_STATIC12, MRV_FILT_FILT_CHR_H_MODE_DYN_2},
-		{36, 51, 23, 10, 2,			MRV_FILT_FILT_CHR_V_MODE_STATIC12, MRV_FILT_FILT_CHR_H_MODE_DYN_2},
-		{41, 67, 26, 15, 3,			MRV_FILT_FILT_CHR_V_MODE_STATIC12, MRV_FILT_FILT_CHR_H_MODE_DYN_2},
-		{75, 10, 50, 20, 3,			MRV_FILT_FILT_CHR_V_MODE_STATIC12, MRV_FILT_FILT_CHR_H_MODE_DYN_2},
-		{90, 120, 60, 26, 2,		MRV_FILT_FILT_CHR_V_MODE_STATIC12, MRV_FILT_FILT_CHR_H_MODE_DYN_2},
-		{120, 150, 80, 51, 2,		MRV_FILT_FILT_CHR_V_MODE_STATIC12, MRV_FILT_FILT_CHR_H_MODE_DYN_2},
-		{170, 200, 140, 100, 2,		MRV_FILT_FILT_CHR_V_MODE_STATIC12, MRV_FILT_FILT_CHR_H_MODE_DYN_2},
-		{250, 300, 180, 150, 2,		MRV_FILT_FILT_CHR_V_MODE_STATIC12, MRV_FILT_FILT_CHR_H_MODE_DYN_2},
-		{1023, 1023, 1023, 1023, 2,	MRV_FILT_FILT_CHR_V_MODE_STATIC12, MRV_FILT_FILT_CHR_H_MODE_DYN_2},
-		{1023, 1023, 1023, 1023, 0,	MRV_FILT_FILT_CHR_V_MODE_BYPASS,   MRV_FILT_FILT_CHR_H_MODE_BYPASS},
+		{0, 0, 0, 0, 6, MRV_FILT_FILT_CHR_V_MODE_STATIC8,
+		 MRV_FILT_FILT_CHR_H_MODE_BYPASS},
+		{18, 33, 8, 2, 6, MRV_FILT_FILT_CHR_V_MODE_STATIC12,
+		 MRV_FILT_FILT_CHR_H_MODE_DYN_2},
+		{26, 44, 13, 5, 4, MRV_FILT_FILT_CHR_V_MODE_STATIC12,
+		 MRV_FILT_FILT_CHR_H_MODE_DYN_2},
+		{36, 51, 23, 10, 2, MRV_FILT_FILT_CHR_V_MODE_STATIC12,
+		 MRV_FILT_FILT_CHR_H_MODE_DYN_2},
+		{41, 67, 26, 15, 3, MRV_FILT_FILT_CHR_V_MODE_STATIC12,
+		 MRV_FILT_FILT_CHR_H_MODE_DYN_2},
+		{75, 10, 50, 20, 3, MRV_FILT_FILT_CHR_V_MODE_STATIC12,
+		 MRV_FILT_FILT_CHR_H_MODE_DYN_2},
+		{90, 120, 60, 26, 2, MRV_FILT_FILT_CHR_V_MODE_STATIC12,
+		 MRV_FILT_FILT_CHR_H_MODE_DYN_2},
+		{120, 150, 80, 51, 2, MRV_FILT_FILT_CHR_V_MODE_STATIC12,
+		 MRV_FILT_FILT_CHR_H_MODE_DYN_2},
+		{170, 200, 140, 100, 2, MRV_FILT_FILT_CHR_V_MODE_STATIC12,
+		 MRV_FILT_FILT_CHR_H_MODE_DYN_2},
+		{250, 300, 180, 150, 2, MRV_FILT_FILT_CHR_V_MODE_STATIC12,
+		 MRV_FILT_FILT_CHR_H_MODE_DYN_2},
+		{1023, 1023, 1023, 1023, 2, MRV_FILT_FILT_CHR_V_MODE_STATIC12,
+		 MRV_FILT_FILT_CHR_H_MODE_DYN_2},
+		{1023, 1023, 1023, 1023, 0, MRV_FILT_FILT_CHR_V_MODE_BYPASS,
+		 MRV_FILT_FILT_CHR_H_MODE_BYPASS},
 	};
 
 	struct flt_sharpen_type {
@@ -965,17 +1110,17 @@ int isp_s_flt(struct isp_ic_dev *dev)
 	};
 
 	static struct flt_sharpen_type sharpen_tbl[] = {
-		{ 0x4,  0x4,  0x4,  0x2,  0x0  },
-		{ 0x7,  0x8,  0x6,  0x2,  0x0  },
-		{ 0xA,  0xC,  0x8,  0x4,  0x0  },
-		{ 0xC,  0x10, 0xA,  0x6,  0x2  },
-		{ 0x16, 0x16, 0xC,  0x8,  0x4  },
-		{ 0x14, 0x1B, 0x10, 0xA,  0x4  },
-		{ 0x1A, 0x20, 0x13, 0xC,  0x6  },
-		{ 0x1E, 0x26, 0x17, 0x10, 0x8  },
-		{ 0x24, 0x2C, 0x1D, 0x15, 0x0D },
-		{ 0x2A, 0x30, 0x22, 0x1A, 0x14 },
-		{ 0x30, 0x3F, 0x28, 0x24, 0x20 },
+		{0x4, 0x4, 0x4, 0x2, 0x0},
+		{0x7, 0x8, 0x6, 0x2, 0x0},
+		{0xA, 0xC, 0x8, 0x4, 0x0},
+		{0xC, 0x10, 0xA, 0x6, 0x2},
+		{0x16, 0x16, 0xC, 0x8, 0x4},
+		{0x14, 0x1B, 0x10, 0xA, 0x4},
+		{0x1A, 0x20, 0x13, 0xC, 0x6},
+		{0x1E, 0x26, 0x17, 0x10, 0x8},
+		{0x24, 0x2C, 0x1D, 0x15, 0x0D},
+		{0x2A, 0x30, 0x22, 0x1A, 0x14},
+		{0x30, 0x3F, 0x28, 0x24, 0x20},
 	};
 
 	pr_info("enter %s\n", __func__);
@@ -986,24 +1131,37 @@ int isp_s_flt(struct isp_ic_dev *dev)
 	}
 
 	if (flt->denoise >= 0) {
-		isp_write_reg(dev, REG_ADDR(isp_filt_thresh_sh0), denoise_tbl[flt->denoise].thresh_sh0);
-		isp_write_reg(dev, REG_ADDR(isp_filt_thresh_sh1), denoise_tbl[flt->denoise].thresh_sh1);
-		isp_write_reg(dev, REG_ADDR(isp_filt_thresh_bl0), denoise_tbl[flt->denoise].thresh_bl0);
-		isp_write_reg(dev, REG_ADDR(isp_filt_thresh_bl1), denoise_tbl[flt->denoise].thresh_bl1);
-		REG_SET_SLICE(isp_flt_mode, MRV_FILT_STAGE1_SELECT,  denoise_tbl[flt->denoise].stage_select);
-		REG_SET_SLICE(isp_flt_mode, MRV_FILT_FILT_CHR_V_MODE, denoise_tbl[flt->denoise].vmode);
-		REG_SET_SLICE(isp_flt_mode, MRV_FILT_FILT_CHR_H_MODE, denoise_tbl[flt->denoise].hmode);
+		isp_write_reg(dev, REG_ADDR(isp_filt_thresh_sh0),
+			      denoise_tbl[flt->denoise].thresh_sh0);
+		isp_write_reg(dev, REG_ADDR(isp_filt_thresh_sh1),
+			      denoise_tbl[flt->denoise].thresh_sh1);
+		isp_write_reg(dev, REG_ADDR(isp_filt_thresh_bl0),
+			      denoise_tbl[flt->denoise].thresh_bl0);
+		isp_write_reg(dev, REG_ADDR(isp_filt_thresh_bl1),
+			      denoise_tbl[flt->denoise].thresh_bl1);
+		REG_SET_SLICE(isp_flt_mode, MRV_FILT_STAGE1_SELECT,
+			      denoise_tbl[flt->denoise].stage_select);
+		REG_SET_SLICE(isp_flt_mode, MRV_FILT_FILT_CHR_V_MODE,
+			      denoise_tbl[flt->denoise].vmode);
+		REG_SET_SLICE(isp_flt_mode, MRV_FILT_FILT_CHR_H_MODE,
+			      denoise_tbl[flt->denoise].hmode);
 	}
 
 	if (flt->sharpen >= 0) {
-		isp_write_reg(dev, REG_ADDR(isp_filt_fac_sh0), sharpen_tbl[flt->sharpen].fac_sh0);
-		isp_write_reg(dev, REG_ADDR(isp_filt_fac_sh1), sharpen_tbl[flt->sharpen].fac_sh1);
-		isp_write_reg(dev, REG_ADDR(isp_filt_fac_mid), sharpen_tbl[flt->sharpen].fac_mid);
-		isp_write_reg(dev, REG_ADDR(isp_filt_fac_bl0), sharpen_tbl[flt->sharpen].fac_bl0);
-		isp_write_reg(dev, REG_ADDR(isp_filt_fac_bl1), sharpen_tbl[flt->sharpen].fac_bl1);
+		isp_write_reg(dev, REG_ADDR(isp_filt_fac_sh0),
+			      sharpen_tbl[flt->sharpen].fac_sh0);
+		isp_write_reg(dev, REG_ADDR(isp_filt_fac_sh1),
+			      sharpen_tbl[flt->sharpen].fac_sh1);
+		isp_write_reg(dev, REG_ADDR(isp_filt_fac_mid),
+			      sharpen_tbl[flt->sharpen].fac_mid);
+		isp_write_reg(dev, REG_ADDR(isp_filt_fac_bl0),
+			      sharpen_tbl[flt->sharpen].fac_bl0);
+		isp_write_reg(dev, REG_ADDR(isp_filt_fac_bl1),
+			      sharpen_tbl[flt->sharpen].fac_bl1);
 	}
 
-	REG_SET_SLICE(isp_flt_mode, MRV_FILT_FILT_MODE, MRV_FILT_FILT_MODE_DYNAMIC);
+	REG_SET_SLICE(isp_flt_mode, MRV_FILT_FILT_MODE,
+		      MRV_FILT_FILT_MODE_DYNAMIC);
 	isp_write_reg(dev, REG_ADDR(isp_filt_mode), isp_flt_mode);
 	REG_SET_SLICE(isp_flt_mode, MRV_FILT_FILT_ENABLE, 1);
 	isp_write_reg(dev, REG_ADDR(isp_filt_mode), isp_flt_mode);
@@ -1028,7 +1186,8 @@ int isp_s_cac(struct isp_ic_dev *dev)
 
 	REG_SET_SLICE(isp_cac_ctrl, MRV_CAC_H_CLIP_MODE, cac->hmode);
 	REG_SET_SLICE(isp_cac_ctrl, MRV_CAC_V_CLIP_MODE, cac->vmode);
-	isp_write_reg(dev, REG_ADDR(isp_cac_count_start), cac->hstart | (cac->vstart << 16));
+	isp_write_reg(dev, REG_ADDR(isp_cac_count_start),
+		      cac->hstart | (cac->vstart << 16));
 	isp_write_reg(dev, REG_ADDR(isp_cac_a), cac->ar | (cac->ab << 16));
 	isp_write_reg(dev, REG_ADDR(isp_cac_b), cac->br | (cac->bb << 16));
 	isp_write_reg(dev, REG_ADDR(isp_cac_c), cac->cr | (cac->cb << 16));
@@ -1063,17 +1222,20 @@ int isp_s_deg(struct isp_ic_dev *dev)
 	}
 
 	for (i = 0; i < 8; i++) {
-		isp_gamma_dx_lo |= deg->segment[i] << (i*4);
-		isp_gamma_dx_hi |= deg->segment[i+8] << (i*4);
+		isp_gamma_dx_lo |= deg->segment[i] << (i * 4);
+		isp_gamma_dx_hi |= deg->segment[i + 8] << (i * 4);
 	}
 
 	isp_write_reg(dev, REG_ADDR(isp_gamma_dx_lo), isp_gamma_dx_lo);
 	isp_write_reg(dev, REG_ADDR(isp_gamma_dx_hi), isp_gamma_dx_hi);
 
 	for (i = 0; i < 17; i++) {
-		isp_write_reg(dev, REG_ADDR(degamma_r_y_block_arr[i]), deg->r[i]);
-		isp_write_reg(dev, REG_ADDR(degamma_g_y_block_arr[i]), deg->g[i]);
-		isp_write_reg(dev, REG_ADDR(degamma_b_y_block_arr[i]), deg->b[i]);
+		isp_write_reg(dev, REG_ADDR(degamma_r_y_block_arr[i]),
+			      deg->r[i]);
+		isp_write_reg(dev, REG_ADDR(degamma_g_y_block_arr[i]),
+			      deg->g[i]);
+		isp_write_reg(dev, REG_ADDR(degamma_b_y_block_arr[i]),
+			      deg->b[i]);
 	}
 
 	REG_SET_SLICE(isp_ctrl, MRV_ISP_ISP_GAMMA_IN_ENABLE, 1);
@@ -1127,8 +1289,10 @@ int isp_s_ie(struct isp_ic_dev *dev)
 	isp_write_reg(dev, REG_ADDR(vi_ircl), vi_ircl);
 
 	if (!ie->enable) {
-		REG_SET_SLICE(img_eff_ctrl, MRV_IMGEFF_CFG_UPD, MRV_IMGEFF_CFG_UPD_UPDATE);
-		REG_SET_SLICE(img_eff_ctrl, MRV_IMGEFF_BYPASS_MODE, MRV_IMGEFF_BYPASS_MODE_BYPASS);
+		REG_SET_SLICE(img_eff_ctrl, MRV_IMGEFF_CFG_UPD,
+			      MRV_IMGEFF_CFG_UPD_UPDATE);
+		REG_SET_SLICE(img_eff_ctrl, MRV_IMGEFF_BYPASS_MODE,
+			      MRV_IMGEFF_BYPASS_MODE_BYPASS);
 		REG_SET_SLICE(vi_iccl, MRV_VI_IE_CLK_ENABLE, 0);
 		isp_write_reg(dev, REG_ADDR(vi_iccl), vi_iccl);
 		isp_write_reg(dev, REG_ADDR(img_eff_ctrl), img_eff_ctrl);
@@ -1153,24 +1317,39 @@ int isp_s_ie(struct isp_ic_dev *dev)
 		REG_SET_SLICE(img_eff_tint, MRV_IMGEFF_INCR_CB, ie->tint_cb);
 		isp_write_reg(dev, REG_ADDR(img_eff_tint), img_eff_tint);
 	} else if (ie->mode == MRV_IMGEFF_EFFECT_MODE_COLOR_SEL) {
-		REG_SET_SLICE(img_eff_color_sel, MRV_IMGEFF_COLOR_SELECTION, ie->color_sel);
-		REG_SET_SLICE(img_eff_color_sel, MRV_IMGEFF_COLOR_THRESHOLD, ie->color_thresh);
-		isp_write_reg(dev, REG_ADDR(img_eff_color_sel), img_eff_color_sel);
+		REG_SET_SLICE(img_eff_color_sel, MRV_IMGEFF_COLOR_SELECTION,
+			      ie->color_sel);
+		REG_SET_SLICE(img_eff_color_sel, MRV_IMGEFF_COLOR_THRESHOLD,
+			      ie->color_thresh);
+		isp_write_reg(dev, REG_ADDR(img_eff_color_sel),
+			      img_eff_color_sel);
 	} else if (ie->mode == MRV_IMGEFF_EFFECT_MODE_EMBOSS) {
-		isp_write_reg(dev, REG_ADDR(img_eff_mat_1), mat[0] | (mat[1] << 4) | (mat[2] << 8) | (mat[3] << 12));
-		isp_write_reg(dev, REG_ADDR(img_eff_mat_2), mat[4] | (mat[5] << 4) | (mat[6] << 8) | (mat[7] << 12));
+		isp_write_reg(dev, REG_ADDR(img_eff_mat_1),
+			      mat[0] | (mat[1] << 4) | (mat[2] << 8) | (mat[3]
+									<< 12));
+		isp_write_reg(dev, REG_ADDR(img_eff_mat_2),
+			      mat[4] | (mat[5] << 4) | (mat[6] << 8) | (mat[7]
+									<< 12));
 		isp_write_reg(dev, REG_ADDR(img_eff_mat_3), mat[8]);
 	} else if (ie->mode == MRV_IMGEFF_EFFECT_MODE_SKETCH ||
-			   ie->mode == MRV_IMGEFF_EFFECT_MODE_SHARPEN) {
-		isp_write_reg(dev, REG_ADDR(img_eff_mat_3), (mat[0] << 4) | (mat[1] << 8) | (mat[2] << 12));
-		isp_write_reg(dev, REG_ADDR(img_eff_mat_4), mat[3] | (mat[4] << 4) | (mat[5] << 8) | (mat[6] << 12));
-		isp_write_reg(dev, REG_ADDR(img_eff_mat_5), mat[7] | (mat[8] << 4));
-		REG_SET_SLICE(sharpen, MRV_IMGEFF_SHARP_FACTOR, ie->sharpen_factor);
-		REG_SET_SLICE(sharpen, MRV_IMGEFF_CORING_THR, ie->sharpen_thresh);
+		   ie->mode == MRV_IMGEFF_EFFECT_MODE_SHARPEN) {
+		isp_write_reg(dev, REG_ADDR(img_eff_mat_3),
+			      (mat[0] << 4) | (mat[1] << 8) | (mat[2] << 12));
+		isp_write_reg(dev, REG_ADDR(img_eff_mat_4),
+			      mat[3] | (mat[4] << 4) | (mat[5] << 8) | (mat[6]
+									<< 12));
+		isp_write_reg(dev, REG_ADDR(img_eff_mat_5),
+			      mat[7] | (mat[8] << 4));
+		REG_SET_SLICE(sharpen, MRV_IMGEFF_SHARP_FACTOR,
+			      ie->sharpen_factor);
+		REG_SET_SLICE(sharpen, MRV_IMGEFF_CORING_THR,
+			      ie->sharpen_thresh);
 		isp_write_reg(dev, REG_ADDR(img_eff_sharpen), sharpen);
 	}
-	REG_SET_SLICE(img_eff_ctrl, MRV_IMGEFF_CFG_UPD, MRV_IMGEFF_CFG_UPD_UPDATE);
-	REG_SET_SLICE(img_eff_ctrl, MRV_IMGEFF_BYPASS_MODE, MRV_IMGEFF_BYPASS_MODE_PROCESS);
+	REG_SET_SLICE(img_eff_ctrl, MRV_IMGEFF_CFG_UPD,
+		      MRV_IMGEFF_CFG_UPD_UPDATE);
+	REG_SET_SLICE(img_eff_ctrl, MRV_IMGEFF_BYPASS_MODE,
+		      MRV_IMGEFF_BYPASS_MODE_PROCESS);
 	isp_write_reg(dev, REG_ADDR(img_eff_ctrl), img_eff_ctrl);
 
 	return 0;
@@ -1188,20 +1367,24 @@ int isp_s_vsm(struct isp_ic_dev *dev)
 		REG_SET_SLICE(isp_vsm_mode, ISP_VSM_MEAS_EN, 0);
 		REG_SET_SLICE(isp_vsm_mode, ISP_VSM_MEAS_IRQ_ENABLE, 0);
 		isp_write_reg(dev, REG_ADDR(isp_vsm_mode), isp_vsm_mode);
-		isp_write_reg(dev, REG_ADDR(isp_imsc), isp_imsc & ~MRV_ISP_IMSC_VSM_END_MASK);
+		isp_write_reg(dev, REG_ADDR(isp_imsc),
+			      isp_imsc & ~MRV_ISP_IMSC_VSM_END_MASK);
 		return 0;
 	}
 
 	isp_write_reg(dev, REG_ADDR(isp_vsm_h_offs), vsm->window.x);
 	isp_write_reg(dev, REG_ADDR(isp_vsm_v_offs), vsm->window.y);
-	isp_write_reg(dev, REG_ADDR(isp_vsm_h_size), vsm->window.width >> 1);
-	isp_write_reg(dev, REG_ADDR(isp_vsm_v_size), vsm->window.height >> 1);
+	isp_write_reg(dev, REG_ADDR(isp_vsm_h_size),
+		      vsm->window.width & 0xFFFFE);
+	isp_write_reg(dev, REG_ADDR(isp_vsm_v_size),
+		      vsm->window.height & 0xFFFFE);
 	isp_write_reg(dev, REG_ADDR(isp_vsm_h_segments), vsm->h_seg);
 	isp_write_reg(dev, REG_ADDR(isp_vsm_v_segments), vsm->v_seg);
 	REG_SET_SLICE(isp_vsm_mode, ISP_VSM_MEAS_EN, 1);
 	REG_SET_SLICE(isp_vsm_mode, ISP_VSM_MEAS_IRQ_ENABLE, 1);
 	isp_write_reg(dev, REG_ADDR(isp_vsm_mode), isp_vsm_mode);
-	isp_write_reg(dev, REG_ADDR(isp_imsc), isp_imsc | MRV_ISP_IMSC_VSM_END_MASK);
+	isp_write_reg(dev, REG_ADDR(isp_imsc),
+		      isp_imsc | MRV_ISP_IMSC_VSM_END_MASK);
 
 	return 0;
 }
@@ -1217,11 +1400,12 @@ int isp_g_vsm(struct isp_ic_dev *dev, struct isp_vsm_result *vsm)
 
 u32 get_afm_shift(u32 count, u32 thresh)
 {
-	u32 grad  = count;
+	u32 grad = count;
 	u32 shift = 0;
 
 	while (grad > (thresh)) {
-		++shift; grad >>= 1;
+		++shift;
+		grad >>= 1;
 	}
 
 	return shift;
@@ -1230,7 +1414,9 @@ u32 get_afm_shift(u32 count, u32 thresh)
 int isp_s_afm(struct isp_ic_dev *dev)
 {
 	struct isp_afm_context *afm = &dev->afm;
-	u32 mask = (MRV_ISP_IMSC_AFM_FIN_MASK | MRV_ISP_IMSC_AFM_LUM_OF_MASK | MRV_ISP_IMSC_AFM_SUM_OF_MASK);
+	u32 mask =
+	    (MRV_ISP_IMSC_AFM_FIN_MASK | MRV_ISP_IMSC_AFM_LUM_OF_MASK |
+	     MRV_ISP_IMSC_AFM_SUM_OF_MASK);
 	u32 max_count = 0;
 	u32 lum_shift = 0;
 	u32 afm_shift = 0;
@@ -1252,11 +1438,12 @@ int isp_s_afm(struct isp_ic_dev *dev)
 	}
 
 	for (i = 0; i < 3; i++) {
-		isp_write_reg(dev, REG_ADDR(isp_afm_lt_a) + i*8,
-				(afm->window[i].x << 16) | afm->window[i].y);
-		isp_write_reg(dev, REG_ADDR(isp_afm_rb_a) + i*8,
-				((afm->window[i].x + afm->window[i].width - 1) << 16) |
-				((afm->window[i].y + afm->window[i].height - 1)));
+		isp_write_reg(dev, REG_ADDR(isp_afm_lt_a) + i * 8,
+			      (afm->window[i].x << 16) | afm->window[i].y);
+		isp_write_reg(dev, REG_ADDR(isp_afm_rb_a) + i * 8,
+			      ((afm->window[i].x + afm->window[i].width -
+				1) << 16) | ((afm->window[i].y +
+					      afm->window[i].height - 1)));
 		pix_count = afm->window[i].width * afm->window[i].height;
 		if (pix_count > max_count)
 			max_count = pix_count;
@@ -1303,9 +1490,8 @@ int isp_s_exp2(struct isp_ic_dev *dev)
 
 	pr_info("enter %s\n", __func__);
 
-	grid_w  = (exp2->window.width / 32) - 1;
-	grid_h  = (exp2->window.height / 32) - 1;
-
+	grid_w = (exp2->window.width / 32) - 1;
+	grid_h = (exp2->window.height / 32) - 1;
 
 	if (!exp2->enable) {
 		REG_SET_SLICE(isp_expv2_ctrl, MRV_AE_ISP_EXPV2_ENABLE, 0);
@@ -1323,11 +1509,11 @@ int isp_s_exp2(struct isp_ic_dev *dev)
 	REG_SET_SLICE(size_inv, MRV_AE_ISP_EXPV2_SIZE_INVERT_H, 65536 / grid_w);
 	REG_SET_SLICE(size_inv, MRV_AE_ISP_EXPV2_SIZE_INVERT_V, 65536 / grid_h);
 	weight = 0;
-	REG_SET_SLICE(weight, MRV_AE_ISP_EXPV2_PIX_WEIGHT_R,  exp2->r)
-	REG_SET_SLICE(weight, MRV_AE_ISP_EXPV2_PIX_WEIGHT_GR, exp2->gr)
-	REG_SET_SLICE(weight, MRV_AE_ISP_EXPV2_PIX_WEIGHT_GB, exp2->gb)
-	REG_SET_SLICE(weight, MRV_AE_ISP_EXPV2_PIX_WEIGHT_B,  exp2->b)
-	isp_write_reg(dev, REG_ADDR(isp_expv2_offset), offset);
+	REG_SET_SLICE(weight, MRV_AE_ISP_EXPV2_PIX_WEIGHT_R, exp2->r)
+	    REG_SET_SLICE(weight, MRV_AE_ISP_EXPV2_PIX_WEIGHT_GR, exp2->gr)
+	    REG_SET_SLICE(weight, MRV_AE_ISP_EXPV2_PIX_WEIGHT_GB, exp2->gb)
+	    REG_SET_SLICE(weight, MRV_AE_ISP_EXPV2_PIX_WEIGHT_B, exp2->b)
+	    isp_write_reg(dev, REG_ADDR(isp_expv2_offset), offset);
 	isp_write_reg(dev, REG_ADDR(isp_expv2_size_invert), size_inv);
 	isp_write_reg(dev, REG_ADDR(isp_expv2_size), size);
 #ifdef ISP_AE_SHADOW
@@ -1358,7 +1544,8 @@ int isp_s_2dnr(struct isp_ic_dev *dev)
 	return -EINVAL;
 #else
 	struct isp_2dnr_context *dnr2 = &dev->dnr2;
-	u32 isp_denoised2d_control = isp_read_reg(dev, REG_ADDR(isp_denoised2d_control));
+	u32 isp_denoised2d_control =
+	    isp_read_reg(dev, REG_ADDR(isp_denoised2d_control));
 	u32 value, addr;
 	u32 isp_ctrl;
 	int i;
@@ -1367,7 +1554,8 @@ int isp_s_2dnr(struct isp_ic_dev *dev)
 
 	if (!dnr2->enable) {
 		REG_SET_SLICE(isp_denoised2d_control, ISP_2DNR_ENABLE, 0);
-		isp_write_reg(dev, REG_ADDR(isp_denoised2d_control), isp_denoised2d_control);
+		isp_write_reg(dev, REG_ADDR(isp_denoised2d_control),
+			      isp_denoised2d_control);
 		return 0;
 	}
 
@@ -1380,14 +1568,16 @@ int isp_s_2dnr(struct isp_ic_dev *dev)
 	for (i = 0; i < 60; i += 5) {
 		value = 0;
 		REG_SET_SLICE(value, ISP_2DNR_SIGMAY0, dnr2->sigma[i]);
-		REG_SET_SLICE(value, ISP_2DNR_SIGMAY1, dnr2->sigma[i+1]);
-		REG_SET_SLICE(value, ISP_2DNR_SIGMAY2A, dnr2->sigma[i+2] >> 6);
+		REG_SET_SLICE(value, ISP_2DNR_SIGMAY1, dnr2->sigma[i + 1]);
+		REG_SET_SLICE(value, ISP_2DNR_SIGMAY2A,
+			      dnr2->sigma[i + 2] >> 6);
 		isp_write_reg(dev, addr, value);
 		value = 0;
 		addr += 4;
-		REG_SET_SLICE(value, ISP_2DNR_SIGMAY2B, dnr2->sigma[i+2] & 0x3f);
-		REG_SET_SLICE(value, ISP_2DNR_SIGMAY0, dnr2->sigma[i+3]);
-		REG_SET_SLICE(value, ISP_2DNR_SIGMAY1, dnr2->sigma[i+4]);
+		REG_SET_SLICE(value, ISP_2DNR_SIGMAY2B,
+			      dnr2->sigma[i + 2] & 0x3f);
+		REG_SET_SLICE(value, ISP_2DNR_SIGMAY0, dnr2->sigma[i + 3]);
+		REG_SET_SLICE(value, ISP_2DNR_SIGMAY1, dnr2->sigma[i + 4]);
 		isp_write_reg(dev, addr, value);
 		addr += 4;
 	}
@@ -1396,7 +1586,8 @@ int isp_s_2dnr(struct isp_ic_dev *dev)
 	REG_SET_SLICE(isp_ctrl, MRV_ISP_ISP_CFG_UPD, 1);
 	isp_write_reg(dev, REG_ADDR(isp_ctrl), isp_ctrl);
 	REG_SET_SLICE(isp_denoised2d_control, ISP_2DNR_ENABLE, 1);
-	isp_write_reg(dev, REG_ADDR(isp_denoised2d_control), isp_denoised2d_control);
+	isp_write_reg(dev, REG_ADDR(isp_denoised2d_control),
+		      isp_denoised2d_control);
 
 	return 0;
 #endif
@@ -1423,10 +1614,11 @@ int isp_s_simp(struct isp_ic_dev *dev)
 	REG_SET_SLICE(vi_ircl, MRV_VI_SIMP_SOFT_RST, 0);
 	isp_write_reg(dev, REG_ADDR(super_imp_offset_x), simp->x);
 	isp_write_reg(dev, REG_ADDR(super_imp_offset_y), simp->y);
-	isp_write_reg(dev, REG_ADDR(super_imp_color_y),  simp->r);
+	isp_write_reg(dev, REG_ADDR(super_imp_color_y), simp->r);
 	isp_write_reg(dev, REG_ADDR(super_imp_color_cb), simp->g);
 	isp_write_reg(dev, REG_ADDR(super_imp_color_cr), simp->b);
-	REG_SET_SLICE(super_imp_ctrl, MRV_SI_TRANSPARENCY_MODE, simp->transparency_mode);
+	REG_SET_SLICE(super_imp_ctrl, MRV_SI_TRANSPARENCY_MODE,
+		      simp->transparency_mode);
 	REG_SET_SLICE(super_imp_ctrl, MRV_SI_REF_IMAGE, simp->ref_image);
 	isp_write_reg(dev, REG_ADDR(super_imp_ctrl), super_imp_ctrl);
 	isp_write_reg(dev, REG_ADDR(vi_ircl), vi_ircl);
@@ -1443,14 +1635,14 @@ int isp_s_cproc(struct isp_ic_dev *dev)
 	u32 vi_iccl = isp_read_reg(dev, REG_ADDR(vi_iccl));
 	u32 cproc_ctrl = isp_read_reg(dev, REG_ADDR(cproc_ctrl));
 
-	pr_info("enter %s\n", __func__);
+	pr_info("enter %s %d\n", __func__, cproc->enable);
 	REG_SET_SLICE(vi_ircl, MRV_VI_CP_SOFT_RST, 1);
 	isp_write_reg(dev, REG_ADDR(vi_ircl), vi_ircl);
 
 	if (!cproc->enable) {
 		REG_SET_SLICE(cproc_ctrl, MRV_CPROC_CPROC_ENABLE, 0);
-		REG_SET_SLICE(vi_iccl, MRV_VI_CP_CLK_ENABLE, 0);
-		isp_write_reg(dev, REG_ADDR(vi_iccl), vi_iccl);
+		/*      REG_SET_SLICE(vi_iccl, MRV_VI_CP_CLK_ENABLE, 0); */
+		/*      isp_write_reg(dev, REG_ADDR(vi_iccl), vi_iccl); */
 		isp_write_reg(dev, REG_ADDR(cproc_ctrl), cproc_ctrl);
 		return 0;
 	}
@@ -1462,9 +1654,11 @@ int isp_s_cproc(struct isp_ic_dev *dev)
 	isp_write_reg(dev, REG_ADDR(cproc_saturation), cproc->saturation);
 	isp_write_reg(dev, REG_ADDR(cproc_hue), cproc->hue);
 	REG_SET_SLICE(cproc_ctrl, MRV_CPROC_CPROC_ENABLE, 1);
-	REG_SET_SLICE(cproc_ctrl, MRV_CPROC_CPROC_C_OUT_RANGE, cproc->c_out_full);
-	REG_SET_SLICE(cproc_ctrl, MRV_CPROC_CPROC_Y_OUT_RANGE, cproc->y_out_full);
-	REG_SET_SLICE(cproc_ctrl, MRV_CPROC_CPROC_Y_IN_RANGE,  cproc->y_in_full);
+	REG_SET_SLICE(cproc_ctrl, MRV_CPROC_CPROC_C_OUT_RANGE,
+		      cproc->c_out_full);
+	REG_SET_SLICE(cproc_ctrl, MRV_CPROC_CPROC_Y_OUT_RANGE,
+		      cproc->y_out_full);
+	REG_SET_SLICE(cproc_ctrl, MRV_CPROC_CPROC_Y_IN_RANGE, cproc->y_in_full);
 	REG_SET_SLICE(vi_iccl, MRV_VI_CP_CLK_ENABLE, 1);
 	isp_write_reg(dev, REG_ADDR(vi_iccl), vi_iccl);
 	isp_write_reg(dev, REG_ADDR(cproc_ctrl), cproc_ctrl);
@@ -1484,7 +1678,8 @@ int isp_s_elawb(struct isp_ic_dev *dev)
 		REG_SET_SLICE(awb_meas_mode, ISP_AWB_MEAS_IRQ_ENABLE, 0);
 		REG_SET_SLICE(awb_meas_mode, ISP_AWB_MEAS_EN, 0);
 		isp_write_reg(dev, REG_ADDR(awb_meas_mode), awb_meas_mode);
-		isp_write_reg(dev, REG_ADDR(isp_imsc), isp_imsc & ~MRV_ISP_IMSC_AWB_DONE_MASK);
+		isp_write_reg(dev, REG_ADDR(isp_imsc),
+			      isp_imsc & ~MRV_ISP_IMSC_AWB_DONE_MASK);
 		return 0;
 	}
 
@@ -1494,13 +1689,20 @@ int isp_s_elawb(struct isp_ic_dev *dev)
 	isp_write_reg(dev, REG_ADDR(awb_meas_v_size), elawb->window.height);
 
 	if (id > 0 && id < 9) {
-		isp_write_reg(dev, REG_ADDR(awb_meas_center[id-1].x), elawb->info[id-1].x);
-		isp_write_reg(dev, REG_ADDR(awb_meas_center[id-1].y), elawb->info[id-1].y);
-		isp_write_reg(dev, REG_ADDR(awb_meas_axis[id-1].a1), elawb->info[id-1].a1);
-		isp_write_reg(dev, REG_ADDR(awb_meas_axis[id-1].a2), elawb->info[id-1].a2);
-		isp_write_reg(dev, REG_ADDR(awb_meas_axis[id-1].a3), elawb->info[id-1].a3);
-		isp_write_reg(dev, REG_ADDR(awb_meas_axis[id-1].a4), elawb->info[id-1].a4);
-		isp_write_reg(dev, REG_ADDR(awb_meas_rmax[id-1]), elawb->info[id-1].r_max_sqr);
+		isp_write_reg(dev, REG_ADDR(awb_meas_center[id - 1].x),
+			      elawb->info[id - 1].x);
+		isp_write_reg(dev, REG_ADDR(awb_meas_center[id - 1].y),
+			      elawb->info[id - 1].y);
+		isp_write_reg(dev, REG_ADDR(awb_meas_axis[id - 1].a1),
+			      elawb->info[id - 1].a1);
+		isp_write_reg(dev, REG_ADDR(awb_meas_axis[id - 1].a2),
+			      elawb->info[id - 1].a2);
+		isp_write_reg(dev, REG_ADDR(awb_meas_axis[id - 1].a3),
+			      elawb->info[id - 1].a3);
+		isp_write_reg(dev, REG_ADDR(awb_meas_axis[id - 1].a4),
+			      elawb->info[id - 1].a4);
+		isp_write_reg(dev, REG_ADDR(awb_meas_rmax[id - 1]),
+			      elawb->info[id - 1].r_max_sqr);
 	}
 
 	data = 0;
@@ -1515,29 +1717,36 @@ int isp_s_elawb(struct isp_ic_dev *dev)
 	REG_SET_SLICE(awb_meas_mode, ISP_AWB_MEAS_IRQ_ENABLE, 1);
 	REG_SET_SLICE(awb_meas_mode, ISP_AWB_MEAS_EN, 1);
 	isp_write_reg(dev, REG_ADDR(awb_meas_mode), awb_meas_mode);
-	isp_write_reg(dev, REG_ADDR(isp_imsc), isp_imsc | MRV_ISP_IMSC_AWB_DONE_MASK);
+	isp_write_reg(dev, REG_ADDR(isp_imsc),
+		      isp_imsc | MRV_ISP_IMSC_AWB_DONE_MASK);
 
 	return 0;
 }
 
 int isp_ioc_qcap(struct isp_ic_dev *dev, void *args)
 {
-	// 0-isp, 1-dwe, 2-vse, can be extend
-	// use public VIDIOC_QUERYCAP to query the type of v4l-subdevs.
-	int type = 0;
 
-	copy_to_user(args, &type, sizeof(type));
-
+	/* use public VIDIOC_QUERYCAP to query the type of v4l-subdevs. */
+#ifdef __KERNEL__
+#ifndef USE_FPGA
+	struct v4l2_capability *cap = (struct v4l2_capability *)args;
+	strcpy((char *)cap->driver, "viv_isp_subdev");
+#else
+	struct v4l2_capability cap;
+	strcpy((char *)cap.driver, "viv_isp_subdev");
+	pr_info("enter %s viv_isp_subdev\n", __func__);
+	viv_check_retval(copy_to_user
+			 ((struct v4l2_capability *)args, &cap, sizeof(cap)));
+#endif
+#endif
 	return 0;
 }
 
 int isp_ioc_g_status(struct isp_ic_dev *dev, void *args)
 {
 	u32 val = 0;
-
-	// val = isp_read_reg(REG_ADDR(isp_feature_version));
-	copy_to_user(args, &val, sizeof(val));
-
+	/* val = isp_read_reg(REG_ADDR(isp_feature_version)); */
+	viv_check_retval(copy_to_user(args, &val, sizeof(val)));
 	return 0;
 }
 
@@ -1569,7 +1778,7 @@ int isp_ioc_g_feature(struct isp_ic_dev *dev, void *args)
 #ifdef ISP_HDR_STITCH
 	val |= ISP_HDR_STITCH_SUPPORT;
 #endif
-	copy_to_user(args, &val, sizeof(val));
+	viv_check_retval(copy_to_user(args, &val, sizeof(val)));
 
 	return 0;
 }
@@ -1578,8 +1787,8 @@ int isp_ioc_g_feature_veresion(struct isp_ic_dev *dev, void *args)
 {
 	u32 val = 0;
 
-	// val = isp_read_reg(REG_ADDR(isp_feature_version));
-	copy_to_user(args, &val, sizeof(val));
+	/* val = isp_read_reg(REG_ADDR(isp_feature_version)); */
+	viv_check_retval(copy_to_user(args, &val, sizeof(val)));
 
 	return 0;
 }
@@ -1660,215 +1869,264 @@ long isp_priv_ioctl(struct isp_ic_dev *dev, unsigned int cmd, void *args)
 		ret = isp_r_3dnr(dev);
 		break;
 	case ISPIOC_S_IS:
-		copy_from_user(&dev->is, args, sizeof(dev->is));
+		viv_check_retval(copy_from_user
+				 (&dev->is, args, sizeof(dev->is)));
 		ret = isp_s_is(dev);
 		break;
 	case ISPIOC_S_RAW_IS:
-		copy_from_user(&dev->rawis, args, sizeof(dev->rawis));
+		viv_check_retval(copy_from_user
+				 (&dev->rawis, args, sizeof(dev->rawis)));
 		ret = isp_s_raw_is(dev);
 		break;
 	case ISPIOC_S_CC:
-		copy_from_user(&dev->cc, args, sizeof(dev->cc));
+		viv_check_retval(copy_from_user
+				 (&dev->cc, args, sizeof(dev->cc)));
 		ret = isp_s_cc(dev);
 		break;
 	case ISPIOC_S_EE:
-		copy_from_user(&dev->ee, args, sizeof(dev->ee));
+		viv_check_retval(copy_from_user
+				 (&dev->ee, args, sizeof(dev->ee)));
 		ret = isp_s_ee(dev);
 		break;
 	case ISPIOC_S_IE:
-		copy_from_user(&dev->ie, args, sizeof(dev->ie));
+		viv_check_retval(copy_from_user
+				 (&dev->ie, args, sizeof(dev->ie)));
 		ret = isp_s_ie(dev);
 		break;
 	case ISPIOC_S_TPG:
-		copy_from_user(&dev->tpg, args, sizeof(dev->tpg));
+		viv_check_retval(copy_from_user
+				 (&dev->tpg, args, sizeof(dev->tpg)));
 		ret = isp_s_tpg(dev);
 		break;
 	case ISPIOC_S_BLS:
-		copy_from_user(&dev->bls, args, sizeof(dev->bls));
+		viv_check_retval(copy_from_user
+				 (&dev->bls, args, sizeof(dev->bls)));
 		ret = isp_s_bls(dev);
 		break;
 	case ISPIOC_S_MUX:
-		copy_from_user(&dev->mux, args, sizeof(dev->mux));
+		viv_check_retval(copy_from_user
+				 (&dev->mux, args, sizeof(dev->mux)));
 		ret = isp_s_mux(dev);
 		break;
 	case ISPIOC_S_AWB:
-		copy_from_user(&dev->awb, args, sizeof(dev->awb));
+		viv_check_retval(copy_from_user
+				 (&dev->awb, args, sizeof(dev->awb)));
 		ret = isp_s_awb(dev);
 		break;
 	case ISPIOC_S_LSC:
-		copy_from_user(&dev->lsc, args, sizeof(dev->lsc));
+		viv_check_retval(copy_from_user
+				 (&dev->lsc, args, sizeof(dev->lsc)));
 		ret = isp_s_lsc(dev);
 		break;
 	case ISPIOC_S_DPF:
-		copy_from_user(&dev->dpf, args, sizeof(dev->dpf));
+		viv_check_retval(copy_from_user
+				 (&dev->dpf, args, sizeof(dev->dpf)));
 		ret = isp_s_dpf(dev);
 		break;
 	case ISPIOC_S_EXP:
-		copy_from_user(&dev->exp, args, sizeof(dev->exp));
+		viv_check_retval(copy_from_user
+				 (&dev->exp, args, sizeof(dev->exp)));
 		ret = isp_s_exp(dev);
 		break;
 	case ISPIOC_S_CNR:
-		copy_from_user(&dev->cnr, args, sizeof(dev->cnr));
+		viv_check_retval(copy_from_user
+				 (&dev->cnr, args, sizeof(dev->cnr)));
 		ret = isp_s_cnr(dev);
 		break;
 	case ISPIOC_S_FLT:
-		copy_from_user(&dev->flt, args, sizeof(dev->flt));
+		viv_check_retval(copy_from_user
+				 (&dev->flt, args, sizeof(dev->flt)));
 		ret = isp_s_flt(dev);
 		break;
 	case ISPIOC_S_CAC:
-		copy_from_user(&dev->cac, args, sizeof(dev->cac));
+		viv_check_retval(copy_from_user
+				 (&dev->cac, args, sizeof(dev->cac)));
 		ret = isp_s_cac(dev);
 		break;
 	case ISPIOC_S_DEG:
-		copy_from_user(&dev->deg, args, sizeof(dev->deg));
+		viv_check_retval(copy_from_user
+				 (&dev->deg, args, sizeof(dev->deg)));
 		ret = isp_s_deg(dev);
 		break;
 	case ISPIOC_S_VSM:
-		copy_from_user(&dev->vsm, args, sizeof(dev->vsm));
+		viv_check_retval(copy_from_user
+				 (&dev->vsm, args, sizeof(dev->vsm)));
 		ret = isp_s_vsm(dev);
 		break;
 	case ISPIOC_S_AFM:
-		copy_from_user(&dev->afm, args, sizeof(dev->afm));
+		viv_check_retval(copy_from_user
+				 (&dev->afm, args, sizeof(dev->afm)));
 		ret = isp_s_afm(dev);
 		break;
 	case ISPIOC_S_HDR:
-		copy_from_user(&dev->hdr, args, sizeof(dev->hdr));
+		viv_check_retval(copy_from_user
+				 (&dev->hdr, args, sizeof(dev->hdr)));
 		ret = isp_s_hdr(dev);
 		break;
 	case ISPIOC_ENABLE_HDR:
-		copy_from_user(&dev->hdr, args, sizeof(dev->hdr));
+		viv_check_retval(copy_from_user
+				 (&dev->hdr, args, sizeof(dev->hdr)));
 		ret = isp_enable_hdr(dev);
 		break;
 	case ISPIOC_DISABLE_HDR:
-		copy_from_user(&dev->hdr, args, sizeof(dev->hdr));
+		viv_check_retval(copy_from_user
+				 (&dev->hdr, args, sizeof(dev->hdr)));
 		ret = isp_disable_hdr(dev);
 		break;
 	case ISPIOC_S_HIST:
-		copy_from_user(&dev->hist, args, sizeof(dev->hist));
+		viv_check_retval(copy_from_user
+				 (&dev->hist, args, sizeof(dev->hist)));
 		ret = isp_s_hist(dev);
 		break;
 	case ISPIOC_S_DPCC:
-		copy_from_user(&dev->dpcc, args, sizeof(dev->dpcc));
+		viv_check_retval(copy_from_user
+				 (&dev->dpcc, args, sizeof(dev->dpcc)));
 		ret = isp_s_dpcc(dev);
 		break;
 	case ISPIOC_S_WDR3:
-		copy_from_user(&dev->wdr3, args, sizeof(dev->wdr3));
+		viv_check_retval(copy_from_user
+				 (&dev->wdr3, args, sizeof(dev->wdr3)));
 		ret = isp_s_wdr3(dev);
 		break;
 	case ISPIOC_S_EXP2:
-		copy_from_user(&dev->exp2, args, sizeof(dev->exp2));
+		viv_check_retval(copy_from_user
+				 (&dev->exp2, args, sizeof(dev->exp2)));
 		ret = isp_s_exp2(dev);
 		break;
 	case ISPIOC_S_2DNR:
-		copy_from_user(&dev->dnr2, args, sizeof(dev->dnr2));
+		viv_check_retval(copy_from_user
+				 (&dev->dnr2, args, sizeof(dev->dnr2)));
 		ret = isp_s_2dnr(dev);
 		break;
 	case ISPIOC_S_3DNR:
-		copy_from_user(&dev->dnr3, args, sizeof(dev->dnr3));
+		viv_check_retval(copy_from_user
+				 (&dev->dnr3, args, sizeof(dev->dnr3)));
 		ret = isp_s_3dnr(dev);
 		break;
 	case ISPIOC_S_SIMP:
-		copy_from_user(&dev->simp, args, sizeof(dev->simp));
+		viv_check_retval(copy_from_user
+				 (&dev->simp, args, sizeof(dev->simp)));
 		ret = isp_s_simp(dev);
 		break;
 	case ISPIOC_S_COMP:
-		copy_from_user(&dev->comp, args, sizeof(dev->comp));
+		viv_check_retval(copy_from_user
+				 (&dev->comp, args, sizeof(dev->comp)));
 		ret = isp_s_comp(dev);
 		break;
 	case ISPIOC_S_CPROC:
-		copy_from_user(&dev->cproc, args, sizeof(dev->cproc));
+		viv_check_retval(copy_from_user
+				 (&dev->cproc, args, sizeof(dev->cproc)));
 		ret = isp_s_cproc(dev);
 		break;
 	case ISPIOC_S_XTALK:
-		copy_from_user(&dev->xtalk, args, sizeof(dev->xtalk));
+		viv_check_retval(copy_from_user
+				 (&dev->xtalk, args, sizeof(dev->xtalk)));
 		ret = isp_s_xtalk(dev);
 		break;
 	case ISPIOC_S_ELAWB:
-		copy_from_user(&dev->elawb, args, sizeof(dev->elawb));
+		viv_check_retval(copy_from_user
+				 (&dev->elawb, args, sizeof(dev->elawb)));
 		ret = isp_s_elawb(dev);
 		break;
 	case ISPIOC_S_INPUT:
-		copy_from_user(&dev->ctx, args, sizeof(dev->ctx));
+		viv_check_retval(copy_from_user
+				 (&dev->ctx, args, sizeof(dev->ctx)));
 		ret = isp_s_input(dev);
 		break;
+	case ISPIOC_S_DEMOSAIC:
+		viv_check_retval(copy_from_user
+				 (&dev->ctx, args, sizeof(dev->ctx)));
+		ret = isp_s_demosaic(dev);
+		break;
 	case ISPIOC_MI_START:
-		copy_from_user(&dev->mi, args, sizeof(dev->mi));
+		viv_check_retval(copy_from_user
+				 (&dev->mi, args, sizeof(dev->mi)));
 		ret = isp_mi_start(dev);
 		break;
 	case ISPIOC_S_HDR_WB:
-		copy_from_user(&dev->hdr, args, sizeof(dev->hdr));
+		viv_check_retval(copy_from_user
+				 (&dev->hdr, args, sizeof(dev->hdr)));
 		ret = isp_s_hdr_wb(dev);
 		break;
 	case ISPIOC_S_HDR_BLS:
-		copy_from_user(&dev->hdr, args, sizeof(dev->hdr));
+		viv_check_retval(copy_from_user
+				 (&dev->hdr, args, sizeof(dev->hdr)));
 		ret = isp_s_hdr_bls(dev);
 		break;
-	case ISPIOC_S_GAMMA_OUT: {
-		copy_from_user(&dev->gamma_out, args, sizeof(dev->gamma_out));
-		ret = isp_s_gamma_out(dev);
-		break;
-	}
-	case ISPIOC_SET_BUFFER: {
-		struct isp_buffer_context buf;
-		copy_from_user(&buf, args, sizeof(buf));
-		ret = isp_set_buffer(dev, &buf);
-		break;
-	}
-	case ISPIOC_SET_BP_BUFFER: {
-		struct isp_bp_buffer_context buf;
-		copy_from_user(&buf, args, sizeof(buf));
-		ret = isp_set_bp_buffer(dev, &buf);
-		break;
-	}
-	case ISPIOC_START_CAPTURE: {
-		u32 num;
-		copy_from_user(&num, args, sizeof(num));
-		ret = isp_start_stream(dev, num);
-		break;
-	}
-	case ISPIOC_U_3DNR: {
-		struct isp_3dnr_update param;
-
-		copy_from_user(&param, args, sizeof(param));
-		ret = isp_u_3dnr(dev, &param);
-		break;
-	}
-	case ISPIOC_G_AWBMEAN: {
-		struct isp_awb_mean mean;
-		ret = isp_g_awbmean(dev, &mean);
-		copy_to_user(args, &mean, sizeof(mean));
-		break;
-	}
-	case ISPIOC_G_EXPMEAN: {
-		u8 mean[25];
-		ret = isp_g_expmean(dev, mean);
-		copy_to_user(args, mean, sizeof(mean));
-		break;
-	}
-	case ISPIOC_G_HISTMEAN: {
-		u32 mean[HIST_BIN_TOTAL];
-		ret = isp_g_histmean(dev, mean);
-		copy_to_user(args, mean, sizeof(mean));
-		break;
-	}
-	case ISPIOC_G_VSM: {
-		struct isp_vsm_result vsm;
-		ret = isp_g_vsm(dev, &vsm);
-		copy_to_user(args, &vsm, sizeof(vsm));
-		break;
-	}
-	case ISPIOC_G_AFM: {
-		struct isp_afm_result afm;
-		ret = isp_g_afm(dev, &afm);
-		copy_to_user(args, &afm, sizeof(afm));
-		break;
-	}
-	case ISPIOC_G_3DNR: {
-		u32 avg;
-		ret = isp_g_3dnr(dev, &avg);
-		copy_to_user(args, &avg, sizeof(avg));
-		break;
-	}
+	case ISPIOC_S_GAMMA_OUT:{
+			viv_check_retval(copy_from_user
+					 (&dev->gamma_out, args,
+					  sizeof(dev->gamma_out)));
+			ret = isp_s_gamma_out(dev);
+			break;
+		}
+	case ISPIOC_SET_BUFFER:{
+			struct isp_buffer_context buf;
+			viv_check_retval(copy_from_user
+					 (&buf, args, sizeof(buf)));
+			ret = isp_set_buffer(dev, &buf);
+			break;
+		}
+	case ISPIOC_SET_BP_BUFFER:{
+			struct isp_bp_buffer_context buf;
+			viv_check_retval(copy_from_user
+					 (&buf, args, sizeof(buf)));
+			ret = isp_set_bp_buffer(dev, &buf);
+			break;
+		}
+	case ISPIOC_START_CAPTURE:{
+			u32 num;
+			viv_check_retval(copy_from_user
+					 (&num, args, sizeof(num)));
+			ret = isp_start_stream(dev, num);
+			break;
+		}
+	case ISPIOC_U_3DNR:{
+			struct isp_3dnr_update param;
+			viv_check_retval(copy_from_user
+					 (&param, args, sizeof(param)));
+			ret = isp_u_3dnr(dev, &param);
+			break;
+		}
+	case ISPIOC_G_AWBMEAN:{
+			struct isp_awb_mean mean;
+			ret = isp_g_awbmean(dev, &mean);
+			viv_check_retval(copy_to_user
+					 (args, &mean, sizeof(mean)));
+			break;
+		}
+	case ISPIOC_G_EXPMEAN:{
+			u8 mean[25];
+			ret = isp_g_expmean(dev, mean);
+			viv_check_retval(copy_to_user
+					 (args, mean, sizeof(mean)));
+			break;
+		}
+	case ISPIOC_G_HISTMEAN:{
+			u32 mean[HIST_BIN_TOTAL];
+			ret = isp_g_histmean(dev, mean);
+			viv_check_retval(copy_to_user
+					 (args, mean, sizeof(mean)));
+			break;
+		}
+	case ISPIOC_G_VSM:{
+			struct isp_vsm_result vsm;
+			ret = isp_g_vsm(dev, &vsm);
+			viv_check_retval(copy_to_user(args, &vsm, sizeof(vsm)));
+			break;
+		}
+	case ISPIOC_G_AFM:{
+			struct isp_afm_result afm;
+			ret = isp_g_afm(dev, &afm);
+			viv_check_retval(copy_to_user(args, &afm, sizeof(afm)));
+			break;
+		}
+	case ISPIOC_G_3DNR:{
+			u32 avg;
+			ret = isp_g_3dnr(dev, &avg);
+			viv_check_retval(copy_to_user(args, &avg, sizeof(avg)));
+			break;
+		}
 	case ISPIOC_G_STATUS:
 		ret = isp_ioc_g_status(dev, args);
 		break;
@@ -1878,65 +2136,12 @@ long isp_priv_ioctl(struct isp_ic_dev *dev, unsigned int cmd, void *args)
 	case ISPIOC_G_FEATURE_VERSION:
 		ret = isp_ioc_g_feature_veresion(dev, args);
 		break;
+
+#ifdef __KERNEL__
 	case VIDIOC_QUERYCAP:
 		ret = isp_ioc_qcap(dev, args);
 		break;
-	case ISPIOC_ENABLE_GCMONO:
-	copy_from_user(&dev->gcmono.mode, args, sizeof(u32));
-		ret = isp_enable_gcmono(dev);
-		break;
-	case ISPIOC_DISABLE_GCMONO:
-		ret = isp_disable_gcmono(dev);
-		break;
-	case ISPIOC_S_GCMONO: {
-	struct isp_gcmono_data *data;
-#ifdef __KERNEL__
-	data = (struct isp_gcmono_data *)kmalloc(sizeof(struct isp_gcmono_data), GFP_KERNEL);
-#else
-	data = (struct isp_gcmono_data *)malloc(sizeof(struct isp_gcmono_data));
 #endif
-	if (data == NULL) {
-		pr_err("malloc mem for rgb gamma failed.");
-		ret = -1;
-	} else {
-		copy_from_user(data, args, sizeof(struct isp_gcmono_data));
-		ret = isp_s_gcmono(dev, data);
-#ifdef __KERNEL__
-		kfree(data);
-#else
-		free(data);
-#endif
-
-	}
-		break;
-	}
-	case ISPIOC_ENABLE_RGBGAMMA:
-		ret = isp_enable_rgbgamma(dev);
-		break;
-	case ISPIOC_DISABLE_RGBGAMMA:
-		ret = isp_disable_rgbgamma(dev);
-		break;
-	case ISPIOC_S_RGBGAMMA: {
-	struct isp_rgbgamma_data *data;
-#ifdef __KERNEL__
-		data = (struct isp_rgbgamma_data *)kmalloc(sizeof(struct isp_rgbgamma_data), GFP_KERNEL);
-#else
-		data = (struct isp_rgbgamma_data *)malloc(sizeof(struct isp_rgbgamma_data));
-#endif
-		if (data == NULL) {
-		pr_err("malloc mem for rgb gamma failed.");
-		ret = -1;
-		} else {
-			copy_from_user(data, args, sizeof(struct isp_rgbgamma_data));
-			ret = isp_s_rgbgamma(dev, data);
-#ifdef __KERNEL__
-			kfree(data);
-#else
-			free(data);
-#endif
-		}
-		break;
-	}
 	default:
 		pr_err("unsupported command %d", cmd);
 		break;
@@ -1944,25 +2149,3 @@ long isp_priv_ioctl(struct isp_ic_dev *dev, unsigned int cmd, void *args)
 
 	return ret;
 }
-
-u32 isp_update_meta_buffer_kernel(struct isp_ic_dev *dev)
-{
-	if (dev->meta.meta_shdbuf.meta_filled == 1) {
-		//already filled, return
-		return 0;
-	}
-	//TBD copy kernel part of meta to buffer, user side handled in CamerIcUpdateMetaBuffer
-
-	//struct ispcore_meta_s *p_buf_meta = (struct ispcore_meta_s *)(dev->meta.meta_shdbuf.addr_y);
-	//Need to map address for the buffer
-	//Todo:
-	//1: map address of p_buf_meta(fetch address from meta_shdbuf->buf_id)
-	//2: p_buf_meta->kernel_meta =  ctx->ic_dev.meta.meta_data.kernel_meta;
-	//3: p_buf_meta->kernel_meta_dma =  ctx->ic_dev.meta.meta_data.kernel_meta_dma;
-	//User side handled in MI user drivers.
-	//dev->meta.meta_shdbuf.meta_filled = 1;
-
-	return 0;
-}
-
-/* MODULE_AUTHOR("Yin Zhiye<zhiye.yin@verisilicon.com>"); */

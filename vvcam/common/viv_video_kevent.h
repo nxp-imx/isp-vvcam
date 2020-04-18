@@ -56,7 +56,7 @@
 
 #ifndef __KERNEL__
 #include <stdint.h>
-typedef uint8_t	u8;
+typedef uint8_t u8;
 typedef uint16_t u16;
 typedef uint32_t u32;
 typedef uint64_t u64;
@@ -77,14 +77,10 @@ enum {
 
 /* max support to 64 bytes! */
 struct viv_video_event {
-	u32 id;
 	u32 stream_id;
-	u32 width;
-	u32 height;
-	int pixelformat;
 	void *file;
 	u64 addr;
-	u32 buf_index; // also use as json id.
+	int buf_index;
 	u64 response;
 	u32 sync;
 };
@@ -97,9 +93,9 @@ struct v4l2_user_buffer {
 
 #define VIV_JSON_BUFFER_SIZE  (64*1024)
 struct viv_control_event {
-	/* physical address of json request, fixed size 16K*/
+	/* physical address of json request, fixed size 64K */
 	u64 request;
-	/* physical address of json response fixed size 16K*/
+	/* physical address of json response fixed size 64K */
 	u64 response;
 	u32 id;
 };
@@ -109,9 +105,11 @@ struct ext_buf_info {
 	u64 size;
 };
 
+#define VIV_VIDEO_ISPIRQ_TYPE	(V4L2_EVENT_PRIVATE_START + 0x0)
+#define VIV_VIDEO_MIIRQ_TYPE	(V4L2_EVENT_PRIVATE_START + 0x1)
 #define VIV_VIDEO_EVENT_TYPE	(V4L2_EVENT_PRIVATE_START + 0x2000)
 
-#define VIV_VIDEO_EVENT_TIMOUT_MS	10000
+#define VIV_VIDEO_EVENT_TIMOUT_MS	5000
 
 #define VIV_VIDIOC_EVENT_COMPLETE		_IOW('V', BASE_VIDIOC_PRIVATE + 100, struct viv_video_event)
 #define VIV_VIDIOC_BUFFER_ALLOC			_IOWR('V', BASE_VIDIOC_PRIVATE + 101, struct ext_buf_info)

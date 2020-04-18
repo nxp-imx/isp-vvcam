@@ -25,7 +25,6 @@
 #define MIPI_CSIS_VC3_PAD_SOURCE	7
 #define MIPI_CSIS_VCX_PADS_NUM		8
 
-
 #define MIPI_CSIS_DEF_PIX_WIDTH		640
 #define MIPI_CSIS_DEF_PIX_HEIGHT	480
 
@@ -41,7 +40,7 @@
 
 struct mipi_csis_event {
 	u32 mask;
-	const char * const name;
+	const char *const name;
 	unsigned int counter;
 };
 
@@ -83,9 +82,9 @@ struct csis_hw_reset1 {
  */
 struct csi_state {
 	struct mutex lock;
-	struct device		*dev;
-	struct v4l2_subdev	sd;
-	struct v4l2_device	v4l2_dev;
+	struct device *dev;
+	struct v4l2_subdev sd;
+	struct v4l2_device v4l2_dev;
 
 	struct media_pad pads[MIPI_CSIS_VCX_PADS_NUM];
 
@@ -105,7 +104,7 @@ struct csi_state {
 	u32 clk_settle;
 	u32 num_lanes;
 	u32 max_num_lanes;
-	int	 id;
+	int id;
 	u8 wclk_ext;
 
 	u8 vchannel;
@@ -116,12 +115,12 @@ struct csi_state {
 	struct csis_pktbuf pkt_buf;
 	struct mipi_csis_event events[MIPI_CSIS_NUM_EVENTS];
 
-	struct v4l2_async_subdev    asd;
-	struct v4l2_async_notifier  subdev_notifier;
-	struct v4l2_async_subdev    *async_subdevs[2];
+	struct v4l2_async_subdev asd;
+	struct v4l2_async_notifier subdev_notifier;
+	struct v4l2_async_subdev *async_subdevs[2];
 
 	struct csis_hw_reset1 hw_reset;
-	struct regulator     *mipi_phy_regulator;
+	struct regulator *mipi_phy_regulator;
 
 	struct regmap *gasket;
 	struct reset_control *soft_resetn;
@@ -144,4 +143,4 @@ struct csis_pix_format {
 	u8 data_alignment;
 };
 
-#endif // _MIPI_CSI2_COMMON_H_
+#endif /* _MIPI_CSI2_COMMON_H_ */

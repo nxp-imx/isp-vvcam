@@ -72,6 +72,8 @@ enum {
 	OV2775IOC_STREAMOFF,
 	OV2775IOC_READ_REG,
 	OV2775IOC_WRITE_REG,
+	OV2775IOC_S_HDR,
+	OV2775IOC_S_FPS,
 };
 
 struct ov2775_reg_setting_t {
@@ -93,7 +95,9 @@ int ov2775_s_gain(void *dev, struct ov2775_gain_context *gain);
 int ov2775_s_vsgain(void *dev, struct ov2775_gain_context *gain);
 int ov2775_s_exp(void *dev, __u32 exp);
 int ov2775_s_vsexp(void *dev, uint32_t exp);
-int ov2775_g_version(void *dev, __u32 *version);
+int ov2775_s_hdr(void *dev, bool enable);
+int ov2775_s_fps(void *dev, __u32 fps);
+int ov2775_g_version(void *dev, __u32 * version);
 int ov2775_streamon(void *dev);
 int ov2775_streamoff(void *dev);
 

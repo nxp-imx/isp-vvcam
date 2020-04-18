@@ -50,107 +50,53 @@
  * version of this file.
  *
  *****************************************************************************/
+#ifndef _OS08a20_IOC_H_
+#define _OS08a20_IOC_H_
 #ifdef __KERNEL__
-#include "nwl_driver.h"
+#include <media/v4l2-subdev.h>
+#else
+#include <linux/videodev2.h>
 #endif
-#include "nwl_ioctl.h"
-#include "nwl_regs.h"
+enum {
+	OS08a20IOC_G_BLS = 0x100,
+	OS08a20IOC_G_GAIN,
+	OS08a20IOC_S_GAIN,
+	OS08a20IOC_S_VSGAIN,
+	OS08a20IOC_S_EXP,
+	OS08a20IOC_S_VSEXP,
+	OS08a20IOC_S_PATTERN,
+	OS08a20IOC_S_BLS,
+	OS08a20IOC_S_POWER,
+	OS08a20IOC_G_VERSION,
+	OS08a20IOC_STREAMON,
+	OS08a20IOC_STREAMOFF,
+	OS08a20IOC_READ_REG,
+	OS08a20IOC_WRITE_REG,
+};
 
-#ifndef __KERNEL__
-#include <hal/hal_api.h>
-#include "common_dev.h"
+struct os08a20_reg_setting_t {
+	__u16 addr;
+	__u8 val;
+};
 
-#define NWL_EXTREG_OFFSET 0x308244
-#define NWL_REG_OFFSET 0x300000
+struct os08a20_gain_context {
+	__u32 again;
+	__u32 dgain;
+};
 
-static HalHandle_t hal_handle;
-void nwl_ic_set_hal(HalHandle_t hal)
-{
-	hal_handle = hal;
-}
+#ifdef __KERNEL__
+long os08a20_priv_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg);
 
-void nwl_write_reg(u32 offset, u32 val)
-{
-	offset += NWL_REG_OFFSET;
-	HalWriteReg(hal_handle, offset, val);
-}
+int os08a20_s_bayer_pattern(void *dev, __u8 pattern);
+int os08a20_g_gain(void *dev, struct os08a20_gain_context *gain);
+int os08a20_s_gain(void *dev, struct os08a20_gain_context *gain);
+int os08a20_s_vsgain(void *dev, struct os08a20_gain_context *gain);
+int os08a20_s_exp(void *dev, __u32 exp);
+int os08a20_s_vsexp(void *dev, uint32_t exp);
+int os08a20_g_version(void *dev, __u32 * version);
+int os08a20_streamon(void *dev);
+int os08a20_streamoff(void *dev);
 
-u32 nwl_read_reg(u32 offset)
-{
-	offset += NWL_REG_OFFSET;
-	return HalReadReg(hal_handle, offset);
-}
-
-u32 nwl_write_extreg(u32 offset, u32 val)
-{
-	offset += NWL_EXTREG_OFFSET;
-	return HalReadReg(hal_handle, offset);
-}
-
-int nwl_set_stream(void *dev, int enable)
-{
-	u32 clock_status;
-	u32 data_status;
-
-	nwl_write_reg(MRV_MIPICSI1_NUM_LANES, 0x4);
-
-	if (enable == true) {
-		clock_status = 0x1;
-		data_status = 0xFF;
-	} else {
-		clock_status = 0x0;
-		data_status = 0x0;
-	}
-	nwl_write_reg(MRV_MIPICSI1_LANES_CLK, clock_status);
-	nwl_write_reg(MRV_MIPICSI1_LANES_DATA, data_status);
-
-	return 0;
-}
-
-int nwl_init(void)
-{
-	nwl_write_reg(MRV_MIPICSI1_NUM_LANES, 0x4);
-	nwl_write_reg(MRV_MIPICSI1_LANES_CLK, 0x1);
-	nwl_write_reg(MRV_MIPICSI1_LANES_DATA, 0xF);
-	nwl_write_reg(MRV_MIPICSI1_IGNORE_VC, 0x1);
-	nwl_write_extreg(MRV_MIPICSI1_OUT_SHIFT, 0x4);
-
-	return 0;
-}
 #endif
 
-int nwl_ioc_init(void)
-{
-	nwl_init();
-
-	return 0;
-}
-
-int nwl_ioc_s_stream(void *dev, void *__user args)
-{
-	int enable;
-
-	copy_from_user(&enable, args, sizeof(enable));
-	nwl_set_stream(dev, enable);
-	return 0;
-}
-
-long nwl_priv_ioctl(void *dev, unsigned int cmd, void *args)
-{
-	int ret = -1;
-
-	switch (cmd) {
-	case CSIIOC_INIT:
-		ret = nwl_ioc_init();
-		break;
-	case CSIIOC_S_STREAM:{
-			ret = nwl_ioc_s_stream(dev, args);
-		}
-		break;
-	default:
-		pr_err("Unsupported csi command %d.\n", cmd);
-		break;
-	}
-
-	return ret;
-}
+#endif /* _OS08a20_IOC_H_ */

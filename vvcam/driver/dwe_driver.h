@@ -78,4 +78,4 @@ u32 dwe_read_reg(struct dwe_ic_dev *dev, u32 offset);
 int dwe_hw_register(struct viv_video_device *vdev);
 int dwe_hw_unregister(struct viv_video_device *vdev);
 
-#endif  // _DWE_DRIVER_H_
+#endif /* _DWE_DRIVER_H_ */

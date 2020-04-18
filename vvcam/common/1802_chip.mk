@@ -1,11 +1,9 @@
 INCLUDE_DIR := $(KERNEL_SOURCE_DIR)
 
-
-EXTRA_CFLAGS += -Wno-unused-result
-EXTRA_CFLAGS += -Wno-maybe-uninitialized
 EXTRA_CFLAGS += -I$(PWD)/../isp/
 EXTRA_CFLAGS += -I$(PWD)/../csi/samsung/
 EXTRA_CFLAGS += -I$(PWD)/../sensor/ov2775/
+EXTRA_CFLAGS += -I$(PWD)/../sensor/os08a20/
 EXTRA_CFLAGS += -I$(PWD)/../driver/
 EXTRA_CFLAGS += -I$(PWD)/../common/
 EXTRA_CFLAGS += -I$(PWD)/../dwe/
@@ -23,13 +21,12 @@ EXTRA_CFLAGS += -DDWE_REG_SIZE=0x00010000
 EXTRA_CFLAGS += -DRESERVED_MEM_BASE=0xB0000000
 EXTRA_CFLAGS += -DRESERVED_MEM_SIZE=0x10000000
 EXTRA_CFLAGS += -DCSI_REG_BASE=0x32e40000
-EXTRA_CFLAGS += -DCSI_REG_SIZE=0x00010000
+EXTRA_CFLAGS += -DCSI_REG_SIZE=0x00001000
 
 vvcam-objs += ../dwe/dwe_ioctl.o
 vvcam-objs += ../driver/dwe_driver.o
-vvcam-objs += ../isp/cma.o
+vvcam-objs += cma.o
 vvcam-objs += ../isp/isp_miv1.o
-vvcam-objs += ../isp/isp_miv2.o
 vvcam-objs += ../isp/isp_wdr3.o
 vvcam-objs += ../isp/isp_3dnr.o
 vvcam-objs += ../isp/isp_hdr.o
@@ -42,6 +39,8 @@ vvcam-objs += ../csi/samsung/sam_ioctl.o
 vvcam-objs += ../csi/samsung/mxc-mipi-csi2-sam.o
 vvcam-objs += ../sensor/ov2775/ov2775_ioctl.o
 vvcam-objs += ../sensor/ov2775/ov2775_mipi_v3.o
+vvcam-objs += ../sensor/os08a20/os08a20_ioctl.o
+vvcam-objs += ../sensor/os08a20/os08a20_mipi_v3.o
 vvcam-objs += ../driver/isp_driver.o
 vvcam-objs += video.o
 

@@ -65,11 +65,12 @@ enum {
 	CSIOC_STREAMON,
 	CSIOC_STREAMOFF,
 	CSIOC_S_FMT,
+	CSIOC_S_HDR,
 };
 
 struct csi_sam_format {
 	/* v4l2 format such as V4L2_PIX_FMT_SBGGR12 */
-	__u32 format;
+	int64_t format;
 	__u32 width;
 	__u32 height;
 };
@@ -77,6 +78,7 @@ struct csi_sam_format {
 #ifdef __KERNEL__
 long csis_priv_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg);
 int csis_s_fmt(struct v4l2_subdev *sd, struct csi_sam_format *fmt);
+int csis_s_hdr(struct v4l2_subdev *sd, bool enable);
 #endif
 
 #endif /* _CSI_SAM_IOC_H_ */

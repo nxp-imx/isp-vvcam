@@ -34,7 +34,6 @@
 #define MIPI_CSIS_VC3_PAD_SOURCE	7
 #define MIPI_CSIS_VCX_PADS_NUM		8
 
-
 #define MIPI_CSIS_DEF_PIX_WIDTH		1920
 #define MIPI_CSIS_DEF_PIX_HEIGHT	1080
 
@@ -46,6 +45,7 @@
 /* CSIS common control */
 #define MIPI_CSIS_CMN_CTRL			0x04
 #define MIPI_CSIS_CMN_CTRL_UPDATE_SHADOW	(1 << 16)
+#define MIPI_CSIS_CMN_CTRL_HDR_MODE		 (1 << 11)
 #define MIPI_CSIS_CMN_CTRL_INTER_MODE		(1 << 10)
 #define MIPI_CSIS_CMN_CTRL_LANE_NR_OFFSET	8
 #define MIPI_CSIS_CMN_CTRL_LANE_NR_MASK		(3 << 8)
@@ -128,7 +128,6 @@
 /* D-PHY Slave Control register High */
 #define MIPI_CSIS_DPHYSCTRL_H		0x3c
 
-
 /* ISP Configuration register */
 #define MIPI_CSIS_ISPCONFIG_CH0				0x40
 #define MIPI_CSIS_ISPCONFIG_CH0_PIXEL_MODE_MASK		(0x3 << 12)
@@ -150,7 +149,6 @@
 #define PIXEL_MODE_DUAL_PIXEL_MODE			0x1
 #define PIXEL_MODE_QUAD_PIXEL_MODE			0x2
 #define PIXEL_MODE_INVALID_PIXEL_MODE			0x3
-
 
 #define MIPI_CSIS_ISPCFG_MEM_FULL_GAP_MSK	(0xff << 24)
 #define MIPI_CSIS_ISPCFG_MEM_FULL_GAP(x)	(x << 24)
@@ -226,14 +224,14 @@
 
 struct mipi_csis_event {
 	u32 mask;
-	const char * const name;
+	const char *const name;
 	unsigned int counter;
 };
 
 /**
  * struct csis_pix_format - CSIS pixel format description
  * @pix_width_alignment: horizontal pixel alignment, width will be
- *                       multiple of 2^pix_width_alignment
+ *					   multiple of 2^pix_width_alignment
  * @code: corresponding media bus code
  * @fmt_reg: MIPI_CSIS_CONFIG register value
  * @data_alignment: MIPI-CSI data alignment in bits
@@ -257,32 +255,33 @@ struct csis_hw_reset1 {
 };
 
 struct csi_state;
-typedef int (*mipi_csis_phy_reset_t)(struct csi_state *state);
+typedef int (*mipi_csis_phy_reset_t) (struct csi_state * state);
 
 static const struct mipi_csis_event mipi_csis_events[] = {
 	/* Errors */
-	{ MIPI_CSIS_INTSRC_ERR_SOT_HS,	"SOT Error" },
-	{ MIPI_CSIS_INTSRC_ERR_LOST_FS,	"Lost Frame Start Error" },
-	{ MIPI_CSIS_INTSRC_ERR_LOST_FE,	"Lost Frame End Error" },
-	{ MIPI_CSIS_INTSRC_ERR_OVER,	"FIFO Overflow Error" },
-	{ MIPI_CSIS_INTSRC_ERR_ECC,	"ECC Error" },
-	{ MIPI_CSIS_INTSRC_ERR_CRC,	"CRC Error" },
-	{ MIPI_CSIS_INTSRC_ERR_UNKNOWN,	"Unknown Error" },
+	{MIPI_CSIS_INTSRC_ERR_SOT_HS, "SOT Error"},
+	{MIPI_CSIS_INTSRC_ERR_LOST_FS, "Lost Frame Start Error"},
+	{MIPI_CSIS_INTSRC_ERR_LOST_FE, "Lost Frame End Error"},
+	{MIPI_CSIS_INTSRC_ERR_OVER, "FIFO Overflow Error"},
+	{MIPI_CSIS_INTSRC_ERR_ECC, "ECC Error"},
+	{MIPI_CSIS_INTSRC_ERR_CRC, "CRC Error"},
+	{MIPI_CSIS_INTSRC_ERR_UNKNOWN, "Unknown Error"},
 	/* Non-image data receive events */
-	{ MIPI_CSIS_INTSRC_EVEN_BEFORE,	"Non-image data before even frame" },
-	{ MIPI_CSIS_INTSRC_EVEN_AFTER,	"Non-image data after even frame" },
-	{ MIPI_CSIS_INTSRC_ODD_BEFORE,	"Non-image data before odd frame" },
-	{ MIPI_CSIS_INTSRC_ODD_AFTER,	"Non-image data after odd frame" },
+	{MIPI_CSIS_INTSRC_EVEN_BEFORE, "Non-image data before even frame"},
+	{MIPI_CSIS_INTSRC_EVEN_AFTER, "Non-image data after even frame"},
+	{MIPI_CSIS_INTSRC_ODD_BEFORE, "Non-image data before odd frame"},
+	{MIPI_CSIS_INTSRC_ODD_AFTER, "Non-image data after odd frame"},
 	/* Frame start/end */
-	{ MIPI_CSIS_INTSRC_FRAME_START,	"Frame Start" },
-	{ MIPI_CSIS_INTSRC_FRAME_END,	"Frame End" },
+	{MIPI_CSIS_INTSRC_FRAME_START, "Frame Start"},
+	{MIPI_CSIS_INTSRC_FRAME_END, "Frame End"},
 };
+
 #define MIPI_CSIS_NUM_EVENTS ARRAY_SIZE(mipi_csis_events)
 
 /**
  * struct csi_state - the driver's internal state data structure
  * @lock: mutex serializing the subdev and power management operations,
- *        protecting @format and @flags members
+ *		protecting @format and @flags members
  * @sd: v4l2_subdev associated with CSIS device instance
  * @index: the hardware instance index
  * @pdev: CSIS platform device
@@ -305,10 +304,10 @@ static const struct mipi_csis_event mipi_csis_events[] = {
  * @events: MIPI-CSIS event (error) counters
  */
 struct csi_state {
-	struct v4l2_subdev	sd;
+	struct v4l2_subdev sd;
 	struct mutex lock;
-	struct device		*dev;
-	struct v4l2_device	v4l2_dev;
+	struct device *dev;
+	struct v4l2_device v4l2_dev;
 
 	struct media_pad pads[MIPI_CSIS_VCX_PADS_NUM];
 
@@ -338,12 +337,12 @@ struct csi_state {
 	struct csis_pktbuf pkt_buf;
 	struct mipi_csis_event events[MIPI_CSIS_NUM_EVENTS];
 
-	struct v4l2_async_subdev    asd;
-	struct v4l2_async_notifier  subdev_notifier;
-	struct v4l2_async_subdev    *async_subdevs[2];
+	struct v4l2_async_subdev asd;
+	struct v4l2_async_notifier subdev_notifier;
+	struct v4l2_async_subdev *async_subdevs[2];
 
 	struct csis_hw_reset1 hw_reset;
-	struct regulator     *mipi_phy_regulator;
+	struct regulator *mipi_phy_regulator;
 
 	struct regmap *gasket;
 	struct regmap *gpr;
@@ -353,6 +352,7 @@ struct csi_state {
 	struct reset_control *mipi_reset;
 
 	mipi_csis_phy_reset_t phy_reset_fn;
+	bool hdr;
 };
 
 /* regsiter csi as v4l2 sub device of vdev */
@@ -366,4 +366,4 @@ void mipi_csis_set_params(struct csi_state *state);
 void disp_mix_gasket_config(struct csi_state *state);
 const struct csis_pix_format *find_csis_format(u32 code);
 
-#endif // _MN_MIPI_CSI2_H_
+#endif /* _MN_MIPI_CSI2_H_ */

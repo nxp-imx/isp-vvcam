@@ -79,7 +79,7 @@ enum ov2775_mode {
 	ov2775_mode_QVGA_320_240 = 4,
 	ov2775_mode_QSXGA_2592_1944 = 5,
 	ov2775_mode_MAX = 0,
-	ov2775_mode_INIT = 0xff, /*only for sensor init*/
+	ov2775_mode_INIT = 0xff,	/* only for sensor init */
 };
 
 enum ov2775_frame_rate {
@@ -88,8 +88,8 @@ enum ov2775_frame_rate {
 };
 
 struct ov2775_datafmt {
-	u32	code;
-	enum v4l2_colorspace		colorspace;
+	u32 code;
+	enum v4l2_colorspace colorspace;
 };
 
 /* image size under 1280 * 960 are SUBSAMPLING
@@ -133,7 +133,7 @@ struct ov2775 {
 	struct v4l2_subdev subdev;
 	struct i2c_client *i2c_client;
 	struct v4l2_pix_format pix;
-	const struct ov2775_datafmt	*fmt;
+	const struct ov2775_datafmt *fmt;
 	struct v4l2_captureparm streamcap;
 	struct media_pad pads[OV2775_SENS_PADS_NUM];
 	bool on;
@@ -153,16 +153,16 @@ struct ov2775 {
 	struct clk *sensor_clk;
 	int csi;
 
-	void (*io_init)(struct ov2775 *);
+	void (*io_init) (struct ov2775 *);
 	int pwn_gpio, rst_gpio;
+	bool hdr;
 };
-
 
 #define client_to_ov2775(client)	container_of(i2c_get_clientdata(client), struct ov2775, subdev)
 
 int ov2775_hw_register(struct v4l2_device *vdev);
 void ov2775_hw_unregister(void);
 s32 ov2775_write_reg(struct ov2775 *sensor, u16 reg, u8 val);
-s32 ov2775_read_reg(struct ov2775 *sensor, u16 reg, u8 *val);
+s32 ov2775_read_reg(struct ov2775 *sensor, u16 reg, u8 * val);
 
 #endif

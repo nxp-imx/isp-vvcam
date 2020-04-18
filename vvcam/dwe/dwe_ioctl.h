@@ -74,9 +74,9 @@ int dwe_s_params(struct dwe_ic_dev *dev);
 int dwe_enable_bus(struct dwe_ic_dev *dev, bool enable);
 int dwe_disable_irq(struct dwe_ic_dev *dev);
 int dwe_clear_irq(struct dwe_ic_dev *dev);
-int dwe_read_irq(struct dwe_ic_dev *dev, u32 *ret);
+int dwe_read_irq(struct dwe_ic_dev *dev, u32 * ret);
 int dwe_start_dma_read(struct dwe_ic_dev *dev, u64 addr);
 int dwe_set_buffer(struct dwe_ic_dev *dev, u64 addr);
 int dwe_set_lut(struct dwe_ic_dev *dev, u64 addr);
 
-#endif  // _DWE_IOC_H_
+#endif /* _DWE_IOC_H_ */

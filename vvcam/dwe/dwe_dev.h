@@ -59,7 +59,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <errno.h>
-typedef uint8_t  u8;
+typedef uint8_t u8;
 typedef uint16_t u16;
 typedef uint32_t u32;
 typedef uint64_t u64;
@@ -71,13 +71,15 @@ typedef uint64_t u64;
 #define __user
 #define __iomem
 
-typedef bool (*pReadBar)(uint32_t bar, uint32_t *data);
-typedef bool (*pWriteBar)(uint32_t bar, uint32_t data);
+typedef bool(*pReadBar) (uint32_t bar, uint32_t * data);
+typedef bool(*pWriteBar) (uint32_t bar, uint32_t data);
 
 extern void dwe_set_func(pReadBar read_func, pWriteBar write_func);
-extern void dwe_copy_data(void *dst, void *src, int size);
+extern long dwe_copy_data(void *dst, void *src, int size);
 
 #endif
+
+#include "vvdefs.h"
 
 struct dwe_hw_info {
 	u32 split_line;
@@ -100,4 +102,4 @@ struct dwe_ic_dev {
 	void __iomem *reset;
 };
 
-#endif  // _DWE_DEV_H
+#endif /* _DWE_DEV_H */

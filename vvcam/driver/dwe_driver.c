@@ -86,36 +86,33 @@ int dwe_close_node(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 	return 0;
 }
 
-
 int dwe_subscribe_event(struct v4l2_subdev *sd, struct v4l2_fh *fh,
-	struct v4l2_event_subscription *sub)
+			struct v4l2_event_subscription *sub)
 {
 	return 0;
 }
 
 int dwe_unsubscribe_event(struct v4l2_subdev *sd, struct v4l2_fh *fh,
-	struct v4l2_event_subscription *sub)
+			  struct v4l2_event_subscription *sub)
 {
 	return 0;
 }
 
 #ifdef CONFIG_COMPAT
 static long dwe_ioctl_compat(struct v4l2_subdev *sd,
-	unsigned int cmd, void *arg)
+			     unsigned int cmd, void *arg)
 {
 	struct dwe_device *dwe_dev = v4l2_get_subdevdata(sd);
 
 	return dwe_priv_ioctl(&dwe_dev->ic_dev, cmd, arg);
 }
 
-long dwe_ioctl(struct v4l2_subdev *sd,
-	unsigned int cmd, void *arg)
+long dwe_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 {
 	return dwe_ioctl_compat(sd, cmd, arg);
 }
 #else /* CONFIG_COMPAT */
-long dwe_ioctl(struct v4l2_subdev *sd,
-	unsigned int cmd, void *arg)
+long dwe_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 {
 	struct dwe_device *dwe_dev = v4l2_get_subdevdata(sd);
 
@@ -172,8 +169,7 @@ int dwe_hw_register(struct viv_video_device *vdev)
 
 	v4l2_subdev_init(&dwe_dev->subdev, &dwe_v4l2_subdev_ops);
 	dwe_dev->subdev.internal_ops = &dwe_subdev_internal_ops;
-	snprintf(dwe_dev->subdev.name,
-		sizeof(dwe_dev->subdev.name), "viv_dwe");
+	snprintf(dwe_dev->subdev.name, sizeof(dwe_dev->subdev.name), "viv_dwe");
 	dwe_dev->subdev.flags |= V4L2_SUBDEV_FL_HAS_DEVNODE;
 	dwe_dev->subdev.flags |= V4L2_SUBDEV_FL_HAS_EVENTS;
 	dwe_dev->subdev.owner = THIS_MODULE;
@@ -184,7 +180,8 @@ int dwe_hw_register(struct viv_video_device *vdev)
 #ifdef DWE_REG_RESET
 	dwe_dev->ic_dev.reset = ioremap(DWE_REG_RESET, 4);
 #endif
-	pr_info("dwe ioremap addr: 0x%08x 0x%08x %p", DWE_REG_BASE, DWE_REG_SIZE, dwe_dev->ic_dev.base);
+	pr_info("dwe ioremap addr: 0x%08x 0x%08x %p", DWE_REG_BASE,
+		DWE_REG_SIZE, dwe_dev->ic_dev.base);
 	vdev->dwe = dwe_dev;
 	return rc;
 end:
@@ -210,5 +207,3 @@ int dwe_hw_unregister(struct viv_video_device *vdev)
 
 	return 0;
 }
-
-/* MODULE_AUTHOR("Yin Zhiye<zhiye.yin@verisilicon.com>"); */

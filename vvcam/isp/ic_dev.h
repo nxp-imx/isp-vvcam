@@ -58,7 +58,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <errno.h>
-typedef uint8_t  u8;
+typedef uint8_t u8;
 typedef uint16_t u16;
 typedef uint32_t u32;
 typedef uint64_t u64;
@@ -70,16 +70,15 @@ typedef uint64_t u64;
 #define __user
 #define __iomem
 
-
 #if defined(HAL_CMODEL) || defined(HAL_ALTERA)
 #include <hal/hal_api.h>
-static HalHandle_t hal_handle;
+
 void isp_ic_set_hal(HalHandle_t hal);
 #endif
 
-#else  // __KERNEL__
+#else /* __KERNEL__ */
 
-// if v4l2
+/* if v4l2 */
 #include <linux/clk.h>
 #include <linux/interrupt.h>
 #include <linux/completion.h>
@@ -88,12 +87,11 @@ void isp_ic_set_hal(HalHandle_t hal);
 #include <linux/delay.h>
 #include <media/v4l2-subdev.h>
 #include <linux/platform_device.h>
-#include "cam_device_buf_defs_common.h"
 
 #endif
 
 #include "isp_version.h"
-#include "cam_device_buf_defs_common.h"
+#include "vvdefs.h"
 
 #define REG_ADDR(x)  ((uint32_t)(uintptr_t)&all_regs->x)
 
@@ -174,13 +172,13 @@ struct isp_tpg_context {
 	u16 lineGap;
 	u16 gapStandard;
 	u32 randomSeed;
-	struct isp_tpg_userdefine_mode  user_mode_h, user_mode_v;
+	struct isp_tpg_userdefine_mode user_mode_h, user_mode_v;
 };
 
 struct isp_mux_context {
 	u32 mp_mux;				/**< main path muxer (vi_mp_mux) */
 	u32 sp_mux;				/**< self path muxer (vi_dma_spmux) */
-	u32  chan_mode;			/**< 1-mp, 2-sp, 4-sp2 */
+	u32 chan_mode;			/**< 1-mp, 2-sp, 4-sp2 */
 	u32 ie_mux;				/**< image effects muxer (vi_dma_iemux) */
 	u32 dma_read_switch;	   /**< dma read switch (vi_dma_switch) */
 	u32 if_select;			 /**< interface selector (if_select) */
@@ -248,8 +246,6 @@ struct isp_buffer_context {
 	u32 path;
 	u32 addr_y, addr_cb, addr_cr;
 	u32 size_y, size_cb, size_cr;
-	BufIdentity buf_id;
-	u32 meta_filled;
 };
 
 struct isp_bp_buffer_context {
@@ -353,7 +349,7 @@ struct isp_cac_context {
 	u32 hstart, vstart;
 };
 
-// degamma
+/* degamma */
 struct isp_deg_context {
 	bool enable;
 	u8 segment[16];
@@ -421,10 +417,10 @@ struct isp_wdr3_context {
 struct isp_exp2_context {
 	bool enable;
 	struct ic_window window;
-	//weight;
+	/* weight; */
 	u8 r, gr, gb, b;
-	// write 4096 EXPV2 mean value to dma by MI MP-JDP path.
-	// physical address, alloacte by user
+	/* write 4096 EXPV2 mean value to dma by MI MP-JDP path. */
+	/* physical address, alloacte by user */
 	u64 pa;
 };
 
@@ -444,8 +440,8 @@ struct isp_3dnr_context {
 	u32 spacial_curve[17];
 	u32 temperal_curve[17];
 	u32 strength;
-	// write full denoise3d reference raw image to dma by MI SP2.
-	// physical address, alloacte by user
+	/* write full denoise3d reference raw image to dma by MI SP2. */
+	/* physical address, alloacte by user */
 	u64 pa;
 	u32 size;
 };
@@ -466,7 +462,7 @@ struct isp_3dnr_update {
 
 struct isp_hdr_context {
 	bool enable;
-	// hdr bls
+	/* hdr bls */
 	u16 width;
 	u16 height;
 	u8 l_bit_dep, s_bit_dep, vs_bit_dep, ls_bit_dep;
@@ -478,11 +474,11 @@ struct isp_hdr_context {
 	u16 long_exp, short_exp, very_short_exp;
 	u32 bls[4];
 	u32 reg;
-	// hdr awb
+	/* hdr awb */
 	u32 r, gr, gb, b;
-	// hdr exp
+	/* hdr exp */
 	u32 compress_lut[15];
-	// long short, very short
+	/* long short, very short */
 	u32 ls0, ls1, vs0, vs1;
 	u32 ext_bit;
 	u32 valid_thresh;
@@ -499,14 +495,14 @@ struct isp_simp_context {
 	u32 ref_image;
 };
 
-// COMPAND
+/* COMPAND */
 struct isp_comp_context {
 	bool enable;
 	bool bls;
 	bool compress;
 	bool expand;
 	bool update_tbl;
-	// BLS
+	/* BLS */
 	int a, b, c, d;
 	u32 compress_tbl[64];
 	u32 expand_tbl[64];
@@ -524,23 +520,17 @@ struct isp_cproc_context {
 };
 
 struct elawb_ellipse_info {
-	u32 x, y;			// ellipse center
-	u32 a1, a2, a3, a4;  // ellipse axis
+	u32 x, y;		/* ellipse center */
+	u32 a1, a2, a3, a4;	/* ellipse axis */
 	u32 r_max_sqr;
 };
 
 struct isp_elawb_context {
 	bool enable;
-	u32 id;  // ellipse id,  1-8,  0 means update all.
+	u32 id;			/* ellipse id,  1-8,  0 means update all. */
 	struct elawb_ellipse_info info[8];
 	struct ic_window window;
-	u32 r, gr, gb, b;  // gain
-};
-
-struct isp_meta_context {
-	struct ispcore_meta_s meta_data;
-	struct isp_buffer_context meta_shdbuf;
-	struct isp_buffer_context meta_buf;
+	u32 r, gr, gb, b;	/* gain */
 };
 
 struct isp_gcmono_data {
@@ -569,6 +559,12 @@ struct isp_rgbgamma_data {
 
 struct isp_rgbgamma_context {
 	bool enable;
+};
+
+struct isp_irq_data {
+	uint32_t addr;
+	uint32_t val;
+	uint32_t nop[14];
 };
 
 struct isp_ic_dev {
@@ -607,7 +603,6 @@ struct isp_ic_dev {
 	struct isp_simp_context simp;
 	struct isp_cproc_context cproc;
 	struct isp_elawb_context elawb;
-	struct isp_meta_context meta;
 	struct isp_gcmono_context gcmono;
 	struct isp_rgbgamma_context rgbgamma;
 };
@@ -615,4 +610,4 @@ struct isp_ic_dev {
 void isp_write_reg(struct isp_ic_dev *dev, u32 offset, u32 val);
 u32 isp_read_reg(struct isp_ic_dev *dev, u32 offset);
 
-#endif  // _ISP_DEV_H_
+#endif /* _ISP_DEV_H_ */

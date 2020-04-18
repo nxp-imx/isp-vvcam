@@ -91,13 +91,11 @@
 */
 #define SWAP_CONTROL        0x00000058
 
-
 /* VSplitLine 0x005C
    VERT_SPLIT_LINE1 12:0 rw Image vertical split line1.
    VERT_SPLIT_LINE2 28:16 rw Image vertical split line2.
 */
 #define VERTICAL_SPLIT_LINE 0x0000005C
-
 
 /* HSplitLine 0x0060
    HOR_SPLIT_LINE 12:0 rw Image horizontal split line1.
@@ -109,13 +107,11 @@
 */
 #define SCALE_FACTOR    0x00000064
 
-
 /* ROIStart 0x0068
     ROI_STX 12:0 rw Region of Interest X origin.
     ROI_STY 28:16 rw Region of Interest Y origin.
 */
 #define ROI_START       0x00000068
-
 
 /* Boundry Pixel 0x006C
    BOUNDRY_PIXELV 7:0 rw Boundary pixel value for V plane.
@@ -123,7 +119,6 @@
    BOUNDRY_PIXELY 23:16 rw Boundary pixel value for Y plane.
 */
 #define BOUNDRY_PIXEL 0x0000006C
-
 
 /* INTERRUPT STATUS  0x0070
    INT_FRAME_DONE 0:0 r Frame done. READ ONLY.
@@ -146,9 +141,6 @@
 #define INT_CLR_MASK         0x00007F00
 #define INT_RESET_MASK       0x01000000
 
-
-
-
 /* BUSCTL 0x0074
    AXI_MASTER_RD_OUTSTANDING_NUMBER 7:0 rw
    AXI maximum outstanding reads. Add 2 to this value (default is d’14).
@@ -162,24 +154,20 @@
 #define BUS_CTRL                  0x00000074
 #define DEWRAP_BUS_CTRL_ENABLE_MASK  (1 << 31)
 
-
 /* BUSCTL1 0x0078
    AXI_MASTER_WR_OUTSTANDING_NUMBER 7:0 rw AXI maximum outstanding writes. Add 2 to this value (default is d’14).
 */
 #define BUS_CTRL1                 0x00000078
-
 
 /* ButTimeoutCircle 0x007C
    AXI_MASTER_TIME_OUT_CYCLE 30:0 rw Axi master, number of cycles to timeout
 */
 #define BUS_TIME_OUT_CYCLE        0x0000007C
 
-
 /* MapLutAddr 0x0008
    LUT_BASE 29:0 rw LUT start address. Upper 30 bits of 34 bit address; the lower 4 bits are zero.
 */
 #define MAP_LUT_ADDR              0x00000008
-
 
 /* MapLutSize 0x000C
    LUT_HSIZE 10:0 rw LUT horizontal size in words
@@ -187,18 +175,15 @@
 */
 #define MAP_LUT_SIZE              0x0000000C
 
-
 /* SrcImgYBase 0x0010
    SRC_Y_BASE 29:0 r Address of Y plane origin. Upper 30 bits of 34 bit address; the lower 4 bits are zero.
 */
 #define SRC_IMG_Y_BASE            0x00000010
 
-
 /* SrcImgUVBase 0x0014
    SRC_UV_BASE 29:0 r Address of UV plane origin. Upper 30 bits of 34 bit address; the lower 4 bits are zero.
 */
 #define SRC_IMG_UV_BASE           0x00000014
-
 
 /* SrcImgSize 0x0018
    SRC_HSIZE 12:0 rw Source1 image horizontal stride in pixels.
@@ -206,18 +191,15 @@
 */
 #define SRC_IMG_SIZE              0x00000018
 
-
 /* SrcImgStride 0x001C
    SRC_STRIDE 15:0 rw Source1 image horizontal resolution in pixels
 */
 #define SRC_IMG_STRIDE            0x0000001C
 
-
 /* MapLutAddr2 0x0020
    LUT_BASE 29:0 rw LUT start address. Upper 30 bits of 34 bit address; the lower 4 bits are zero.
 */
 #define MAP_LUT_ADDR2             0x00000020
-
 
 /* MapLutSize2 0x0024
    LUT_HSIZE 10:0 rw LUT horizontal size in pixels.
@@ -225,18 +207,15 @@
 */
 #define MAP_LUT_SIZE2             0x00000024
 
-
 /* SrcImgYBase2 0x0028
    SRC_Y_BASE 29:0 r Address of Y plane origin. Upper 30 bits of 34 bit address; the lower 4 bits are zero.
 */
 #define SRC_IMG_Y_BASE2           0x00000028
 
-
 /* SrcImgUVBase2 0x002C
    SRC_UV_BASE 29:0 r Address of UV plane origin. Upper 30 bits of 34 bit address; the lower 4 bits are zero.
 */
 #define SRC_IMG_UV_BASE2          0x0000002C
-
 
 /* SrcImgSize2 0x0030
    SRC_HSIZE 12:0 rw Source2 image horizontal stride in pixels.
@@ -244,25 +223,21 @@
 */
 #define SRC_IMG_SIZE2             0x00000030
 
-
 /* SrcImgStride2 0x0034
    SRC_STRIDE 15:0 rw Source2 image horizontal resolution in pixels.
    SRC_VSIZE 27:16 rw Source2 image vertical resolution in rows/lines
 */
 #define SRC_IMG_STRIDE2           0x00000034
 
-
 /* DstImgYBase 0x0038
    DST_Y_BASE 29:0 r Address of Y plane origin. Upper 30 bits of 34 bit address; the lower 4 bits are zero.
 */
 #define DST_IMG_Y_BASE            0x00000038
 
-
 /* DstImgUVBase 0x003C
    DST_UV_BASE 29:0 r Address of UV plane origin. Upper 30 bits of 34 bit address; the lower 4 bits are zero.
 */
 #define DST_IMG_UV_BASE           0x0000003C
-
 
 /* DstImgSize  0x0040
    DST_HSIZE 12:0 rw Destination1 image horizontal stride in pixels.
@@ -270,25 +245,21 @@
 */
 #define DST_IMG_SIZE              0x00000040
 
-
 /* DstImgStride 0x0044
    DST_STRIDE 15:0 rw Destination1 image horizontal resolution in pixels.
    DST_VSIZE 27:16 rw Destination1 image vertical resolution in rows/lines
 */
 #define DST_IMG_STRIDE            0x00000044
 
-
 /* DstImgYBase2 0x0048
    DST_Y_BASE 29:0 r Address of Y plane origin. Upper 30 bits of 34 bit address; the lower 4 bits are zero.
 */
 #define DST_IMG_Y_BASE2           0x00000048
 
-
 /* DstImgUVBase2 0x004C
    DST_UV_BASE 29:0 r Address of UV plane origin. Upper 30 bits of 34 bit address; the lower 4 bits are zero.
 */
 #define DST_IMG_UV_BASE2          0x0000004C
-
 
 /* DstImgSize2   0x0050
    DST_HSIZE 12:0 rw Destination1 image horizontal stride in pixels.
@@ -296,35 +267,30 @@
 */
 #define DST_IMG_SIZE2             0x00000050
 
-
 /* DstImgStride2 0x0054
    DST_STRIDE 15:0 rw Destination1 image horizontal resolution in pixels.
    DST_VSIZE 27:16 rw Destination1 image vertical resolution in rows/lines
 */
 #define DST_IMG_STRIDE2           0x00000054
 
-
 /* DstImgYSize1 0x0080
    DST_IMG_Y_SIZE1 29:0 rw Destination2 image Y ring buffer size. Upper 30 bits of 34 bit address; the lower 4 bits are zero.
 */
 #define DST_IMG_Y_SIZE1           0x00000080
-
 
 /* DstImgUVSize1 0x0084
    DST_IMG_UV_SIZE1 29:0 rw Destination2 image UV ring buffer size. Upper 30 bits of 34 bit address; the lower 4 bits are zero.
 */
 #define DST_IMG_UV_SIZE1          0x00000084
 
-
 /* DstImgYSize2   0x0088
    DST_IMG_Y_SIZE2 29:0 rw Destination2 image Y ring buffer size. Upper 30 bits of 34 bit address; the lower 4 bits are zero.
 */
 #define DST_IMG_Y_SIZE2           0x00000088
-
 
 /* DstImgUVSize2  0x008C
    DST_IMG_UV_SIZE2 29:0 rw Destination2 image UV ring buffer size. Upper 30 bits of 34 bit address; the lower 4 bits are zero.
 */
 #define DST_IMG_UV_SIZE2          0x0000008C
 
-#endif  // _DWE_REGS_H_
+#endif /* _DWE_REGS_H_ */

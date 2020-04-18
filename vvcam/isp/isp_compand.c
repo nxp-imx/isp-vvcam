@@ -84,39 +84,68 @@ int isp_s_comp(struct isp_ic_dev *dev)
 
 	if (!comp->enable) {
 		REG_SET_SLICE(isp_compand_ctrl, COMPAND_CTRL_BLS_ENABLE, 0);
-		REG_SET_SLICE(isp_compand_ctrl, COMPAND_CTRL_COMPRESS_ENABLE, 0);
-		REG_SET_SLICE(isp_compand_ctrl, COMPAND_CTRL_COMPRESS_ENABLE, 0);
-		isp_write_reg(dev, REG_ADDR(isp_compand_ctrl), isp_compand_ctrl);
+		REG_SET_SLICE(isp_compand_ctrl, COMPAND_CTRL_COMPRESS_ENABLE,
+			      0);
+		REG_SET_SLICE(isp_compand_ctrl, COMPAND_CTRL_COMPRESS_ENABLE,
+			      0);
+		isp_write_reg(dev, REG_ADDR(isp_compand_ctrl),
+			      isp_compand_ctrl);
 		return 0;
 	}
 	if (comp->bls) {
-		isp_write_reg(dev, REG_ADDR(isp_compand_bls_a_fixed), convertBlsValue(comp->a));
-		isp_write_reg(dev, REG_ADDR(isp_compand_bls_b_fixed), convertBlsValue(comp->b));
-		isp_write_reg(dev, REG_ADDR(isp_compand_bls_c_fixed), convertBlsValue(comp->c));
-		isp_write_reg(dev, REG_ADDR(isp_compand_bls_d_fixed), convertBlsValue(comp->d));
+		isp_write_reg(dev, REG_ADDR(isp_compand_bls_a_fixed),
+			      convertBlsValue(comp->a));
+		isp_write_reg(dev, REG_ADDR(isp_compand_bls_b_fixed),
+			      convertBlsValue(comp->b));
+		isp_write_reg(dev, REG_ADDR(isp_compand_bls_c_fixed),
+			      convertBlsValue(comp->c));
+		isp_write_reg(dev, REG_ADDR(isp_compand_bls_d_fixed),
+			      convertBlsValue(comp->d));
 	}
 	if (comp->expand && comp->update_tbl) {
 		for (ri = 0; ri < 10; ri++) {
-			valr = comp->expand_tbl[ri * 6 + 0] | (comp->expand_tbl[ri * 6 + 1] << 5) |
-				  (comp->expand_tbl[ri * 6 + 2] << 10) | (comp->expand_tbl[ri * 6 + 3] << 15) |
-				  (comp->expand_tbl[ri * 6 + 4] << 20) | (comp->expand_tbl[ri * 6 + 5] << 25);
-			isp_write_reg(dev, REG_ADDR(isp_compand_expand_px_0) + ri * 4, valr);
+			valr =
+			    comp->expand_tbl[ri * 6 +
+					     0] | (comp->expand_tbl[ri * 6 +
+								    1] << 5) |
+			    (comp->expand_tbl[ri * 6 +
+					      2] << 10) | (comp->expand_tbl[ri *
+									    6 +
+									    3]
+							   << 15)
+			    | (comp->expand_tbl[ri * 6 +
+						4] << 20) | (comp->
+							     expand_tbl[ri * 6 +
+									5] <<
+							     25);
+			isp_write_reg(dev,
+				      REG_ADDR(isp_compand_expand_px_0) +
+				      ri * 4, valr);
 		}
-		valr = comp->expand_tbl[ri * 6 + 0] | (comp->expand_tbl[ri * 6 + 1] << 5) |
-			  (comp->expand_tbl[ri * 6 + 2] << 10) | (comp->expand_tbl[ri * 6 + 3] << 15);
-		isp_write_reg(dev, REG_ADDR(isp_compand_expand_px_0) + ri * 4, valr);
+		valr =
+		    comp->expand_tbl[ri * 6 +
+				     0] | (comp->expand_tbl[ri * 6 +
+							    1] << 5) |
+		    (comp->
+		     expand_tbl[ri * 6 + 2] << 10) | (comp->expand_tbl[ri * 6 +
+								       3] <<
+						      15);
+		isp_write_reg(dev, REG_ADDR(isp_compand_expand_px_0) + ri * 4,
+			      valr);
 		isp_write_reg(dev, REG_ADDR(isp_compand_expand_x_addr), 0);
 		valr = 0;
 		for (ri = 0; ri < 64; ri++) {
 			valr += (1 << comp->expand_tbl[ri]);
 			if (valr > 0xfffff)
 				valr = 0xfffff;
-			isp_write_reg(dev, REG_ADDR(isp_compand_expand_x_write_data), valr);
+			isp_write_reg(dev,
+				      REG_ADDR(isp_compand_expand_x_write_data),
+				      valr);
 		}
 		isp_write_reg(dev, REG_ADDR(isp_compand_expand_y_addr), 0);
 		valr = 0;
 		for (ri = 0; ri < 64; ri++) {
-			//12bit->16bit for ov2775
+			/* 12bit->16bit for ov2775 */
 			if (comp->expand_tbl[ri] == 0) {
 				valr += (1 << comp->expand_tbl[ri]);
 			} else {
@@ -125,7 +154,7 @@ int isp_s_comp(struct isp_ic_dev *dev)
 			if (valr <= 512) {
 				valy = 2 * valr;
 			} else if (valr <= 768) {
-				valy = 4 * (valr-256);
+				valy = 4 * (valr - 256);
 			} else if (valr <= 2560) {
 				valy = 8 * (valr - 512);
 			} else if (valr <= 4096) {
@@ -136,32 +165,53 @@ int isp_s_comp(struct isp_ic_dev *dev)
 			if (valy > 65535) {
 				valy = 65535;
 			}
-			isp_write_reg(dev, REG_ADDR(isp_compand_expand_y_write_data), valy<<4);
+			isp_write_reg(dev,
+				      REG_ADDR(isp_compand_expand_y_write_data),
+				      valy << 4);
 		}
 	}
 
 	if (comp->compress && comp->update_tbl) {
 		for (ri = 0; ri < 10; ri++) {
-			valr = comp->compress_tbl[ri * 6 + 0] | (comp->compress_tbl[ri * 6 + 1] << 5) |
-				  (comp->compress_tbl[ri * 6 + 2] << 10) | (comp->compress_tbl[ri * 6 + 3] << 15) |
-				  (comp->compress_tbl[ri * 6 + 4] << 20) | (comp->compress_tbl[ri * 6 + 5] << 25);
-			isp_write_reg(dev, REG_ADDR(isp_compand_compress_px_0) + ri * 4, valr);
+			valr =
+			    comp->compress_tbl[ri * 6 +
+					       0] | (comp->compress_tbl[ri * 6 +
+									1] << 5)
+			    | (comp->compress_tbl[ri * 6 +
+						  2] << 10) |
+			    (comp->compress_tbl[ri * 6 + 3]
+			     << 15) | (comp->compress_tbl[ri * 6 +
+							  4] << 20) |
+			    (comp->compress_tbl[ri * 6 + 5] << 25);
+			isp_write_reg(dev,
+				      REG_ADDR(isp_compand_compress_px_0) +
+				      ri * 4, valr);
 		}
-		valr = comp->compress_tbl[ri * 6 + 0] | (comp->compress_tbl[ri * 6 + 1] << 5) |
-			   (comp->compress_tbl[ri * 6 + 2] << 10) | (comp->compress_tbl[ri * 6 + 3] << 15);
-		isp_write_reg(dev, REG_ADDR(isp_compand_compress_px_0) + ri * 4, valr);
+		valr =
+		    comp->compress_tbl[ri * 6 +
+				       0] | (comp->compress_tbl[ri * 6 +
+								1] << 5) |
+		    (comp->compress_tbl[ri * 6 +
+					2] << 10) | (comp->compress_tbl[ri * 6 +
+									3] <<
+						     15);
+		isp_write_reg(dev, REG_ADDR(isp_compand_compress_px_0) + ri * 4,
+			      valr);
 		isp_write_reg(dev, REG_ADDR(isp_compand_compress_x_addr), 0);
 		valr = 0;
 		for (ri = 0; ri < 64; ri++) {
 			valr += (1 << comp->compress_tbl[ri]);
 			if (valr > 0xfffff)
 				valr = 0xfffff;
-			isp_write_reg(dev, REG_ADDR(isp_compand_compress_x_write_data), valr);
+			isp_write_reg(dev,
+				      REG_ADDR
+				      (isp_compand_compress_x_write_data),
+				      valr);
 		}
 		isp_write_reg(dev, REG_ADDR(isp_compand_compress_y_addr), 0);
 		valr = 0;
 		for (ri = 0; ri < 64; ri++) {
-			//16bit->12bit for ov2775
+			/* 16bit->12bit for ov2775 */
 			if (comp->compress_tbl[ri] == 0) {
 				valr += (1 << comp->compress_tbl[ri]);
 			} else {
@@ -181,13 +231,18 @@ int isp_s_comp(struct isp_ic_dev *dev)
 			if (valy > 4095) {
 				valy = 4095;
 			}
-			isp_write_reg(dev, REG_ADDR(isp_compand_compress_y_write_data), valy);
+			isp_write_reg(dev,
+				      REG_ADDR
+				      (isp_compand_compress_y_write_data),
+				      valy);
 		}
 	}
 
 	REG_SET_SLICE(isp_compand_ctrl, COMPAND_CTRL_BLS_ENABLE, comp->bls);
-	REG_SET_SLICE(isp_compand_ctrl, COMPAND_CTRL_COMPRESS_ENABLE, comp->compress);
-	REG_SET_SLICE(isp_compand_ctrl, COMPAND_CTRL_EXPAND_ENABLE, comp->expand);
+	REG_SET_SLICE(isp_compand_ctrl, COMPAND_CTRL_COMPRESS_ENABLE,
+		      comp->compress);
+	REG_SET_SLICE(isp_compand_ctrl, COMPAND_CTRL_EXPAND_ENABLE,
+		      comp->expand);
 	isp_write_reg(dev, REG_ADDR(isp_compand_ctrl), isp_compand_ctrl);
 
 	return 0;

@@ -53,91 +53,26 @@
 #ifndef _ISP_VERSION_H_
 #define _ISP_VERSION_H_
 
-#ifdef ISP8000L_V1902
-#define ISP_EE
-#define ISP_2DNR
-#define ISP_3DNR
-#define ISP_WDR_V3
-#define ISP_WDR_V3_20BIT
-#define ISP_MIV2
-#define ISP_AEV2
-#define ISP_CMPD
-#define ISPVI_EXPAND_CHAN
-#define ISP_HDR_STITCH
-#endif  // ISP8000L_V1902
 
 #ifdef ISP8000NANO_V1802
+#ifndef ISP_WDR_V3
 #define ISP_WDR_V3
+#endif
+#ifndef ISP_MIV1
 #define ISP_MIV1
+#endif
+#ifndef ISP_CMPD
 #define ISP_CMPD
-#endif  // ISP8000NANO_V1802
-
-#ifdef ISP8000NANO_V1801
-#define ISP_WDR_V3
-#define ISP_MIV1
-#define ISP_GCMONO
-#define ISP_MI_BP
-#define ISP_RAWIS
-#define ISP_RGBGC
-#define ISP_HIST256
-#define ISP_GAMMA_IN
-#endif  // ISP8000NANO_V1801
-
-#ifdef ISP8000L_V1903
-#define ISP_EE
-#define ISP_2DNR
-#define ISP_WDR_V3
-#define ISP_WDR_V3_20BIT
-#define ISP_MIV2
-#define ISP_AEV2
-#define ISP_AE_SHADOW
-#define ISP_CMPD
-#define ISPVI_EXPAND_CHAN
-#endif  // ISP8000L_V1903
-
-#ifdef ISP8000L_V1905
-#define ISP_EE
-#define ISP_2DNR
-#define ISP_3DNR
-#define ISP_WDR_V3
-#define ISP_WDR_V3_20BIT
-#define ISP_MIV2
-#define ISP_AEV2
-#define ISP_AE_SHADOW
-#define ISP_CMPD
-#define ISPVI_EXPAND_CHAN
-#endif  // ISP8000L_V1905
-
-#ifdef ISP8000L_V2001
-#define ISP_EE
-#define ISP_2DNR
-#define ISP_3DNR
-#define ISP_WDR_V3
-#define ISP_WDR_V3_20BIT
-#define ISP_MIV2
-#define ISP_AEV2
-#define ISP_CMPD
-#define ISPVI_EXPAND_CHAN
-#endif  // ISP8000L_V2001
-
-#ifdef ISP8000_V1901
-#define ISP_2DNR
-#define ISP_3DNR
-#define ISP_WDR_V3
-#define ISP_WDR_V3_20BIT
-#define ISP_MIV2
-#define ISP_AEV2
-#define ISP_CMPD
-#define ISPVI_EXPAND_CHAN
-#endif  // ISP8000_V1901
+#endif
+#endif /* ISP8000NANO_V1802 */
 
 #define ISP_EE_SUPPORT 1
-#define ISP_2DNR_SUPPORT 2
-#define ISP_3DNR_SUPPORT 4
-#define ISP_WDR3_SUPPORT 8
-#define ISP_MIV2_SUPPORT 16
-#define ISP_AEV2_SUPPORT 32
-#define ISP_CMPD_SUPPORT 64
-#define ISP_HDR_STITCH_SUPPORT 128
+#define ISP_2DNR_SUPPORT (1 << 1)
+#define ISP_3DNR_SUPPORT (1 << 2)
+#define ISP_WDR3_SUPPORT (1 << 3)
+#define ISP_MIV2_SUPPORT (1 << 4)
+#define ISP_AEV2_SUPPORT (1 << 5)
+#define ISP_CMPD_SUPPORT (1 << 6)
+#define ISP_HDR_STITCH_SUPPORT (1 << 7)
 
-#endif  // _ISP_VERSION_H_
+#endif /* _ISP_VERSION_H_ */

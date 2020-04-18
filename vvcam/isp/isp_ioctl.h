@@ -57,7 +57,7 @@
 enum {
 	ISPIOC_RESET = 0,
 	ISPIOC_WRITE_REG = 1,
-	ISPIOC_READ_REG = 4,  //can't pass id 2, skip it.
+	ISPIOC_READ_REG = 4,	/* can't pass id 2, skip it. */
 	ISPIOC_S_INPUT = 8,
 	ISPIOC_ENABLE = 16,
 	ISPIOC_DISABLE,
@@ -108,9 +108,9 @@ enum {
 	ISPIOC_S_EXP2,
 	ISPIOC_S_2DNR,
 	ISPIOC_S_3DNR,
-	ISPIOC_G_3DNR,  // get last avg
-	ISPIOC_U_3DNR,  // update
-	ISPIOC_R_3DNR,  // read back 3dnr reference image.
+	ISPIOC_G_3DNR,		/* get last avg */
+	ISPIOC_U_3DNR,		/* update */
+	ISPIOC_R_3DNR,		/* read back 3dnr reference image. */
 	ISPIOC_S_HDR,
 	ISPIOC_S_COMP,
 	ISPIOC_S_CPROC,
@@ -133,13 +133,13 @@ enum {
 	ISPIOC_ENABLE_RGBGAMMA,
 	ISPIOC_DISABLE_RGBGAMMA,
 	ISPIOC_S_RGBGAMMA,
+	ISPIOC_S_DEMOSAIC,
 };
 
 long isp_priv_ioctl(struct isp_ic_dev *dev, unsigned int cmd, void *args);
-void isp_copy_data(void *dst, void *src, int size);
+long isp_copy_data(void *dst, void *src, int size);
 
-#ifdef __KERNEL__
-// internal functions, can called by v4l2 video device and ioctl
+/* internal functions, can called by v4l2 video device and ioctl */
 int isp_reset(struct isp_ic_dev *dev);
 int isp_enable_tpg(struct isp_ic_dev *dev);
 int isp_disable_tpg(struct isp_ic_dev *dev);
@@ -150,6 +150,7 @@ int isp_disable(struct isp_ic_dev *dev);
 int isp_enable_lsc(struct isp_ic_dev *dev);
 int isp_disable_lsc(struct isp_ic_dev *dev);
 int isp_s_input(struct isp_ic_dev *dev);
+int isp_s_demosaic(struct isp_ic_dev *dev);
 int isp_s_tpg(struct isp_ic_dev *dev);
 int isp_s_mux(struct isp_ic_dev *dev);
 int isp_s_bls(struct isp_ic_dev *dev);
@@ -171,9 +172,9 @@ int isp_s_lsc(struct isp_ic_dev *dev);
 int isp_s_dpf(struct isp_ic_dev *dev);
 int isp_s_ee(struct isp_ic_dev *dev);
 int isp_s_exp(struct isp_ic_dev *dev);
-int isp_g_expmean(struct isp_ic_dev *dev, u8 *mean);
+int isp_g_expmean(struct isp_ic_dev *dev, u8 * mean);
 int isp_s_hist(struct isp_ic_dev *dev);
-int isp_g_histmean(struct isp_ic_dev *dev, u32 *mean);
+int isp_g_histmean(struct isp_ic_dev *dev, u32 * mean);
 int isp_s_dpcc(struct isp_ic_dev *dev);
 int isp_s_flt(struct isp_ic_dev *dev);
 int isp_s_cac(struct isp_ic_dev *dev);
@@ -192,7 +193,7 @@ int isp_enable_hdr(struct isp_ic_dev *dev);
 int isp_disable_hdr(struct isp_ic_dev *dev);
 int isp_s_2dnr(struct isp_ic_dev *dev);
 int isp_s_3dnr(struct isp_ic_dev *dev);
-int isp_g_3dnr(struct isp_ic_dev *dev, u32 *avg);
+int isp_g_3dnr(struct isp_ic_dev *dev, u32 * avg);
 int isp_u_3dnr(struct isp_ic_dev *dev, struct isp_3dnr_update *dnr3_update);
 int isp_r_3dnr(struct isp_ic_dev *dev);
 int isp_s_comp(struct isp_ic_dev *dev);
@@ -202,7 +203,7 @@ int isp_s_elawb(struct isp_ic_dev *dev);
 
 int isp_enable_gcmono(struct isp_ic_dev *dev);
 int isp_disable_gcmono(struct isp_ic_dev *dev);
-int isp_s_gcmono(struct isp_ic_dev *dev, struct isp_gcmono_data *data);  // set curve
+int isp_s_gcmono(struct isp_ic_dev *dev, struct isp_gcmono_data *data);	/* set curve */
 int isp_enable_rgbgamma(struct isp_ic_dev *dev);
 int isp_disable_rgbgamma(struct isp_ic_dev *dev);
 int isp_s_rgbgamma(struct isp_ic_dev *dev, struct isp_rgbgamma_data *data);
@@ -214,12 +215,7 @@ int isp_ioc_start_dma_read(struct isp_ic_dev *dev, void *args);
 int isp_mi_start(struct isp_ic_dev *dev);
 int isp_mi_stop(struct isp_ic_dev *dev);
 int isp_set_buffer(struct isp_ic_dev *dev, struct isp_buffer_context *buf);
-int isp_set_bp_buffer(struct isp_ic_dev *dev, struct isp_bp_buffer_context *buf);
+int isp_set_bp_buffer(struct isp_ic_dev *dev,
+		      struct isp_bp_buffer_context *buf);
 
-#else
-#ifndef ISP_VIDEO_TEST
-#define VIDIOC_QUERYCAP -1
-#endif
-#endif
-
-#endif  // _ISP_IOC_H_
+#endif /* _ISP_IOC_H_ */

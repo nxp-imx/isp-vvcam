@@ -35,7 +35,7 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
@@ -50,15 +50,25 @@
  * version of this file.
  *
  *****************************************************************************/
-#ifndef _ISP_CMA_H_
-#define _ISP_CMA_H_
+#ifndef _ISP_VVDEFS_H_
+#define _ISP_VVDEFS_H_
 
-#include <linux/slab.h>
-#include <linux/types.h>
+#define viv_check_retval(x)\
+	do {\
+		if ((x))\
+			return -EIO;\
+	} while (0)
 
-int cma_init(u64 addr, u64 size, u64 align);
-int cma_release(void);
-u64 cma_alloc(u64 size);
-void cma_free(u64 addr);
+#ifndef VIV_MEDIA_PIX_FMT
+#define VIV_MEDIA_PIX_FMT
+enum {
+	MEDIA_PIX_FMT_YUV422SP = 0,
+	MEDIA_PIX_FMT_YUV422I,
+	MEDIA_PIX_FMT_YUV420SP,
+	MEDIA_PIX_FMT_YUV444,
+	MEDIA_PIX_FMT_RGB888,
+	MEDIA_PIX_FMT_RGB888P,
+};
+#endif
 
-#endif  // _ISP_CMA_H_
+#endif /* _ISP_VVDEFS_H_ */
