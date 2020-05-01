@@ -56,6 +56,7 @@
 #include <media/v4l2-subdev.h>
 #else
 #include <linux/videodev2.h>
+#include <linux/v4l2-subdev.h>
 #endif
 enum {
 	OV2775IOC_G_BLS = 0x100,
@@ -97,7 +98,7 @@ int ov2775_s_exp(void *dev, __u32 exp);
 int ov2775_s_vsexp(void *dev, uint32_t exp);
 int ov2775_s_hdr(void *dev, bool enable);
 int ov2775_s_fps(void *dev, __u32 fps);
-int ov2775_g_version(void *dev, __u32 * version);
+int ov2775_g_version(void *dev, __u32 *version);
 int ov2775_streamon(void *dev);
 int ov2775_streamoff(void *dev);
 

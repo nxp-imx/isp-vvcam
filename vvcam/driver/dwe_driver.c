@@ -60,6 +60,7 @@
 #include <linux/videodev2.h>
 #include <linux/of_device.h>
 #include <linux/sched_clock.h>
+#include <media/v4l2-ctrls.h>
 #include <media/v4l2-subdev.h>
 #include <media/v4l2-device.h>
 #include <media/v4l2-ioctl.h>
@@ -89,13 +90,13 @@ int dwe_close_node(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 int dwe_subscribe_event(struct v4l2_subdev *sd, struct v4l2_fh *fh,
 			struct v4l2_event_subscription *sub)
 {
-	return 0;
+	return v4l2_event_subscribe(fh, sub, 2, NULL);
 }
 
 int dwe_unsubscribe_event(struct v4l2_subdev *sd, struct v4l2_fh *fh,
 			  struct v4l2_event_subscription *sub)
 {
-	return 0;
+	return v4l2_event_unsubscribe(fh, sub);
 }
 
 #ifdef CONFIG_COMPAT
@@ -116,7 +117,7 @@ long dwe_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 {
 	struct dwe_device *dwe_dev = v4l2_get_subdevdata(sd);
 
-	return dwe_priv_ioctl(&^dwe_dev->ic_dev, cmd, arg);
+	return dwe_priv_ioctl(&dwe_dev->ic_dev, cmd, arg);
 }
 #endif /* CONFIG_COMPAT */
 
@@ -199,11 +200,8 @@ int dwe_hw_unregister(struct viv_video_device *vdev)
 		return -1;
 	sd = &vdev->dwe->subdev;
 	v4l2_device_unregister_subdev(sd);
-	if (vdev->dwe) {
-		iounmap(vdev->dwe->ic_dev.base);
-		kzfree(vdev->dwe);
-		vdev->dwe = NULL;
-	}
-
+	iounmap(vdev->dwe->ic_dev.base);
+	kzfree(vdev->dwe);
+	vdev->dwe = NULL;
 	return 0;
 }

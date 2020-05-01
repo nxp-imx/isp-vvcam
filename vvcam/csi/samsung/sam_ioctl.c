@@ -60,12 +60,30 @@ int csis_s_fmt(struct v4l2_subdev *sd, struct csi_sam_format *fmt)
 	struct csi_state *state = container_of(sd, struct csi_state, sd);
 
 	switch (fmt->format) {
-	case V4L2_PIX_FMT_SBGGR12:
-		code = MEDIA_BUS_FMT_SBGGR12_1X12;
-		break;
 	case V4L2_PIX_FMT_SBGGR10:
-		code = MEDIA_BUS_FMT_SBGGR10_1X10;
-		break;
+	    code = MEDIA_BUS_FMT_SBGGR10_1X10;
+	    break;
+	case V4L2_PIX_FMT_SGBRG10:
+	    code = MEDIA_BUS_FMT_SGBRG10_1X10;
+	    break;
+	case V4L2_PIX_FMT_SGRBG10:
+	    code = MEDIA_BUS_FMT_SGRBG10_1X10;
+	    break;
+	case V4L2_PIX_FMT_SRGGB10:
+	    code = MEDIA_BUS_FMT_SRGGB10_1X10;
+	    break;
+	case V4L2_PIX_FMT_SBGGR12:
+	    code = MEDIA_BUS_FMT_SBGGR12_1X12;
+	    break;
+	case V4L2_PIX_FMT_SGBRG12:
+	    code = MEDIA_BUS_FMT_SGBRG12_1X12;
+	    break;
+	case V4L2_PIX_FMT_SGRBG12:
+	    code = MEDIA_BUS_FMT_SGRBG12_1X12;
+	    break;
+	case V4L2_PIX_FMT_SRGGB12:
+	    code = MEDIA_BUS_FMT_SRGGB12_1X12;
+	    break;
 	default:
 		return -EINVAL;
 	}

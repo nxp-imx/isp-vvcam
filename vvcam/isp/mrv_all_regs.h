@@ -12112,7 +12112,7 @@ typedef struct {
 #define STITCHING_COMPRESS_LUT_SHD_9
 #define STITCHING_COMPRESS_LUT_SHD_9_MASK 0x0000003FFU
 #define STITCHING_COMPRESS_LUT_SHD_9_SHIFT 0U
-/*!Register: isp_stitching_compress_lut_shd_4     (0x000033C4)*/
+/*!Register: isp_stitching_compress_lut_shd_4     (0x000033C4) */
 /*!Slice: stitching_compress_lut_shd_14 */
 #define STITCHING_COMPRESS_LUT_SHD_14
 #define STITCHING_COMPRESS_LUT_SHD_14_MASK 0x03FF00000U
@@ -12124,8 +12124,8 @@ typedef struct {
 /*!Slice: stitching_compress_lut_shd_12 */
 #define STITCHING_COMPRESS_LUT_SHD_12
 #define STITCHING_COMPRESS_LUT_SHD_12_MASK 0x0000003FFU
-#define STITCHING_COMPRESS_LUT_SHD_12_SHIFT 0U */
-/*!Register:isp_stitching_exp0_awb_gain_g         (0x000033C8)*/
+#define STITCHING_COMPRESS_LUT_SHD_12_SHIFT 0U
+/*!Register:isp_stitching_exp0_awb_gain_g         (0x000033C8) */
 /* Slice:stiching_exp0_awb_gain_gr */
 #define STITCHING_EXP0_AWB_GAIN_GR
 #define STITCHING_EXP0_AWB_GAIN_GR_MASK 0x003FF0000U

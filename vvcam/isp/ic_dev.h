@@ -53,43 +53,10 @@
 #ifndef _ISP_DEV_H_
 #define _ISP_DEV_H_
 
-#ifndef __KERNEL__
-#include <stdlib.h>
-#include <stdint.h>
-#include <stdbool.h>
-#include <errno.h>
-typedef uint8_t u8;
-typedef uint16_t u16;
-typedef uint32_t u32;
-typedef uint64_t u64;
-
-#define __iomem
-#else /* __KERNEL__ */
-
-/* if v4l2 */
-#include <linux/clk.h>
-#include <linux/interrupt.h>
-#include <linux/completion.h>
-#include <linux/io.h>
-#include <linux/list.h>
-#include <linux/delay.h>
-#include <media/v4l2-subdev.h>
-#include <linux/platform_device.h>
-
-#endif
-
 #include "isp_version.h"
 #include "vvdefs.h"
 
 #define REG_ADDR(x)  ((uint32_t)(uintptr_t)&all_regs->x)
-
-#ifndef MIN
-#define MIN(a, b) (((a) < (b)) ? (a) : (b))
-#endif
-
-#ifndef MAX
-#define MAX(a, b) (((a) > (b)) ? (a) : (b))
-#endif
 
 struct isp_reg_t {
 	u32 offset;
@@ -236,12 +203,6 @@ struct isp_buffer_context {
 	u32 size_y, size_cb, size_cr;
 };
 
-struct isp_bp_buffer_context {
-	u32 addr_r;
-	u32 addr_gr;
-	u32 addr_gb;
-	u32 addr_b;
-};
 
 struct isp_dma_context {
 	u32 type;

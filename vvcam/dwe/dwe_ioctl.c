@@ -54,11 +54,6 @@
 #include "dwe_ioctl.h"
 #include "dwe_regs.h"
 
-#undef ALIGN_UP
-#define ALIGN_UP(x, align) (((x) + ((align) - 1)) & ~((align)-1))
-
-
-
 int dwe_reset(struct dwe_ic_dev *dev)
 {
 	pr_info("enter %s\n", __func__);
@@ -79,7 +74,7 @@ int dwe_s_params(struct dwe_ic_dev *dev)
 	u32 vDown = (info->split_v2 & ~0x0F) | 0x0C;
 	u32 hLine = (info->split_h & ~0x0F) | 0x0C;
 
-	/* pr_info("enter %s\n", __func__); */
+	pr_info("enter %s\n", __func__);
 
 	dwe_write_reg(dev, MAP_LUT_SIZE,
 		      ((info->map_w & 0x7ff) | ((info->map_h & 0x7ff) << 16)));
@@ -156,7 +151,7 @@ int dwe_clear_irq(struct dwe_ic_dev *dev)
 	return 0;
 }
 
-int dwe_read_irq(struct dwe_ic_dev *dev, u32 * ret)
+int dwe_read_irq(struct dwe_ic_dev *dev, u32 *ret)
 {
 	u32 irq = 0;
 
@@ -173,7 +168,7 @@ int dwe_start_dma_read(struct dwe_ic_dev *dev, u64 addr)
 	u32 regStart = 1 << 4;
 	u32 reg;
 #endif
-	u32 reg_dst_y_base = (u32) addr;
+	u32 reg_dst_y_base = (u32)addr;
 	u32 reg_y_rbuff_size = ALIGN_UP(info->src_stride * info->src_h, 16);
 	u32 reg_dst_uv_base = reg_dst_y_base + reg_y_rbuff_size;
 
@@ -222,7 +217,6 @@ int dwe_ioc_qcap(struct dwe_ic_dev *dev, void *args)
 long dwe_priv_ioctl(struct dwe_ic_dev *dev, unsigned int cmd, void *args)
 {
 	int ret = -1;
-	u64 addr;
 
 	switch (cmd) {
 	case DWEIOC_RESET:
@@ -245,23 +239,17 @@ long dwe_priv_ioctl(struct dwe_ic_dev *dev, unsigned int cmd, void *args)
 	case DWEIOC_CLEAR_IRQ:
 		ret = dwe_clear_irq(dev);
 		break;
-	case DWEIOC_READ_IRQ:{
-			u32 irq = 0;
-			ret = dwe_read_irq(dev, &irq);
-			viv_check_retval(copy_to_user(args, &irq, sizeof(irq)));
-			break;
-		}
+	case DWEIOC_READ_IRQ:
+		ret = dwe_read_irq(dev, (u32 *)args);
+		break;
 	case DWEIOC_START_DMA_READ:
-		viv_check_retval(copy_from_user(&addr, args, sizeof(addr)));
-		ret = dwe_start_dma_read(dev, addr);
+		ret = dwe_start_dma_read(dev, *((u64 *)args));
 		break;
 	case DWEIOC_SET_BUFFER:
-		viv_check_retval(copy_from_user(&addr, args, sizeof(addr)));
-		ret = dwe_set_buffer(dev, addr);
+		ret = dwe_set_buffer(dev, *((u64 *)args));
 		break;
 	case DWEIOC_SET_LUT:
-		viv_check_retval(copy_from_user(&addr, args, sizeof(addr)));
-		ret = dwe_set_lut(dev, addr);
+		ret = dwe_set_lut(dev, *((u64 *)args));
 		break;
 	case VIDIOC_QUERYCAP:
 		ret = dwe_ioc_qcap(dev, args);

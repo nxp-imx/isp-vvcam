@@ -142,7 +142,7 @@ int os08a20_g_gain(void *dev, struct os08a20_gain_context *gain)
 	return 0;
 }
 
-int os08a20_g_version(void *dev, __u32 * version)
+int os08a20_g_version(void *dev, __u32 *version)
 {
 	struct os08a20 *sensor = dev;
 	__u8 val = 0;

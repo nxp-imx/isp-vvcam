@@ -117,7 +117,7 @@ int isp_s_gcmonopx(struct isp_ic_dev *dev, struct isp_gcmono_data *data)
 	u32 gc_px_data = 0;
 
 	pr_info("enter %s\n", __func__);
-	p_table = (u32 *) & data->px;
+	p_table = (u32 *)&data->px;
 	for (i = 0; i < 64; i++) {
 		gc_px_data |= (*(p_table + i) << (i % 6 * 5));
 		if (i % 6 == 5 || i == 63) {
@@ -129,7 +129,7 @@ int isp_s_gcmonopx(struct isp_ic_dev *dev, struct isp_gcmono_data *data)
 #endif
 }
 
-int isp_s_gcmonoWriteData(struct isp_ic_dev *dev, u32 * tblX, u32 * tblY)
+int isp_s_gcmonoWriteData(struct isp_ic_dev *dev, u32 *tblX, u32 *tblY)
 {
 #ifndef ISP_GCMONO
 	pr_err("unsupported function %s", __func__);
@@ -173,7 +173,7 @@ int isp_s_gcmono(struct isp_ic_dev *dev, struct isp_gcmono_data *data)
 	REG_SET_SLICE(isp_gcmono_ctrl, ISP_GCMONO_CFG_DONE,
 		      ISP_GCMONO_CFG_DONE_SET_CURVE);
 	isp_write_reg(dev, REG_ADDR(isp_gcmono_ctrl), isp_gcmono_ctrl);
-	p_table = (u8 *) & data->basePara;
+	p_table = (u8 *)&data->basePara;
 	for (i = 0; i < 1024; i++) {
 		isp_gc_para_base |= (*(p_table + i) << (i % 4 * 8));
 		if (i % 4 == 3) {

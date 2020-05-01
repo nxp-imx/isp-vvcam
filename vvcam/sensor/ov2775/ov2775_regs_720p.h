@@ -51,7 +51,7 @@
  *
  *****************************************************************************/
 
-#ifndef _VVCAM_OV2775_REGS_72P_H_
+#ifndef _VVCAM_OV2775_REGS_720P_H_
 #define _VVCAM_OV2775_REGS_720P_H_
 
 #include "ov2775_mipi_v3.h"
@@ -1896,8 +1896,8 @@ static struct reg_value ov2775_init_setting_720p[] = {
 	{0x301e, 0x17, 0, 0},
 	{0x301f, 0xe1, 0, 0},
 	{0x3005, 0x20, 0, 0},
-	{0x30b0, 0x1a, 0, 0},
-	{0x30b1, 0x90, 0, 0},
+	{0x30b0, 0x0a, 0, 0},
+	{0x30b1, 0x50, 0, 0},
 	{0x3196, 0x06, 0, 0},
 	{0x3197, 0x00, 0, 0},
 	{0x30b2, 0x02, 0, 0},
@@ -1927,7 +1927,6 @@ static struct reg_value ov2775_init_setting_720p[] = {
 	{0x30ba, 0x00, 0, 0},
 	{0x30b6, 0x00, 0, 0},
 	{0x30b7, 0xa0, 0, 0},
-	{0x3012, 0x01, 0, 0},
 };
 
 #endif

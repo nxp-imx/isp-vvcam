@@ -56,6 +56,7 @@
 #include <media/v4l2-subdev.h>
 #else
 #include <linux/videodev2.h>
+#include <linux/v4l2-subdev.h>
 #endif
 enum {
 	OS08a20IOC_G_BLS = 0x100,
@@ -93,7 +94,7 @@ int os08a20_s_gain(void *dev, struct os08a20_gain_context *gain);
 int os08a20_s_vsgain(void *dev, struct os08a20_gain_context *gain);
 int os08a20_s_exp(void *dev, __u32 exp);
 int os08a20_s_vsexp(void *dev, uint32_t exp);
-int os08a20_g_version(void *dev, __u32 * version);
+int os08a20_g_version(void *dev, __u32 *version);
 int os08a20_streamon(void *dev);
 int os08a20_streamoff(void *dev);
 

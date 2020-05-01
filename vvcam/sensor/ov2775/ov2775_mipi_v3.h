@@ -78,7 +78,7 @@ enum ov2775_mode {
 	ov2775_mode_VGA_640_480 = 3,
 	ov2775_mode_QVGA_320_240 = 4,
 	ov2775_mode_QSXGA_2592_1944 = 5,
-	ov2775_mode_MAX = 0,
+	ov2775_mode_MAX,
 	ov2775_mode_INIT = 0xff,	/* only for sensor init */
 };
 
@@ -158,12 +158,12 @@ struct ov2775 {
 	bool hdr;
 };
 
-#define client_to_ov2775(client)	container_of(i2c_get_clientdata(client), struct ov2775, subdev)
+#define client_to_ov2775(client)\
+	container_of(i2c_get_clientdata(client), struct ov2775, subdev)
 
 int ov2775_hw_register(struct v4l2_device *vdev);
 void ov2775_hw_unregister(void);
 s32 ov2775_write_reg(struct ov2775 *sensor, u16 reg, u8 val);
-s32 ov2775_read_reg(struct ov2775 *sensor, u16 reg, u8 * val);
-int ov2775_init_device(struct ov2775 *sensor);
+s32 ov2775_read_reg(struct ov2775 *sensor, u16 reg, u8 *val);
 
 #endif

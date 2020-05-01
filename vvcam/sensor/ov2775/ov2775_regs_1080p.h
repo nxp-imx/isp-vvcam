@@ -1875,7 +1875,6 @@ static struct reg_value ov2775_init_setting_1080p[] = {
 	{0x30af, 0x38, 0, 0},
 	{0x30c0, 0x09, 0, 0},
 	{0x30a9, 0x04, 0, 0},
-	{0x3012, 0x01, 0, 0},
 };
 
 #endif

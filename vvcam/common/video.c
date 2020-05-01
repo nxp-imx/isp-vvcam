@@ -81,10 +81,8 @@
 #include "mxc-mipi-csi2-sam.h"
 #include "ov2775_mipi_v3.h"
 #include "os08a20_mipi_v3.h"
-#endif
-
-#ifndef ALIGN_UP
-#define ALIGN_UP(x, align) (((x) + ((align) - 1)) & ~((align)-1))
+#include "basler-camera-driver.h"
+#include "basler-camera-driver-ioctl.h"
 #endif
 
 static struct viv_video_device *vdev;
@@ -564,14 +562,14 @@ static long private_ioctl(struct file *file, void *fh,
 		v_event = (struct viv_video_event *)arg;
 		if (v_event->file) {
 			handle = priv_to_handle(v_event->file);
-            mutex_lock(&file_list_lock);
-            list_for_each_entry(ph, &file_list_head, entry) {
-                if (ph == handle) {
-                    complete(&handle->wait);
-                    break;
-                }
-            }
-            mutex_unlock(&file_list_lock);
+			mutex_lock(&file_list_lock);
+			list_for_each_entry(ph, &file_list_head, entry) {
+				if (ph == handle) {
+					complete(&handle->wait);
+					break;
+				}
+			}
+			mutex_unlock(&file_list_lock);
 		}
 		break;
 	case VIV_VIDIOC_BUFDONE:
@@ -1024,6 +1022,7 @@ static int viv_video_probe(struct platform_device *pdev)
 	rc = mipi_csi_sam_add(pdev, vdev->v4l2_dev);
 	rc = ov2775_hw_register(vdev->v4l2_dev);
 	/* rc = os08a20_hw_register(vdev->v4l2_dev); */
+	/* rc = basler_hw_register(vdev->v4l2_dev); */
 #endif
 	rc = v4l2_device_register_subdev_nodes(vdev->v4l2_dev);
 	cma_init(RESERVED_MEM_BASE, RESERVED_MEM_SIZE, 4096);
@@ -1061,6 +1060,7 @@ static int viv_video_remove(struct platform_device *pdev)
 	mipi_csi_sam_del(pdev);
 	ov2775_hw_unregister();
 	/* os08a20_hw_unregister(); */
+	/* basler_hw_unregister(); */
 #endif
 	if (vdev->video) {
 		video_unregister_device(vdev->video);

@@ -4,6 +4,7 @@ EXTRA_CFLAGS += -I$(PWD)/../isp/
 EXTRA_CFLAGS += -I$(PWD)/../csi/samsung/
 EXTRA_CFLAGS += -I$(PWD)/../sensor/ov2775/
 EXTRA_CFLAGS += -I$(PWD)/../sensor/os08a20/
+EXTRA_CFLAGS += -I$(PWD)/../sensor/camera-proxy-driver/basler-camera-driver/
 EXTRA_CFLAGS += -I$(PWD)/../driver/
 EXTRA_CFLAGS += -I$(PWD)/../common/
 EXTRA_CFLAGS += -I$(PWD)/../dwe/
@@ -39,6 +40,7 @@ vvcam-objs += ../sensor/ov2775/ov2775_ioctl.o
 vvcam-objs += ../sensor/ov2775/ov2775_mipi_v3.o
 vvcam-objs += ../sensor/os08a20/os08a20_ioctl.o
 vvcam-objs += ../sensor/os08a20/os08a20_mipi_v3.o
+vvcam-objs += ../sensor/camera-proxy-driver/basler-camera-driver/basler-camera-driver.o
 vvcam-objs += ../driver/isp_driver.o
 vvcam-objs += video.o
 

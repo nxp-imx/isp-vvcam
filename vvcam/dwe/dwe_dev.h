@@ -53,20 +53,6 @@
 #ifndef _DWE_DEV_H
 #define _DWE_DEV_H
 
-#ifndef __KERNEL__
-#include <stdlib.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdbool.h>
-#include <errno.h>
-typedef uint8_t u8;
-typedef uint16_t u16;
-typedef uint32_t u32;
-typedef uint64_t u64;
-
-#define __iomem
-#endif
-
 #include "vvdefs.h"
 
 struct dwe_hw_info {

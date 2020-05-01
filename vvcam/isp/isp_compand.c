@@ -106,7 +106,7 @@ int isp_s_comp(struct isp_ic_dev *dev)
 		for (ri = 0; ri < 10; ri++) {
 			valr = comp->expand_tbl[ri * 6 + 0] |
 				(comp->expand_tbl[ri * 6 + 1] << 5) |
-			    (comp->expand_tbl[ri * 6 +2] << 10) |
+			    (comp->expand_tbl[ri * 6 + 2] << 10) |
 				(comp->expand_tbl[ri * 6 + 3] << 15) |
 				(comp->expand_tbl[ri * 6 + 4] << 20) |
 				(comp->expand_tbl[ri * 6 + 5] << 25);
@@ -114,7 +114,7 @@ int isp_s_comp(struct isp_ic_dev *dev)
 				      REG_ADDR(isp_compand_expand_px_0) +
 				      ri * 4, valr);
 		}
-		valr = comp->expand_tbl[ri * 6 +0] |
+		valr = comp->expand_tbl[ri * 6 + 0] |
 			(comp->expand_tbl[ri * 6 + 1] << 5) |
 		    (comp->expand_tbl[ri * 6 + 2] << 10) |
 			(comp->expand_tbl[ri * 6 + 3] << 15);

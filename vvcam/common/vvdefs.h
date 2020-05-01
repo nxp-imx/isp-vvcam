@@ -71,4 +71,41 @@ enum {
 };
 #endif
 
+#ifndef __KERNEL__
+#include <stdlib.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include <errno.h>
+typedef uint8_t u8;
+typedef uint16_t u16;
+typedef uint32_t u32;
+typedef uint64_t u64;
+
+#define __iomem
+#else /* __KERNEL__ */
+
+/* if v4l2 */
+#include <linux/clk.h>
+#include <linux/interrupt.h>
+#include <linux/completion.h>
+#include <linux/io.h>
+#include <linux/list.h>
+#include <linux/delay.h>
+#include <media/v4l2-subdev.h>
+#include <linux/platform_device.h>
+#endif
+
+#ifndef MIN
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#endif
+
+#ifndef MAX
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
+#endif
+
+
+#ifndef ALIGN_UP
+#define ALIGN_UP(x, align) (((x) + ((align) - 1)) & ~((align)-1))
+#endif
+
 #endif /* _ISP_VVDEFS_H_ */

@@ -435,6 +435,8 @@ int isp_s_wdr3(struct isp_ic_dev *dev)
 		return 0;
 	}
 
+	pr_info("enter %s: %d %d %d\n", __func__, wdr3->strength,
+	    wdr3->max_gain, wdr3->global_strength);
 	width /= 32;
 	height /= 32;
 	REG_SET_SLICE(isp_wdr3_strength, WDR3_MAXIMUM_GAIN, wdr3->max_gain);

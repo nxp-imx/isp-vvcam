@@ -42,15 +42,45 @@ MODULE_PARM_DESC(debug, "Debug level (0-2)");
 
 static const struct csis_pix_format mipi_csis_formats[] = {
 	{
-	 .code = MEDIA_BUS_FMT_SBGGR12_1X12,
-	 .fmt_reg = MIPI_CSIS_ISPCFG_FMT_RAW12,
-	 .data_alignment = 16,
-	 },
-	{
 	 .code = MEDIA_BUS_FMT_SBGGR10_1X10,
 	 .fmt_reg = MIPI_CSIS_ISPCFG_FMT_RAW10,
 	 .data_alignment = 16,
-	 },
+	},
+	{
+	 .code = MEDIA_BUS_FMT_SGBRG10_1X10,
+	 .fmt_reg = MIPI_CSIS_ISPCFG_FMT_RAW10,
+	 .data_alignment = 16,
+	},
+	{
+	 .code = MEDIA_BUS_FMT_SGRBG10_1X10,
+	 .fmt_reg = MIPI_CSIS_ISPCFG_FMT_RAW10,
+	 .data_alignment = 16,
+	},
+	{
+	 .code = MEDIA_BUS_FMT_SRGGB10_1X10,
+	 .fmt_reg = MIPI_CSIS_ISPCFG_FMT_RAW10,
+	 .data_alignment = 16,
+	},
+	{
+	 .code = MEDIA_BUS_FMT_SBGGR12_1X12,
+	 .fmt_reg = MIPI_CSIS_ISPCFG_FMT_RAW12,
+	 .data_alignment = 16,
+	},
+	{
+	 .code = MEDIA_BUS_FMT_SGBRG12_1X12,
+	 .fmt_reg = MIPI_CSIS_ISPCFG_FMT_RAW12,
+	 .data_alignment = 16,
+	},
+	{
+	 .code = MEDIA_BUS_FMT_SGRBG12_1X12,
+	 .fmt_reg = MIPI_CSIS_ISPCFG_FMT_RAW12,
+	 .data_alignment = 16,
+	},
+	{
+	 .code = MEDIA_BUS_FMT_SRGGB12_1X12,
+	 .fmt_reg = MIPI_CSIS_ISPCFG_FMT_RAW12,
+	 .data_alignment = 16,
+	},
 	{
 	 .code = MEDIA_BUS_FMT_YUYV8_2X8,
 	 .fmt_reg = MIPI_CSIS_ISPCFG_FMT_YCBCR422_8BIT,
@@ -62,7 +92,6 @@ static const struct csis_pix_format mipi_csis_formats[] = {
 	 .data_alignment = 24,
 	 },
 	{
-	 .code = MEDIA_BUS_FMT_UYVY8_2X8,
 	 .code = MEDIA_BUS_FMT_YUYV8_2X8,
 	 .fmt_reg = MIPI_CSIS_ISPCFG_FMT_YCBCR422_8BIT,
 	 .data_alignment = 16,
@@ -79,7 +108,7 @@ static const struct csis_pix_format mipi_csis_formats[] = {
 	 }
 };
 
-typedef int (*mipi_csis_phy_reset_t) (struct csi_state * state);
+typedef int (*mipi_csis_phy_reset_t) (struct csi_state *state);
 
 #define mipi_csis_write(__csis, __r, __v) writel(__v, __csis->regs + __r)
 #define mipi_csis_read(__csis, __r) readl(__csis->regs + __r)
@@ -534,15 +563,30 @@ void disp_mix_gasket_config(struct csi_state *state)
 	case MEDIA_BUS_FMT_VYUY8_2X8:
 		fmt_val = GASKET_0_CTRL_DATA_TYPE_YUV422_8;
 		break;
-	case MEDIA_BUS_FMT_SBGGR8_1X8:
-		fmt_val = GASKET_0_CTRL_DATA_TYPE_RAW8;
-		break;
-	case MEDIA_BUS_FMT_SBGGR12_1X12:
-		fmt_val = GASKET_0_CTRL_DATA_TYPE_RAW12;
-		break;
 	case MEDIA_BUS_FMT_SBGGR10_1X10:
-		fmt_val = GASKET_0_CTRL_DATA_TYPE_RAW10;
-		break;
+	    fmt_val = GASKET_0_CTRL_DATA_TYPE_RAW10;
+	    break;
+	case MEDIA_BUS_FMT_SGBRG10_1X10:
+	    fmt_val = GASKET_0_CTRL_DATA_TYPE_RAW10;
+	    break;
+	case MEDIA_BUS_FMT_SGRBG10_1X10:
+	    fmt_val = GASKET_0_CTRL_DATA_TYPE_RAW10;
+	    break;
+	case MEDIA_BUS_FMT_SRGGB10_1X10:
+	    fmt_val = GASKET_0_CTRL_DATA_TYPE_RAW10;
+	    break;
+	case MEDIA_BUS_FMT_SBGGR12_1X12:
+	    fmt_val = GASKET_0_CTRL_DATA_TYPE_RAW12;
+	    break;
+	case MEDIA_BUS_FMT_SGBRG12_1X12:
+	    fmt_val = GASKET_0_CTRL_DATA_TYPE_RAW12;
+	    break;
+	case MEDIA_BUS_FMT_SGRBG12_1X12:
+	    fmt_val = GASKET_0_CTRL_DATA_TYPE_RAW12;
+	    break;
+	case MEDIA_BUS_FMT_SRGGB12_1X12:
+	    fmt_val = GASKET_0_CTRL_DATA_TYPE_RAW12;
+	    break;
 	default:
 		pr_err("gasket not support format %d\n", fmt->code);
 		return;
@@ -822,7 +866,7 @@ static int mipi_csis_enum_framesizes(struct v4l2_subdev *mipi_sd,
 static int mipi_csis_enum_frameintervals(struct v4l2_subdev *mipi_sd,
 					 struct v4l2_subdev_pad_config *cfg,
 					 struct v4l2_subdev_frame_interval_enum
-					 *fie)
+					 *file)
 {
 	struct csi_state *state = mipi_sd_to_csi_state(mipi_sd);
 	struct v4l2_subdev *sen_sd;
@@ -834,7 +878,7 @@ static int mipi_csis_enum_frameintervals(struct v4l2_subdev *mipi_sd,
 		return -EINVAL;
 	}
 
-	return v4l2_subdev_call(sen_sd, pad, enum_frame_interval, NULL, fie);
+	return v4l2_subdev_call(sen_sd, pad, enum_frame_interval, NULL, file);
 }
 
 static int mipi_csis_log_status(struct v4l2_subdev *mipi_sd)

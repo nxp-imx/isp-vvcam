@@ -28,6 +28,7 @@
 
 #include "ov2775_mipi_v3.h"
 #include "ov2775_regs_1080p.h"
+#include "ov2775_regs_720p.h"
 #include "ov2775_ioctl.h"
 
 static int ov2775_framerates[] = {
@@ -51,9 +52,10 @@ static struct ov2775_mode_info ov2775_mode_info_data[2][ov2775_mode_MAX + 1] = {
 	  ov2775_init_setting_1080p,
 	  ARRAY_SIZE(ov2775_init_setting_1080p)},
 
-	 /*{ov2775_mode_720P_1280_720, SUBSAMPLING, 1280, 720,
-	    ov2775_setting_30fps_720P_1280_720,
-	    ARRAY_SIZE(ov2775_setting_30fps_720P_1280_720)},
+	 {ov2775_mode_720P_1280_720, SCALING, 1280, 720,
+		ov2775_init_setting_720p,
+		ARRAY_SIZE(ov2775_init_setting_720p)},
+	/*
 	    {ov2775_mode_NTSC_720_480, SUBSAMPLING, 720, 480,
 	    ov2775_setting_30fps_NTSC_720_480,
 	    ARRAY_SIZE(ov2775_setting_30fps_NTSC_720_480)},
@@ -73,9 +75,8 @@ static struct ov2775_hs_info hs_setting[] = {
 
 	{1920, 1080, 30, 0x0B},
 	{1920, 1080, 15, 0x10},
-
-	/*{1280, 720,  30, 0x11},
-	   {1280, 720,  15, 0x16},
+	{1280, 720,  30, 0x11},
+	/*   {1280, 720,  15, 0x16},
 
 	   {720,  480,  30, 0x1E},
 	   {720,  480,  15, 0x23},
@@ -125,6 +126,7 @@ static const struct ov2775_datafmt ov2775_colour_fmts[] = {
 };
 #endif
 
+#if 0
 static enum ov2775_frame_rate to_ov2775_frame_rate(struct v4l2_fract
 						   *timeperframe)
 {
@@ -143,8 +145,9 @@ static enum ov2775_frame_rate to_ov2775_frame_rate(struct v4l2_fract
 
 	return rate;
 }
+#endif
 
-static uint16_t find_hs_configure(struct ov2775 *sensor)
+static __u16 find_hs_configure(struct ov2775 *sensor)
 {
 	struct device *dev = &sensor->i2c_client->dev;
 	struct v4l2_fract *timeperframe = &sensor->streamcap.timeperframe;
@@ -262,7 +265,7 @@ static int ov2775_regulator_enable(struct device *dev)
 	return ret;
 }
 
-s32 ov2775_write_reg(struct ov2775 * sensor, u16 reg, u8 val)
+s32 ov2775_write_reg(struct ov2775 *sensor, u16 reg, u8 val)
 {
 	struct device *dev = &sensor->i2c_client->dev;
 	u8 au8Buf[3] = { 0 };
@@ -279,7 +282,7 @@ s32 ov2775_write_reg(struct ov2775 * sensor, u16 reg, u8 val)
 	return 0;
 }
 
-s32 ov2775_read_reg(struct ov2775 * sensor, u16 reg, u8 * val)
+s32 ov2775_read_reg(struct ov2775 *sensor, u16 reg, u8 *val)
 {
 	struct device *dev = &sensor->i2c_client->dev;
 	u8 au8RegBuf[2] = { 0 };
@@ -360,23 +363,6 @@ static int ov2775_download_firmware(struct ov2775 *sensor,
 	return retval;
 }
 
-static int ov2775_config_init(struct ov2775 *sensor)
-{
-	struct reg_value *pModeSetting = NULL;
-	int ArySize = 0, retval = 0;
-
-	/* Configure ov2775 initial parm */
-	pr_info("enter %s\n", __func__);
-	pModeSetting = ov2775_init_setting_1080p;
-	ArySize = ARRAY_SIZE(ov2775_init_setting_1080p);
-
-	retval = ov2775_download_firmware(sensor, pModeSetting, ArySize);
-	if (retval < 0)
-		return retval;
-
-	return 0;
-}
-
 static void ov2775_start(struct ov2775 *sensor)
 {
 	pr_info("enter %s\n", __func__);
@@ -393,6 +379,7 @@ static void ov2775_start(struct ov2775 *sensor)
 	msleep(100);
 }
 
+#if 0
 static int ov2775_change_mode(struct ov2775 *sensor)
 {
 	struct reg_value *pModeSetting = NULL;
@@ -424,6 +411,7 @@ static int ov2775_change_mode(struct ov2775 *sensor)
 
 	return retval;
 }
+#endif
 
 static void ov2775_stop(struct ov2775 *sensor)
 {
@@ -435,18 +423,6 @@ static void ov2775_stop(struct ov2775 *sensor)
 	ov2775_write_reg(sensor, 0x3008, 0x42);
 	ov2775_write_reg(sensor, 0x4800, 0x24);
 #endif
-}
-
-int ov2775_init_device(struct ov2775 *sensor)
-{
-	int retval;
-
-	pr_info("enter %s\n", __func__);
-	retval = ov2775_config_init(sensor);
-	if (retval < 0)
-		return retval;
-
-	return 0;
 }
 
 /*!
@@ -603,6 +579,7 @@ static int ov2775_s_stream(struct v4l2_subdev *sd, int enable)
 	return 0;
 }
 
+#if 0
 static struct ov2775_mode_info *get_max_resolution(enum ov2775_frame_rate rate)
 {
 	u32 max_width;
@@ -687,6 +664,7 @@ max_resolution:
 	sensor->pix.width = info->width;
 	sensor->pix.height = info->height;
 }
+#endif
 
 static int ov2775_set_fmt(struct v4l2_subdev *sd,
 			  struct v4l2_subdev_pad_config *cfg,
@@ -696,7 +674,9 @@ static int ov2775_set_fmt(struct v4l2_subdev *sd,
 	const struct ov2775_datafmt *fmt = ov2775_find_datafmt(mf->code);
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct ov2775 *sensor = client_to_ov2775(client);
-	int ret;
+	unsigned int i;
+	struct reg_value *mode_setting = NULL;
+	int array_size = 0;
 
 	pr_info("enter %s\n", __func__);
 	if (format->pad) {
@@ -704,19 +684,28 @@ static int ov2775_set_fmt(struct v4l2_subdev *sd,
 	}
 
 	if (!fmt) {
-		mf->code = ov2775_colour_fmts[1].code;
-		mf->colorspace = ov2775_colour_fmts[1].colorspace;
+		mf->code = ov2775_colour_fmts[0].code;
+		mf->colorspace = ov2775_colour_fmts[0].colorspace;
 	}
 
 	mf->field = V4L2_FIELD_NONE;
-	try_to_find_resolution(sensor, mf);
-
+	/*  old search method,  vsi need change to
+	    search resolution by width/height */
+	/*  try_to_find_resolution(sensor, mf); */
 	if (format->which == V4L2_SUBDEV_FORMAT_TRY)
 		return 0;
 
-	ret = ov2775_change_mode(sensor);
-	sensor->fmt = fmt;
-	return ret;
+	for (i = 0; i < ARRAY_SIZE(ov2775_mode_info_data[1]); i++) {
+		if (ov2775_mode_info_data[1][i].width == mf->width &&
+			ov2775_mode_info_data[1][i].height == mf->height) {
+				mode_setting = ov2775_mode_info_data[1][i].init_data_ptr;
+				array_size = ov2775_mode_info_data[1][i].init_data_size;
+				return ov2775_download_firmware(sensor, mode_setting, array_size);
+			}
+	}
+
+	pr_err("%s search error: %d %d\n", __func__, mf->width, mf->height);
+	return -EINVAL;;
 }
 
 static int ov2775_get_fmt(struct v4l2_subdev *sd,
@@ -733,8 +722,8 @@ static int ov2775_get_fmt(struct v4l2_subdev *sd,
 
 	memset(mf, 0, sizeof(struct v4l2_mbus_framefmt));
 
-	mf->code = ov2775_colour_fmts[1].code;
-	mf->colorspace = ov2775_colour_fmts[1].colorspace;
+	mf->code = ov2775_colour_fmts[0].code;
+	mf->colorspace = ov2775_colour_fmts[0].colorspace;
 	mf->width = sensor->pix.width;
 	mf->height = sensor->pix.height;
 	mf->field = V4L2_FIELD_NONE;
@@ -950,7 +939,7 @@ static int ov2775_probe(struct i2c_client *client,
 	}
 
 	retval = of_property_read_u32(dev->of_node, "mclk_source",
-				      (u32 *) & (sensor->mclk_source));
+				      (u32 *)&(sensor->mclk_source));
 	if (retval) {
 		dev_err(dev, "mclk_source missing or invalid\n");
 		return retval;

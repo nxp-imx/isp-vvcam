@@ -61,6 +61,7 @@
 #include <linux/videodev2.h>
 #include <linux/of_device.h>
 #include <linux/sched_clock.h>
+#include <media/v4l2-ctrls.h>
 #include <media/v4l2-subdev.h>
 #include <media/v4l2-device.h>
 #include <media/v4l2-ioctl.h>
@@ -73,7 +74,7 @@
 #include "cma.h"
 #include "mrv_all_bits.h"
 
-/*#define ENABLE_IRQ*/
+/* #define ENABLE_IRQ */
 #define ISP_HW_IRQ_NUMBER 16
 
 extern MrvAllRegister_t *all_regs;
@@ -92,20 +93,6 @@ int isp_close_node(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 
 	pr_info("%s E open_cnt %u\n", __func__, --isp_dev->isp_open_cnt);
 	return 0;
-}
-
-int isp_subscribe_event(struct v4l2_subdev *sd, struct v4l2_fh *fh,
-			struct v4l2_event_subscription *sub)
-{
-	pr_info("%s id:%d, type:0x%x.\n", __func__, sub->id, sub->type);
-	return v4l2_event_subscribe(fh, sub, 2, NULL);
-}
-
-int isp_unsubscribe_event(struct v4l2_subdev *sd, struct v4l2_fh *fh,
-			  struct v4l2_event_subscription *sub)
-{
-	pr_info("%s.", __func__);
-	return v4l2_event_unsubscribe(fh, sub);
 }
 
 #ifdef CONFIG_COMPAT
@@ -137,8 +124,8 @@ int isp_set_stream(struct v4l2_subdev *sd, int enable)
 
 static struct v4l2_subdev_core_ops isp_v4l2_subdev_core_ops = {
 	.ioctl = isp_ioctl,
-	.subscribe_event = isp_subscribe_event,
-	.unsubscribe_event = isp_unsubscribe_event,
+	.subscribe_event = v4l2_ctrl_subdev_subscribe_event,
+	.unsubscribe_event = v4l2_event_subdev_unsubscribe,
 };
 
 static struct v4l2_subdev_video_ops isp_v4l2_subdev_video_ops = {
@@ -257,7 +244,7 @@ struct isp_device *isp_hw_register(struct v4l2_device *vdev, u64 base, u64 size)
 	pr_info("ioremap addr: 0x%llx 0x%llx, %p", base, size,
 		isp_dev->ic_dev.base);
 #ifdef ENABLE_IRQ
-	rc = request_irq(ISP_HW_IRQ_NUMBER, isp_hw_isr, IRQF_SHARED, "V4l2_irq",
+	rc = request_irq(ISP_HW_IRQ_NUMBER, isp_hw_isr, IRQF_SHARED, "vsi_isp_irq",
 			 isp_dev);
 	pr_info("request_irq num:%d, rc:%d", ISP_HW_IRQ_NUMBER, rc);
 #endif
@@ -274,14 +261,12 @@ int isp_hw_unregister(struct isp_device *isp)
 	if (!isp)
 		return -1;
 	sd = &isp->subdev;
-	v4l2_device_unregister_subdev(sd);
 #ifdef ENABLE_IRQ
 	free_irq(ISP_HW_IRQ_NUMBER, isp);
 #endif
-	if (isp) {
-		iounmap(isp->ic_dev.base);
-		kzfree(isp);
-	}
+	v4l2_device_unregister_subdev(sd);
 
+	iounmap(isp->ic_dev.base);
+	kzfree(isp);
 	return 0;
 }

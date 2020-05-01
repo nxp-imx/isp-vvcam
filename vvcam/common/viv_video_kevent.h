@@ -75,6 +75,12 @@ enum {
 	VIV_VIDEO_EVENT_MAX,
 };
 
+enum {
+    VIV_DWE_EVENT_MIN = VIV_VIDEO_EVENT_MAX + 1,
+    VIV_DWE_EVENT_FRAMEDONE,
+    VIV_DWE_EVENT_MAX,
+};
+
 /* max support to 64 bytes! */
 struct viv_video_event {
 	u32 stream_id;
@@ -108,6 +114,7 @@ struct ext_buf_info {
 #define VIV_VIDEO_ISPIRQ_TYPE	(V4L2_EVENT_PRIVATE_START + 0x0)
 #define VIV_VIDEO_MIIRQ_TYPE	(V4L2_EVENT_PRIVATE_START + 0x1)
 #define VIV_VIDEO_EVENT_TYPE	(V4L2_EVENT_PRIVATE_START + 0x2000)
+#define VIV_DWE_EVENT_TYPE   	(V4L2_EVENT_PRIVATE_START + 0x3000)
 
 #define VIV_VIDEO_EVENT_TIMOUT_MS	5000
 

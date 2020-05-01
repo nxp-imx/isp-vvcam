@@ -64,7 +64,7 @@
 
 extern MrvAllRegister_t *all_regs;
 
-int getRawBit(u32 type, u32 * bit, u32 * len)
+int getRawBit(u32 type, u32 *bit, u32 *len)
 {
 	*len = 16;
 	switch (type) {
@@ -233,107 +233,11 @@ int set_scaling(int id, struct isp_ic_dev *dev, bool stabilization)
 	return 0;
 }
 
-#ifdef ISP_MI_BP
-int isp_bppath_start(struct isp_ic_dev *dev)
-{
-	struct isp_mi_context mi = *(&dev->mi);
-	u32 bp_ctrl = 0, lval = 0;
-	struct isp_mi_data_path_context *path = &mi.path[2];
-	u32 mi_imsc = isp_read_reg(dev, REG_ADDR(mi_imsc));
-	int i;
-
-	pr_info("enter %s\n", __func__);
-	bp_ctrl = 0;
-	lval = path->out_width;
-
-	if (mi.path[2].enable) {
-		bp_ctrl &= ~MRV_MI_BP_WRITE_RAWBIT_MASK;
-
-		if (path->data_alignMode == ISP_MI_DATA_ALIGN_16BIT_MODE) {
-			if ((path->out_mode == IC_MI_DATAMODE_RAW10) ||
-			    (path->out_mode == IC_MI_DATAMODE_RAW12) ||
-			    (path->out_mode == IC_MI_DATAMODE_RAW14)) {
-				lval = (path->out_width + 3) / 4;
-			}
-		} else if (path->data_alignMode ==
-			   ISP_MI_DATA_ALIGN_128BIT_MODE) {
-			if ((path->out_mode == IC_MI_DATAMODE_RAW10)
-			    || (path->out_mode == IC_MI_DATAMODE_RAW12)
-			    || (path->out_mode == IC_MI_DATAMODE_RAW14)) {
-				lval = (path->out_width * 2 + 126) / 128;
-			}
-		} else {
-			if (path->out_mode == IC_MI_DATAMODE_RAW10) {
-				lval = (path->out_width * 10 + 63) / 64;
-			} else if (path->out_mode == IC_MI_DATAMODE_RAW12) {
-				lval = (path->out_width * 12 + 63) / 64;
-			} else if (path->out_mode == IC_MI_DATAMODE_RAW14) {
-				lval = (path->out_width * 14 + 63) / 64;
-			} else if (path->out_mode == IC_MI_DATAMODE_RAW16) {
-				lval = (path->out_width * 16 + 63) / 64;
-			} else {
-				lval = (path->out_width * 8 + 63) / 64;
-			}
-		}
-		lval <<= 3;
-		REG_SET_SLICE(bp_ctrl, BP_WR_RAW_ALIGNED, path->data_alignMode);
-		switch (mi.path[2].out_mode) {
-		case (IC_MI_DATAMODE_RAW8):
-			REG_SET_SLICE(bp_ctrl, MRV_MI_BP_WRITE_RAWBIT,
-				      MRV_MI_BP_WRITE_RAWBIT_RAW_8);
-			REG_SET_SLICE(bp_ctrl, MRV_MI_BP_WRITE_FORMAT,
-				      MRV_MI_BP_WRITE_INTERLEAVE_FORMAT);
-			break;
-		case (IC_MI_DATAMODE_RAW12):
-			REG_SET_SLICE(bp_ctrl, BP_WR_BYTE_SWAP, 1);
-			REG_SET_SLICE(bp_ctrl, MRV_MI_BP_WRITE_RAWBIT,
-				      MRV_MI_BP_WRITE_RAWBIT_RAW_12);
-			REG_SET_SLICE(bp_ctrl, MRV_MI_BP_WRITE_FORMAT,
-				      MRV_MI_BP_WRITE_INTERLEAVE_FORMAT);
-			break;
-		case (IC_MI_DATAMODE_RAW10):
-			REG_SET_SLICE(bp_ctrl, BP_WR_BYTE_SWAP, 1);
-			REG_SET_SLICE(bp_ctrl, MRV_MI_BP_WRITE_RAWBIT,
-				      MRV_MI_BP_WRITE_RAWBIT_RAW_10);
-			REG_SET_SLICE(bp_ctrl, MRV_MI_BP_WRITE_FORMAT,
-				      MRV_MI_BP_WRITE_INTERLEAVE_FORMAT);
-			break;
-		default:
-			break;
-		}
-		isp_write_reg(dev, REG_ADDR(mi_bp_wr_size_init),
-			      lval * mi.path[2].out_height);
-		isp_write_reg(dev, REG_ADDR(mi_bp_pic_width),
-			      mi.path[2].out_width);
-		isp_write_reg(dev, REG_ADDR(mi_bp_wr_llength), lval);
-		isp_write_reg(dev, REG_ADDR(mi_bp_pic_height),
-			      mi.path[2].out_height);
-		isp_write_reg(dev, REG_ADDR(mi_bp_pic_size),
-			      lval * mi.path[2].out_height);
-		/* enable frame end irq for  bp path */
-		mi_imsc |=
-		    MRV_MI_BP_FRAME_END_MASK | MRV_MI_BP_WRAP_R_MASK |
-		    MRV_MI_BP_WRAP_GR_MASK | MRV_MI_BP_WRAP_GB_MASK |
-		    MRV_MI_BP_WRAP_B_MASK;
-	}
-	if (!dev->rawis.enable) {
-		isp_write_reg(dev, REG_ADDR(isp_raw_is_h_size),
-			      mi.path[2].out_width);
-		isp_write_reg(dev, REG_ADDR(isp_raw_is_v_size),
-			      mi.path[2].out_height);
-		isp_write_reg(dev, REG_ADDR(isp_raw_is_ctrl), 0);
-	}
-	bp_ctrl |= MRV_MI_BP_PATH_ENABLE_MASK;
-	isp_write_reg(dev, REG_ADDR(mi_bp_ctrl), bp_ctrl);
-
-	isp_write_reg(dev, REG_ADDR(mi_imsc), mi_imsc);
-	return 0;
-}
-#endif
 int isp_mi_start(struct isp_ic_dev *dev)
 {
 	struct isp_mi_context mi = *(&dev->mi);
 	u32 mi_init, mi_ctrl, mi_imsc;
+	u32 out_stride;
 	int i;
 
 	pr_info("enter %s\n", __func__);
@@ -411,14 +315,18 @@ int isp_mi_start(struct isp_ic_dev *dev)
 			break;
 		}
 
+		out_stride = mi.path[0].data_layout ==
+				   IC_MI_DATASTORAGE_INTERLEAVED ?
+				   (mi.path[0].out_width * 2) :
+				   (mi.path[0].out_width);
 		isp_write_reg(dev, REG_ADDR(mi_mp_y_pic_width),
-			      mi.path[0].out_width);
+			      out_stride);
 		isp_write_reg(dev, REG_ADDR(mi_mp_y_llength),
-			      mi.path[0].out_width);
+			      out_stride);
 		isp_write_reg(dev, REG_ADDR(mi_mp_y_pic_height),
 			      mi.path[0].out_height);
 		isp_write_reg(dev, REG_ADDR(mi_mp_y_pic_size),
-			      mi.path[0].out_width * mi.path[0].out_height);
+			      out_stride * mi.path[0].out_height);
 
 		/* enable frame end irq for  main path */
 		mi_imsc |=
@@ -484,15 +392,19 @@ int isp_mi_start(struct isp_ic_dev *dev)
 			break;
 		}
 
+		out_stride = mi.path[1].data_layout ==
+				   IC_MI_DATASTORAGE_INTERLEAVED ?
+				   mi.path[1].out_width * 2 :
+				   mi.path[1].out_width;
 		REG_SET_SLICE(mi_ctrl, MRV_MI_SP_ENABLE, 1);
 		isp_write_reg(dev, REG_ADDR(mi_sp_y_pic_width),
-			      mi.path[1].out_width);
+			      out_stride);
 		isp_write_reg(dev, REG_ADDR(mi_sp_y_llength),
-			      mi.path[1].out_width);
+			      out_stride);
 		isp_write_reg(dev, REG_ADDR(mi_sp_y_pic_height),
 			      mi.path[1].out_height);
 		isp_write_reg(dev, REG_ADDR(mi_sp_y_pic_size),
-			      mi.path[1].out_width * mi.path[1].out_height);
+			      out_stride * mi.path[1].out_height);
 		/* enable frame end interrupt on self path */
 		mi_imsc |=
 		    (MRV_MI_SP_FRAME_END_MASK | MRV_MI_WRAP_SP_Y_MASK |
@@ -506,9 +418,6 @@ int isp_mi_start(struct isp_ic_dev *dev)
 	REG_SET_SLICE(mi_init, MRV_MI_MI_CFG_UPD, 1);
 
 	isp_write_reg(dev, REG_ADDR(mi_imsc), mi_imsc);
-#ifdef ISP_MI_BP
-	isp_bppath_start(dev);
-#endif
 	isp_write_reg(dev, REG_ADDR(mi_init), mi_init);
 	return 0;
 }
@@ -529,9 +438,8 @@ int isp_set_buffer(struct isp_ic_dev *dev, struct isp_buffer_context *buf)
 		return -EINVAL;
 	}
 
-	addr =
-	    buf->path ==
-	    0 ? REG_ADDR(mi_mp_y_base_ad_init) : REG_ADDR(mi_sp_y_base_ad_init);
+	addr = buf->path == 0 ?
+		REG_ADDR(mi_mp_y_base_ad_init) : REG_ADDR(mi_sp_y_base_ad_init);
 	isp_write_reg(dev, addr, (buf->addr_y & MRV_MI_MP_Y_BASE_AD_INIT_MASK));
 	isp_write_reg(dev, addr + 1 * 4,
 		      (buf->size_y & MRV_MI_MP_Y_SIZE_INIT_MASK));
@@ -548,35 +456,6 @@ int isp_set_buffer(struct isp_ic_dev *dev, struct isp_buffer_context *buf)
 	isp_write_reg(dev, addr + 11 * 4, 0);
 
 	return 0;
-}
-
-int isp_set_bp_buffer(struct isp_ic_dev *dev, struct isp_bp_buffer_context *buf)
-{
-#ifndef ISP_MI_BP
-	pr_err("unsupported function: %s", __func__);
-	return -EINVAL;
-#else
-	isp_write_reg(dev, REG_ADDR(mi_bp_r_base_ad_init),
-		      (buf->addr_r & BP_R_BASE_AD_INIT_MASK));
-	isp_write_reg(dev, REG_ADDR(mi_bp_gr_base_ad_init),
-		      (buf->addr_gr & BP_GR_BASE_AD_INIT_MASK));
-
-	isp_write_reg(dev, REG_ADDR(mi_bp_gb_base_ad_init),
-		      (buf->addr_gb & BP_GB_BASE_AD_INIT_MASK));
-	isp_write_reg(dev, REG_ADDR(mi_bp_b_base_ad_init),
-		      (buf->addr_b & BP_B_BASE_AD_INIT_MASK));
-	return 0;
-#endif
-}
-
-u32 isp_read_mi_irq(struct isp_ic_dev * dev)
-{
-	return isp_read_reg(dev, REG_ADDR(mi_mis));
-}
-
-void isp_reset_mi_irq(struct isp_ic_dev *dev, u32 icr)
-{
-	isp_write_reg(dev, REG_ADDR(mi_icr), icr);
 }
 
 #endif

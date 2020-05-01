@@ -65,7 +65,6 @@ enum {
 	ISPIOC_START_CAPTURE,
 	ISPIOC_DISABLE_ISP_OFF,
 	ISPIOC_SET_BUFFER,
-	ISPIOC_SET_BP_BUFFER,
 	ISPIOC_START_DMA_READ,
 	ISPIOC_MI_START,
 	ISPIOC_MI_STOP,
@@ -123,9 +122,6 @@ enum {
 	ISPIOC_ENABLE_GCMONO,
 	ISPIOC_DISABLE_GCMONO,
 	ISPIOC_S_GCMONO,
-	ISPIOC_ENABLE_RGBGAMMA,
-	ISPIOC_DISABLE_RGBGAMMA,
-	ISPIOC_S_RGBGAMMA,
 	ISPIOC_S_DEMOSAIC,
 };
 
@@ -149,24 +145,23 @@ int isp_s_mux(struct isp_ic_dev *dev);
 int isp_s_bls(struct isp_ic_dev *dev);
 int isp_enable_awb(struct isp_ic_dev *dev);
 int isp_disable_awb(struct isp_ic_dev *dev);
-int isp_s_awb(struct isp_ic_dev *dev);
+int isp_s_awb(struct isp_ic_dev *dev, struct isp_awb_context *awb);
 int isp_g_awbmean(struct isp_ic_dev *dev, struct isp_awb_mean *mean);
 int isp_s_is(struct isp_ic_dev *dev);
-int isp_s_raw_is(struct isp_ic_dev *dev);
 int isp_s_cnr(struct isp_ic_dev *dev);
 int isp_start_stream(struct isp_ic_dev *dev, u32 framenum);
 int isp_stop_stream(struct isp_ic_dev *dev);
-int isp_s_cc(struct isp_ic_dev *dev);
-int isp_s_xtalk(struct isp_ic_dev *dev);
+int isp_s_cc(struct isp_ic_dev *dev, struct isp_cc_context *cc);
+int isp_s_xtalk(struct isp_ic_dev *dev, struct isp_xtalk_context *xtalk);
 int isp_enable_wb(struct isp_ic_dev *dev, bool bEnable);
 int isp_enable_gamma_out(struct isp_ic_dev *dev, bool bEnable);
-int isp_s_gamma_out(struct isp_ic_dev *dev);
-int isp_s_lsc(struct isp_ic_dev *dev);
-int isp_s_dpf(struct isp_ic_dev *dev);
-int isp_s_exp(struct isp_ic_dev *dev);
-int isp_g_expmean(struct isp_ic_dev *dev, u8 * mean);
+int isp_s_gamma_out(struct isp_ic_dev *dev, struct isp_gamma_out_context* gamma);
+int isp_s_lsc(struct isp_ic_dev *dev, struct isp_lsc_context *lsc);
+int isp_s_dpf(struct isp_ic_dev *dev, struct isp_dpf_context *dpf);
+int isp_s_exp(struct isp_ic_dev *dev, struct isp_exp_context *exp);
+int isp_g_expmean(struct isp_ic_dev *dev, u8 *mean);
 int isp_s_hist(struct isp_ic_dev *dev);
-int isp_g_histmean(struct isp_ic_dev *dev, u32 * mean);
+int isp_g_histmean(struct isp_ic_dev *dev, u32 *mean);
 int isp_s_dpcc(struct isp_ic_dev *dev);
 int isp_s_flt(struct isp_ic_dev *dev);
 int isp_s_cac(struct isp_ic_dev *dev);
@@ -185,21 +180,16 @@ int isp_enable_hdr(struct isp_ic_dev *dev);
 int isp_disable_hdr(struct isp_ic_dev *dev);
 int isp_s_comp(struct isp_ic_dev *dev);
 int isp_s_simp(struct isp_ic_dev *dev);
-int isp_s_cproc(struct isp_ic_dev *dev);
+int isp_s_cproc(struct isp_ic_dev *dev, struct isp_cproc_context *cproc);
 int isp_s_elawb(struct isp_ic_dev *dev);
 
 int isp_enable_gcmono(struct isp_ic_dev *dev);
 int isp_disable_gcmono(struct isp_ic_dev *dev);
 int isp_s_gcmono(struct isp_ic_dev *dev, struct isp_gcmono_data *data);	/* set curve */
 
-u32 isp_read_mi_irq(struct isp_ic_dev *dev);
-void isp_reset_mi_irq(struct isp_ic_dev *dev, u32 icr);
-
 int isp_ioc_start_dma_read(struct isp_ic_dev *dev, void *args);
 int isp_mi_start(struct isp_ic_dev *dev);
 int isp_mi_stop(struct isp_ic_dev *dev);
 int isp_set_buffer(struct isp_ic_dev *dev, struct isp_buffer_context *buf);
-int isp_set_bp_buffer(struct isp_ic_dev *dev,
-		      struct isp_bp_buffer_context *buf);
 
 #endif /* _ISP_IOC_H_ */

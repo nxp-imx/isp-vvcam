@@ -79,7 +79,7 @@ enum os08a20_mode {
 	os08a20_mode_VGA_640_480 = 3,
 	os08a20_mode_QVGA_320_240 = 4,
 	os08a20_mode_QSXGA_2592_1944 = 5,
-	os08a20_mode_MAX = 0,
+	os08a20_mode_MAX,
 	os08a20_mode_INIT = 0xff,	/* only for sensor init */
 };
 
@@ -158,11 +158,12 @@ struct os08a20 {
 	int pwn_gpio, rst_gpio;
 };
 
-#define client_to_os08a20(client)	container_of(i2c_get_clientdata(client), struct os08a20, subdev)
+#define client_to_os08a20(client)\
+    container_of(i2c_get_clientdata(client), struct os08a20, subdev)
 
 int os08a20_hw_register(struct v4l2_device *vdev);
 void os08a20_hw_unregister(void);
 s32 os08a20_write_reg(struct os08a20 *sensor, u16 reg, u8 val);
-s32 os08a20_read_reg(struct os08a20 *sensor, u16 reg, u8 * val);
+s32 os08a20_read_reg(struct os08a20 *sensor, u16 reg, u8 *val);
 
 #endif
