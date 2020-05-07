@@ -977,6 +977,9 @@ static int viv_video_probe(struct platform_device *pdev)
 		goto v4l2_fail;
 	video_set_drvdata(vdev->video, vdev);
 
+	pm_runtime_enable(&pdev->dev);
+	pm_runtime_get_sync(&pdev->dev);
+
 	for (; i < ISP_HW_NUMBER; i++) {
 		switch (i) {
 		case 0:
@@ -1050,8 +1053,39 @@ static int viv_video_remove(struct platform_device *pdev)
 	vdev = NULL;
 	cma_release();
 	mutex_destroy(&file_list_lock);
+	pm_runtime_put(&pdev->dev);
+	pm_runtime_disable(&pdev->dev);
+
 	return 0;
 }
+
+static int isp_system_suspend(struct device *dev)
+{
+	return pm_runtime_force_suspend(dev);;
+}
+
+static int isp_system_resume(struct device *dev)
+{
+	int ret;
+
+	ret = pm_runtime_force_resume(dev);
+	if (ret < 0) {
+		dev_err(dev, "force resume %s failed!\n", dev_name(dev));
+		return ret;
+	}
+
+	return 0;
+}
+
+static const struct dev_pm_ops isp_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(isp_system_suspend, isp_system_resume)
+};
+
+static const struct of_device_id isp_of_match[] = {
+	{.compatible = "fsl,imx8mp-isp", },
+	{ /* sentinel */ },
+};
+MODULE_DEVICE_TABLE(of, isp_of_match);
 
 static struct platform_driver viv_video_driver = {
 	.probe = viv_video_probe,
@@ -1059,6 +1093,8 @@ static struct platform_driver viv_video_driver = {
 	.driver = {
 		   .name = "viv_isp",
 		   .owner = THIS_MODULE,
+		   .of_match_table = isp_of_match,
+		   .pm = &isp_pm_ops,
 		   },
 };
 
@@ -1067,16 +1103,10 @@ static int __init viv_isp_init_module(void)
 	int ret = 0;
 
 	pr_info("enter %s\n", __func__);
-	ret = platform_device_register(&viv_pdev);
-	if (ret) {
-		pr_err("register platform device failed.\n");
-		return ret;
-	}
 
 	ret = platform_driver_register(&viv_video_driver);
 	if (ret) {
 		pr_err("register platform driver failed.\n");
-		platform_device_unregister(&viv_pdev);
 		return ret;
 	}
 	return ret;
@@ -1087,7 +1117,6 @@ static void __exit viv_isp_exit_module(void)
 	pr_info("enter %s\n", __func__);
 	platform_driver_unregister(&viv_video_driver);
 	msleep(100);
-	platform_device_unregister(&viv_pdev);
 }
 
 module_init(viv_isp_init_module);
