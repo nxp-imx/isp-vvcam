@@ -92,6 +92,7 @@ int cma_init(u64 base, u64 size, u64 align)
 
 	item = kzalloc(sizeof(struct block_list), GFP_KERNEL);
 	if (!item) {
+		kzfree(g_cma_mem_ctx);
 		g_cma_mem_ctx = NULL;
 		return -ENOMEM;
 	}

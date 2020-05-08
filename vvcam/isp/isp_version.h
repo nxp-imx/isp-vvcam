@@ -54,18 +54,6 @@
 #define _ISP_VERSION_H_
 
 
-#ifdef ISP8000NANO_V1802
-#ifndef ISP_WDR_V3
-#define ISP_WDR_V3
-#endif
-#ifndef ISP_MIV1
-#define ISP_MIV1
-#endif
-#ifndef ISP_CMPD
-#define ISP_CMPD
-#endif
-#endif /* ISP8000NANO_V1802 */
-
 #define ISP_EE_SUPPORT 1
 #define ISP_2DNR_SUPPORT (1 << 1)
 #define ISP_3DNR_SUPPORT (1 << 2)

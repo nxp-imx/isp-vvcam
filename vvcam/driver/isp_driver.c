@@ -52,6 +52,7 @@
  *****************************************************************************/
 #include <linux/delay.h>
 #include <linux/clk.h>
+#include <linux/clk/clk-conf.h>
 #include <linux/io.h>
 #include <linux/module.h>
 #include <linux/proc_fs.h>
@@ -76,6 +77,7 @@
 
 /* #define ENABLE_IRQ */
 #define ISP_HW_IRQ_NUMBER 16
+struct clk *clk_isp;
 
 extern MrvAllRegister_t *all_regs;
 
@@ -216,11 +218,44 @@ irqreturn_t isp_hw_isr(int irq, void *dev)
 struct isp_device *isp_hw_register(struct v4l2_device *vdev, u64 base, u64 size)
 {
 	struct isp_device *isp_dev;
+	struct device_node *node;
+	struct device_node *node_p;
+	int ret;
 #ifdef ENABLE_IRQ
 	int rc;
 #endif
 
 	pr_info("enter %s\n", __func__);
+	node = of_find_compatible_node(NULL, NULL, "fsl,imx8mp-isp");
+	if (!node) {
+		pr_err("ISP node not found.\n");
+		return NULL;
+	}
+	ret = of_clk_set_defaults(node, false);
+	if (ret < 0) {
+		pr_err("clk: couldn't set desired clock for ISP\n");
+		return NULL;
+	}
+
+	/*
+	 * trick to get ISP clock via power-domain in isp node in dts,
+	 * as there is no power management in current driver.
+	 */
+	node_p = of_parse_phandle(node, "power-domains", 0);
+	if (!node_p) {
+		pr_err("couldn't find power-domain for ISP\n");
+		return NULL;
+	}
+	clk_isp = of_clk_get(node_p, 0);
+	if (IS_ERR(clk_isp)) {
+		pr_err("couldn't get clock for ISP power-domain\n");
+		of_node_put(node_p);
+		return NULL;
+	}
+	of_node_put(node_p);
+
+	clk_prepare_enable(clk_isp);
+
 	isp_dev = kzalloc(sizeof(struct isp_device), GFP_KERNEL);
 	if (!isp_dev) {
 		goto end;
@@ -268,5 +303,7 @@ int isp_hw_unregister(struct isp_device *isp)
 
 	iounmap(isp->ic_dev.base);
 	kzfree(isp);
+	if (!IS_ERR(clk_isp))
+		clk_disable_unprepare(clk_isp);
 	return 0;
 }

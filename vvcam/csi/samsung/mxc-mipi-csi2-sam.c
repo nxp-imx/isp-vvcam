@@ -11,6 +11,7 @@
  */
 
 #include <linux/clk.h>
+#include <linux/clk/clk-conf.h>
 #include <linux/delay.h>
 #include <linux/errno.h>
 #include <linux/interrupt.h>
@@ -1150,6 +1151,12 @@ static int mipi_csis_probe(struct platform_device *pdev)
 	if (IS_ERR(state->mix_gpr)) {
 		dev_err(dev, "failed to get mix gpr\n");
 		return PTR_ERR(state->mix_gpr);
+	}
+
+	ret = of_clk_set_defaults(dev->of_node, false);
+	if (ret < 0) {
+		pr_err("clk: couldn't set desired clock for CSI\n");
+		return ret;
 	}
 
 	ret = mipi_csis_of_parse_resets(state);

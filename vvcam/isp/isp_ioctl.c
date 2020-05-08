@@ -468,7 +468,6 @@ int isp_s_cnr(struct isp_ic_dev *dev)
 	struct isp_cnr_context *cnr = &dev->cnr;
 	u32 isp_ctrl;
 
-	pr_info("enter %s\n", __func__);
 	isp_ctrl = isp_read_reg(dev, REG_ADDR(isp_ctrl));
 
 	if (!cnr->enable) {
@@ -583,7 +582,6 @@ int isp_s_gamma_out(struct isp_ic_dev *dev, struct isp_gamma_out_context *gamma)
 	int i;
 
 	isp_gamma_out_mode = isp_read_reg(dev, REG_ADDR(isp_gamma_out_mode));
-    pr_info("enter %s %d\n", __func__, isp_gamma_out_mode);
 	REG_SET_SLICE(isp_gamma_out_mode, MRV_ISP_EQU_SEGM, gamma->mode);
 	isp_write_reg(dev, REG_ADDR(isp_gamma_out_mode), isp_gamma_out_mode);
 
@@ -933,9 +931,8 @@ int isp_s_dpcc(struct isp_ic_dev *dev)
 	return 0;
 }
 
-int isp_s_flt(struct isp_ic_dev *dev)
+int isp_s_flt(struct isp_ic_dev *dev, struct isp_flt_context *flt)
 {
-	struct isp_flt_context *flt = &dev->flt;
 	u32 isp_flt_mode = isp_read_reg(dev, REG_ADDR(isp_filt_mode));
 	struct flt_denoise_type {
 		u32 thresh_sh0;
@@ -1643,9 +1640,7 @@ long isp_priv_ioctl(struct isp_ic_dev *dev, unsigned int cmd, void *args)
 		ret = isp_s_cnr(dev);
 		break;
 	case ISPIOC_S_FLT:
-		viv_check_retval(copy_from_user
-				 (&dev->flt, args, sizeof(dev->flt)));
-		ret = isp_s_flt(dev);
+		ret = isp_s_flt(dev, (struct isp_flt_context *)args);
 		break;
 	case ISPIOC_S_CAC:
 		viv_check_retval(copy_from_user
