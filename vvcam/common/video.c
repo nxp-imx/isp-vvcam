@@ -1003,7 +1003,7 @@ static int viv_video_probe(struct platform_device *pdev)
 	rc = mipi_csi_sam_add(vdev->v4l2_dev);
 	rc = ov2775_hw_register(vdev->v4l2_dev);
 	/* rc = os08a20_hw_register(vdev->v4l2_dev); */
-	/* rc = basler_hw_register(vdev->v4l2_dev); */
+	rc = basler_hw_register(vdev->v4l2_dev);
 #endif
 	rc = v4l2_device_register_subdev_nodes(vdev->v4l2_dev);
 	cma_init(RESERVED_MEM_BASE, RESERVED_MEM_SIZE, 4096);
@@ -1041,7 +1041,7 @@ static int viv_video_remove(struct platform_device *pdev)
 	mipi_csi_sam_del();
 	ov2775_hw_unregister();
 	/* os08a20_hw_unregister(); */
-	/* basler_hw_unregister(); */
+	basler_hw_unregister();
 #endif
 
 	if (vdev->video) {
