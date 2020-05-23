@@ -102,7 +102,7 @@ int csis_s_fmt(struct v4l2_subdev *sd, struct csi_sam_format *fmt)
 int csis_s_hdr(struct v4l2_subdev *sd, bool enable)
 {
 	struct csi_state *state = container_of(sd, struct csi_state, sd);
-	pr_info("%s: %d\n", __func__, enable);
+	pr_debug("enter %s: %d\n", __func__, enable);
 	state->hdr = enable;
 	return 0;
 }
@@ -119,7 +119,7 @@ long csis_priv_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 	int ret = 1;
 	struct csi_state *state = container_of(sd, struct csi_state, sd);
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	switch (cmd) {
 	case CSIOC_RESET:
 		mipi_csis_sw_reset(state);

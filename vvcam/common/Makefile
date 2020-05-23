@@ -16,19 +16,15 @@ $(MODULE_NAME)-objs := \
 	../isp/isp_ioctl.o \
 	../csi/samsung/sam_ioctl.o \
 	../csi/samsung/mxc-mipi-csi2-sam.o \
-	../sensor/ov2775/ov2775_ioctl.o \
 	../sensor/ov2775/ov2775_mipi_v3.o \
-	../sensor/os08a20/os08a20_ioctl.o \
 	../sensor/os08a20/os08a20_mipi_v3.o \
-	../sensor/camera-proxy-driver/basler-camera-driver/basler-camera-driver.o \
+	../sensor/camera-proxy-driver/basler-camera-driver-vvcam/basler-camera-driver-vvcam.o \
 	../driver/isp_driver.o \
 	../dwe/dwe_ioctl.o \
 
 EXTRA_CFLAGS += -I$(PWD)/../isp/
 EXTRA_CFLAGS += -I$(PWD)/../csi/samsung/
-EXTRA_CFLAGS += -I$(PWD)/../sensor/ov2775/
-EXTRA_CFLAGS += -I$(PWD)/../sensor/os08a20/
-EXTRA_CFLAGS += -I$(PWD)/../sensor/camera-proxy-driver/basler-camera-driver
+EXTRA_CFLAGS += -I$(PWD)/../sensor/
 EXTRA_CFLAGS += -I$(PWD)/../driver/
 EXTRA_CFLAGS += -I$(PWD)/../common/
 EXTRA_CFLAGS += -I$(PWD)/../dwe/

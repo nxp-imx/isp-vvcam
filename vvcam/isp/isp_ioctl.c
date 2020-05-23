@@ -79,7 +79,7 @@ u32 isp_read_reg(struct isp_ic_dev *dev, u32 offset)
 
 int isp_reset(struct isp_ic_dev *dev)
 {
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	isp_write_reg(dev, REG_ADDR(vi_ircl), 0xFFFFFFFF);
 	isp_write_reg(dev, REG_ADDR(vi_ircl), 0x0);
 	return 0;
@@ -89,7 +89,7 @@ int isp_enable_tpg(struct isp_ic_dev *dev)
 {
 	u32 addr, isp_tpg_ctrl;
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	addr = REG_ADDR(isp_tpg_ctrl);
 	isp_tpg_ctrl = isp_read_reg(dev, addr);
 	REG_SET_SLICE(isp_tpg_ctrl, TPG_ENABLE, 1);
@@ -101,7 +101,7 @@ int isp_disable_tpg(struct isp_ic_dev *dev)
 {
 	u32 addr, isp_tpg_ctrl;
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	addr = REG_ADDR(isp_tpg_ctrl);
 	isp_tpg_ctrl = isp_read_reg(dev, addr);
 	REG_SET_SLICE(isp_tpg_ctrl, TPG_ENABLE, 0);
@@ -113,7 +113,7 @@ int isp_enable_bls(struct isp_ic_dev *dev)
 {
 	u32 isp_bls_ctrl = isp_read_reg(dev, REG_ADDR(isp_bls_ctrl));
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	REG_SET_SLICE(isp_bls_ctrl, MRV_BLS_BLS_ENABLE,
 		      MRV_BLS_BLS_ENABLE_PROCESS);
 	isp_write_reg(dev, REG_ADDR(isp_bls_ctrl), isp_bls_ctrl);
@@ -124,7 +124,7 @@ int isp_disable_bls(struct isp_ic_dev *dev)
 {
 	u32 isp_bls_ctrl = isp_read_reg(dev, REG_ADDR(isp_bls_ctrl));
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	REG_SET_SLICE(isp_bls_ctrl, MRV_BLS_BLS_ENABLE,
 		      MRV_BLS_BLS_ENABLE_BYPASS);
 	isp_write_reg(dev, REG_ADDR(isp_bls_ctrl), isp_bls_ctrl);
@@ -135,7 +135,7 @@ int isp_enable(struct isp_ic_dev *dev)
 {
 	u32 isp_ctrl, isp_imsc;
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	isp_imsc = isp_read_reg(dev, REG_ADDR(isp_imsc));
 	isp_imsc |= (MRV_ISP_IMSC_ISP_OFF_MASK | MRV_ISP_IMSC_FRAME_MASK);
 	isp_write_reg(dev, REG_ADDR(isp_imsc), isp_imsc);
@@ -153,7 +153,7 @@ int isp_disable(struct isp_ic_dev *dev)
 {
 	u32 isp_ctrl, isp_imsc;
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	isp_ctrl = isp_read_reg(dev, REG_ADDR(isp_ctrl));
 	isp_imsc = isp_read_reg(dev, REG_ADDR(isp_imsc));
 	isp_imsc |= (MRV_ISP_IMSC_ISP_OFF_MASK | MRV_ISP_IMSC_FRAME_MASK);
@@ -172,7 +172,7 @@ int isp_enable_lsc(struct isp_ic_dev *dev)
 {
 	u32 isp_lsc_ctrl = isp_read_reg(dev, REG_ADDR(isp_lsc_ctrl));
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	REG_SET_SLICE(isp_lsc_ctrl, MRV_LSC_LSC_EN, 1U);
 	isp_write_reg(dev, REG_ADDR(isp_lsc_ctrl), isp_lsc_ctrl);
 	return 0;
@@ -182,7 +182,7 @@ int isp_disable_lsc(struct isp_ic_dev *dev)
 {
 	u32 isp_lsc_ctrl = isp_read_reg(dev, REG_ADDR(isp_lsc_ctrl));
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	REG_SET_SLICE(isp_lsc_ctrl, MRV_LSC_LSC_EN, 0U);
 	isp_write_reg(dev, REG_ADDR(isp_lsc_ctrl), isp_lsc_ctrl);
 	return 0;
@@ -193,7 +193,7 @@ int isp_s_input(struct isp_ic_dev *dev)
 	struct isp_context isp_ctx = *(&dev->ctx);
 	u32 isp_ctrl, isp_acq_prop, isp_demosaic;
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	isp_ctrl = isp_read_reg(dev, REG_ADDR(isp_ctrl));
 	REG_SET_SLICE(isp_ctrl, MRV_ISP_ISP_MODE, isp_ctx.mode);
 	isp_acq_prop = isp_read_reg(dev, REG_ADDR(isp_acq_prop));
@@ -250,7 +250,7 @@ int isp_s_demosaic(struct isp_ic_dev *dev)
 {
 	struct isp_context isp_ctx = *(&dev->ctx);
 	u32 isp_demosaic;
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	isp_demosaic = isp_read_reg(dev, REG_ADDR(isp_demosaic));
 	REG_SET_SLICE(isp_demosaic, MRV_ISP_DEMOSAIC_BYPASS,
 		      isp_ctx.bypass_mode);
@@ -265,7 +265,7 @@ int isp_s_tpg(struct isp_ic_dev *dev)
 	struct isp_tpg_context tpg = *(&dev->tpg);
 	u32 addr, regVal;
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	addr = REG_ADDR(isp_tpg_ctrl);
 	regVal = isp_read_reg(dev, addr);
 	REG_SET_SLICE(regVal, TPG_IMG_NUM, tpg.image_type);
@@ -310,7 +310,7 @@ int isp_s_mux(struct isp_ic_dev *dev)
 	struct isp_mux_context mux = *(&dev->mux);
 	u32 vi_dpcl;
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	vi_dpcl = isp_read_reg(dev, REG_ADDR(vi_dpcl));
 	REG_SET_SLICE(vi_dpcl, MRV_VI_MP_MUX, mux.mp_mux);
 	REG_SET_SLICE(vi_dpcl, MRV_VI_DMA_SPMUX, mux.sp_mux);
@@ -327,7 +327,7 @@ int isp_s_bls(struct isp_ic_dev *dev)
 	struct isp_bls_context bls = *(&dev->bls);
 	u32 isp_bls_ctrl = isp_read_reg(dev, REG_ADDR(isp_bls_ctrl));
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	REG_SET_SLICE(isp_bls_ctrl, MRV_BLS_BLS_MODE, bls.mode);
 	isp_write_reg(dev, REG_ADDR(isp_bls_ctrl), isp_bls_ctrl);
 	isp_write_reg(dev, REG_ADDR(isp_bls_a_fixed), bls.a);
@@ -342,7 +342,7 @@ int isp_enable_awb(struct isp_ic_dev *dev)
 	u32 isp_awb_prop = isp_read_reg(dev, REG_ADDR(isp_awb_prop));
 	u32 isp_imsc = isp_read_reg(dev, REG_ADDR(isp_imsc));
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	REG_SET_SLICE(isp_awb_prop, MRV_ISP_AWB_MODE, MRV_ISP_AWB_MODE_MEAS);
 	isp_write_reg(dev, REG_ADDR(isp_awb_prop), isp_awb_prop);
 	isp_write_reg(dev, REG_ADDR(isp_imsc),
@@ -355,7 +355,7 @@ int isp_disable_awb(struct isp_ic_dev *dev)
 	u32 isp_awb_prop = isp_read_reg(dev, REG_ADDR(isp_awb_prop));
 	u32 isp_imsc = isp_read_reg(dev, REG_ADDR(isp_imsc));
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	REG_SET_SLICE(isp_awb_prop, MRV_ISP_AWB_MODE, MRV_ISP_AWB_MODE_NOMEAS);
 	isp_write_reg(dev, REG_ADDR(isp_awb_prop), isp_awb_prop);
 	isp_write_reg(dev, REG_ADDR(isp_imsc),
@@ -370,7 +370,7 @@ int isp_s_awb(struct isp_ic_dev *dev, struct isp_awb_context *awb)
 	u32 isp_awb_ref = 0;
 	u32 isp_awb_prop = 0;
 
-	/* pr_info("enter %s\n", __func__); */
+	/* pr_debug("enter %s\n", __func__); */
 	isp_awb_prop = isp_read_reg(dev, REG_ADDR(isp_awb_prop));
 
 	if (awb->mode == MRV_ISP_AWB_MEAS_MODE_YCBCR) {
@@ -430,7 +430,7 @@ int isp_s_is(struct isp_ic_dev *dev)
 	u32 isp_is_displace;
 	u32 isp_ctrl;
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 
 	isp_is_ctrl = isp_read_reg(dev, REG_ADDR(isp_is_ctrl));
 
@@ -488,7 +488,7 @@ int isp_start_stream(struct isp_ic_dev *dev, u32 numFrames)
 {
 	u32 isp_imsc, isp_ctrl;
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	isp_write_reg(dev, REG_ADDR(isp_sh_ctrl), 0x10);
 	isp_write_reg(dev, REG_ADDR(isp_acq_nr_frames),
 		      (MRV_ISP_ACQ_NR_FRAMES_MASK & numFrames));
@@ -510,7 +510,7 @@ int isp_start_stream(struct isp_ic_dev *dev, u32 numFrames)
 
 int isp_stop_stream(struct isp_ic_dev *dev)
 {
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	isp_write_reg(dev, REG_ADDR(isp_imsc), 0);
 	isp_disable(dev);
 	return 0;
@@ -521,7 +521,7 @@ int isp_s_cc(struct isp_ic_dev *dev, struct isp_cc_context *cc)
 	u32 isp_ctrl, addr;
 	int i;
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	isp_ctrl = isp_read_reg(dev, REG_ADDR(isp_ctrl));
 	REG_SET_SLICE(isp_ctrl, MRV_ISP_ISP_CSM_Y_RANGE, cc->conv_range_y_full);
 	REG_SET_SLICE(isp_ctrl, MRV_ISP_ISP_CSM_C_RANGE, cc->conv_range_c_full);
@@ -541,7 +541,7 @@ int isp_s_xtalk(struct isp_ic_dev *dev, struct isp_xtalk_context *xtalk)
 {
 	int i;
 
-	/* pr_info("enter %s\n", __func__); */
+	/* pr_debug("enter %s\n", __func__); */
 
 	for (i = 0; i < 9; i++) {
 		isp_write_reg(dev, REG_ADDR(cross_talk_coef_block_arr[i]),
@@ -560,7 +560,7 @@ int isp_enable_wb(struct isp_ic_dev *dev, bool bEnable)
 {
 	u32 isp_ctrl = isp_read_reg(dev, REG_ADDR(isp_ctrl));
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	REG_SET_SLICE(isp_ctrl, MRV_ISP_ISP_AWB_ENABLE, bEnable);
 	isp_write_reg(dev, REG_ADDR(isp_ctrl), isp_ctrl);
 	return 0;
@@ -570,7 +570,7 @@ int isp_enable_gamma_out(struct isp_ic_dev *dev, bool bEnable)
 {
 	u32 isp_ctrl = isp_read_reg(dev, REG_ADDR(isp_ctrl));
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	REG_SET_SLICE(isp_ctrl, MRV_ISP_ISP_GAMMA_OUT_ENABLE, bEnable);
 	isp_write_reg(dev, REG_ADDR(isp_ctrl), isp_ctrl);
 	return 0;
@@ -599,7 +599,7 @@ int isp_s_lsc(struct isp_ic_dev *dev, struct isp_lsc_context *lsc)
 	u32 isp_lsc_status;
 	u32 isp_ctrl = isp_read_reg(dev, REG_ADDR(isp_ctrl));
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 
 	/* Enable isp to enable ram clock for write correct table to ram. */
 	if (!(isp_ctrl & 0x01)) {
@@ -693,7 +693,7 @@ int isp_ioc_disable_isp_off(struct isp_ic_dev *dev, void *args)
 {
 	u32 isp_imsc;
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	isp_imsc = isp_read_reg(dev, REG_ADDR(isp_imsc));
 	isp_imsc &= ~MRV_ISP_IMSC_ISP_OFF_MASK;
 	isp_write_reg(dev, REG_ADDR(isp_imsc), isp_imsc);
@@ -705,7 +705,7 @@ int isp_g_awbmean(struct isp_ic_dev *dev, struct isp_awb_mean *mean)
 {
 	u32 reg = isp_read_reg(dev, REG_ADDR(isp_awb_mean));
 
-	/* pr_info("enter %s\n", __func__); */
+	/* pr_debug("enter %s\n", __func__); */
 
 	mean->g = REG_GET_SLICE(reg, MRV_ISP_AWB_MEAN_Y__G);
 	mean->b = REG_GET_SLICE(reg, MRV_ISP_AWB_MEAN_CB__B);
@@ -721,7 +721,7 @@ int isp_s_exp(struct isp_ic_dev *dev, struct isp_exp_context *exp)
 	u32 isp_exp_ctrl = isp_read_reg(dev, REG_ADDR(isp_exp_ctrl));
 	u32 isp_imsc = isp_read_reg(dev, REG_ADDR(isp_imsc));
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 
 	if (!exp->enable) {
 		REG_SET_SLICE(isp_exp_ctrl, MRV_AE_EXP_START, 0);
@@ -762,7 +762,7 @@ int isp_g_expmean(struct isp_ic_dev *dev, u8 *mean)
 {
 	int i = 0;
 
-	/* pr_info("enter %s\n", __func__); */
+	/* pr_debug("enter %s\n", __func__); */
 	if (!dev || !mean)
 		return -EINVAL;
 	for (; i < 25; i++) {
@@ -827,7 +827,7 @@ int isp_s_hist(struct isp_ic_dev *dev)
 	u32 isp_imsc = isp_read_reg(dev, REG_ADDR(isp_imsc));
 	int i;
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	if (!hist->enable) {
 		REG_SET_SLICE(isp_hist_prop, MRV_HIST_MODE, MRV_HIST_MODE_NONE);
 		isp_write_reg(dev, REG_ADDR(isp_hist_prop), isp_hist_prop);
@@ -869,7 +869,7 @@ int isp_g_histmean(struct isp_ic_dev *dev, u32 *mean)
 {
 	int i = 0;
 
-	/* pr_info("enter %s\n", __func__); */
+	/* pr_debug("enter %s\n", __func__); */
 	if (!dev || !mean)
 		return -EINVAL;
 #ifdef ISP_HIST256
@@ -894,7 +894,7 @@ int isp_s_dpcc(struct isp_ic_dev *dev)
 	int i;
 	u32 isp_dpcc_mode = isp_read_reg(dev, REG_ADDR(isp_dpcc_mode));
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 
 	if (!dpcc->enable) {
 		REG_SET_SLICE(isp_dpcc_mode, MRV_DPCC_ISP_DPCC_ENABLE, 0);
@@ -993,7 +993,7 @@ int isp_s_flt(struct isp_ic_dev *dev, struct isp_flt_context *flt)
 		{0x30, 0x3F, 0x28, 0x24, 0x20},
 	};
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	if (!flt->enable) {
 		REG_SET_SLICE(isp_flt_mode, MRV_FILT_FILT_ENABLE, 0);
 		isp_write_reg(dev, REG_ADDR(isp_filt_mode), isp_flt_mode);
@@ -1046,7 +1046,7 @@ int isp_s_cac(struct isp_ic_dev *dev)
 	u32 val = 0;
 	u32 isp_cac_ctrl = isp_read_reg(dev, REG_ADDR(isp_cac_ctrl));
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 
 	if (!cac->enable) {
 		REG_SET_SLICE(isp_cac_ctrl, MRV_CAC_CAC_EN, 0);
@@ -1083,7 +1083,7 @@ int isp_s_deg(struct isp_ic_dev *dev)
 	u32 isp_gamma_dx_hi = 0;
 	u32 isp_ctrl = isp_read_reg(dev, REG_ADDR(isp_ctrl));
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 
 	if (!deg->enable) {
 		REG_SET_SLICE(isp_ctrl, MRV_ISP_ISP_GAMMA_IN_ENABLE, 0);
@@ -1153,7 +1153,7 @@ int isp_s_ie(struct isp_ic_dev *dev)
 	u32 sharpen = 0;
 	int i;
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 
 	REG_SET_SLICE(vi_ircl, MRV_VI_IE_SOFT_RST, 1);
 	isp_write_reg(dev, REG_ADDR(vi_ircl), vi_ircl);
@@ -1231,7 +1231,7 @@ int isp_s_vsm(struct isp_ic_dev *dev)
 	u32 isp_vsm_mode = isp_read_reg(dev, REG_ADDR(isp_vsm_mode));
 	u32 isp_imsc = isp_read_reg(dev, REG_ADDR(isp_imsc));
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 
 	if (!vsm->enable) {
 		REG_SET_SLICE(isp_vsm_mode, ISP_VSM_MEAS_EN, 0);
@@ -1261,7 +1261,7 @@ int isp_s_vsm(struct isp_ic_dev *dev)
 
 int isp_g_vsm(struct isp_ic_dev *dev, struct isp_vsm_result *vsm)
 {
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	vsm->x = isp_read_reg(dev, REG_ADDR(isp_vsm_delta_h));
 	vsm->y = isp_read_reg(dev, REG_ADDR(isp_vsm_delta_v));
 
@@ -1297,7 +1297,7 @@ int isp_s_afm(struct isp_ic_dev *dev)
 	u32 isp_afm_ctrl = isp_read_reg(dev, REG_ADDR(isp_afm_ctrl));
 	u32 isp_imsc = isp_read_reg(dev, REG_ADDR(isp_imsc));
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 
 	if (!afm->enable) {
 		REG_SET_SLICE(isp_afm_ctrl, MRV_AFM_AFM_EN, 0);
@@ -1336,7 +1336,7 @@ int isp_s_afm(struct isp_ic_dev *dev)
 
 int isp_g_afm(struct isp_ic_dev *dev, struct isp_afm_result *afm)
 {
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	afm->sum_a = isp_read_reg(dev, REG_ADDR(isp_afm_sum_a));
 	afm->sum_b = isp_read_reg(dev, REG_ADDR(isp_afm_sum_b));
 	afm->sum_c = isp_read_reg(dev, REG_ADDR(isp_afm_sum_c));
@@ -1354,7 +1354,7 @@ int isp_s_simp(struct isp_ic_dev *dev)
 	u32 vi_iccl = isp_read_reg(dev, REG_ADDR(vi_iccl));
 	u32 super_imp_ctrl = isp_read_reg(dev, REG_ADDR(super_imp_ctrl));
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 
 	REG_SET_SLICE(vi_ircl, MRV_VI_SIMP_SOFT_RST, 1);
 	isp_write_reg(dev, REG_ADDR(vi_ircl), vi_ircl);
@@ -1388,7 +1388,7 @@ int isp_s_cproc(struct isp_ic_dev *dev, struct isp_cproc_context *cproc)
 	u32 vi_iccl = isp_read_reg(dev, REG_ADDR(vi_iccl));
 	u32 cproc_ctrl = isp_read_reg(dev, REG_ADDR(cproc_ctrl));
 
-	pr_info("enter %s %d\n", __func__, cproc->enable);
+	pr_debug("enter %s: cproc->enable %d\n", __func__, cproc->enable);
 	REG_SET_SLICE(vi_ircl, MRV_VI_CP_SOFT_RST, 1);
 	isp_write_reg(dev, REG_ADDR(vi_ircl), vi_ircl);
 

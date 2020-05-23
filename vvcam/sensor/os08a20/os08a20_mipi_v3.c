@@ -26,7 +26,17 @@
 #include "os08a20_mipi_v3.h"
 #include "os08a20_regs_1080p.h"
 #include "os08a20_regs_4k.h"
-#include "os08a20_ioctl.h"
+
+long os08a20_priv_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg);
+int os08a20_s_bayer_pattern(void *dev, __u8 pattern);
+int os08a20_g_gain(void *dev, struct vvsensor_gain_context *gain);
+int os08a20_s_gain(void *dev, struct vvsensor_gain_context *gain);
+int os08a20_s_vsgain(void *dev, struct vvsensor_gain_context *gain);
+int os08a20_s_exp(void *dev, __u32 exp);
+int os08a20_s_vsexp(void *dev, __u32 exp);
+int os08a20_g_version(void *dev, __u32 *version);
+int os08a20_streamon(void *dev);
+int os08a20_streamoff(void *dev);
 
 static int os08a20_framerates[] = {
 	[os08a20_15_fps] = 15,
@@ -140,7 +150,7 @@ static __u16 find_hs_configure(struct os08a20 *sensor)
 	u32 frame_rate = timeperframe->denominator / timeperframe->numerator;
 	int i;
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 
 	for (i = 0; i < ARRAY_SIZE(hs_setting); i++) {
 		if (hs_setting[i].width == pix->width &&
@@ -161,7 +171,7 @@ static const struct os08a20_datafmt
 {
 	int i;
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	for (i = 0; i < ARRAY_SIZE(os08a20_colour_fmts); i++)
 		if (os08a20_colour_fmts[i].code == code)
 			return os08a20_colour_fmts + i;
@@ -171,14 +181,14 @@ static const struct os08a20_datafmt
 
 static inline void os08a20_power_down(struct os08a20 *sensor, int enable)
 {
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	gpio_set_value_cansleep(sensor->pwn_gpio, enable);
 	udelay(2000);
 }
 
 static inline void os08a20_reset(struct os08a20 *sensor)
 {
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	if (sensor->pwn_gpio < 0 || sensor->rst_gpio < 0)
 		return;
 
@@ -197,7 +207,7 @@ static int os08a20_regulator_enable(struct device *dev)
 {
 	int ret = 0;
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	io_regulator = devm_regulator_get(dev, "DOVDD");
 	if (!IS_ERR(io_regulator)) {
 		regulator_set_voltage(io_regulator,
@@ -311,39 +321,39 @@ static int os08a20_set_clk_rate(struct os08a20 *sensor)
 
 /* download os08a20 settings to sensor through i2c */
 static int os08a20_download_firmware(struct os08a20 *sensor,
-				     struct os08a20_reg_value *pModeSetting,
+				     struct vvsensor_reg_value_t *mode_setting,
 				     s32 ArySize)
 {
-	register u32 Delay_ms = 0;
-	register u16 RegAddr = 0;
-	register u8 Mask = 0;
-	register u8 Val = 0;
-	u8 RegVal = 0;
+	register u32 delay_ms = 0;
+	register u16 reg_addr = 0;
+	register u8 mask = 0;
+	register u8 val = 0;
+	u8 reg_val = 0;
 	int i, retval = 0;
 
-	pr_info("enter %s\n", __func__);
-	for (i = 0; i < ArySize; ++i, ++pModeSetting) {
-		Delay_ms = pModeSetting->u32Delay_ms;
-		RegAddr = pModeSetting->u16RegAddr;
-		Val = pModeSetting->u8Val;
-		Mask = pModeSetting->u8Mask;
+	pr_debug("enter %s\n", __func__);
+	for (i = 0; i < ArySize; ++i, ++mode_setting) {
+		delay_ms = mode_setting->delay;
+		reg_addr = mode_setting->addr;
+		val = mode_setting->val;
+		mask = mode_setting->mask;
 
-		if (Mask) {
-			retval = os08a20_read_reg(sensor, RegAddr, &RegVal);
+		if (mask) {
+			retval = os08a20_read_reg(sensor, reg_addr, &reg_val);
 			if (retval < 0)
 				break;
 
-			RegVal &= ~(u8) Mask;
-			Val &= Mask;
-			Val |= RegVal;
+			reg_val &= ~(u8)mask;
+			val &= mask;
+			val |= reg_val;
 		}
 
-		retval = os08a20_write_reg(sensor, RegAddr, Val);
+		retval = os08a20_write_reg(sensor, reg_addr, val);
 		if (retval < 0)
 			break;
 
-		if (Delay_ms)
-			msleep(Delay_ms);
+		if (delay_ms)
+			msleep(delay_ms);
 	}
 
 	return retval;
@@ -351,7 +361,7 @@ static int os08a20_download_firmware(struct os08a20 *sensor,
 
 static void os08a20_start(struct os08a20 *sensor)
 {
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 #if 1
 	os08a20_write_reg(sensor, 0x3012, 0x01);
 #else
@@ -367,7 +377,7 @@ static void os08a20_start(struct os08a20 *sensor)
 
 static void os08a20_stop(struct os08a20 *sensor)
 {
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 #if 1
 	os08a20_write_reg(sensor, 0x3012, 0x00);
 #else
@@ -390,7 +400,7 @@ static int os08a20_s_power(struct v4l2_subdev *sd, int on)
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct os08a20 *sensor = client_to_os08a20(client);
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	if (on)
 		clk_prepare_enable(sensor->sensor_clk);
 	else
@@ -414,7 +424,7 @@ static int os08a20_g_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *a)
 	struct v4l2_captureparm *cparm = &a->parm.capture;
 	int ret = 0;
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	switch (a->type) {
 		/* This is the only case currently handled. */
 	case V4L2_BUF_TYPE_VIDEO_CAPTURE:
@@ -464,7 +474,7 @@ static int os08a20_s_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *a)
 	enum os08a20_mode mode = a->parm.capture.capturemode;
 	int ret = 0;
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	switch (a->type) {
 		/* This is the only case currently handled. */
 	case V4L2_BUF_TYPE_VIDEO_CAPTURE:
@@ -521,7 +531,7 @@ static int os08a20_s_stream(struct v4l2_subdev *sd, int enable)
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct os08a20 *sensor = client_to_os08a20(client);
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	if (enable)
 		os08a20_start(sensor);
 	else
@@ -539,11 +549,11 @@ static int os08a20_set_fmt(struct v4l2_subdev *sd,
 	const struct os08a20_datafmt *fmt = os08a20_find_datafmt(mf->code);
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct os08a20 *sensor = client_to_os08a20(client);
-    struct os08a20_reg_value *mode_setting = NULL;
+    struct vvsensor_reg_value_t *mode_setting = NULL;
 	int array_size = 0;
     int i;
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	if (format->pad) {
 		return -EINVAL;
 	}
@@ -579,7 +589,7 @@ static int os08a20_get_fmt(struct v4l2_subdev *sd,
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct os08a20 *sensor = client_to_os08a20(client);
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	if (format->pad)
 		return -EINVAL;
 
@@ -604,7 +614,7 @@ static int os08a20_enum_code(struct v4l2_subdev *sd,
 			     struct v4l2_subdev_pad_config *cfg,
 			     struct v4l2_subdev_mbus_code_enum *code)
 {
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	if (code->pad || code->index >= ARRAY_SIZE(os08a20_colour_fmts))
 		return -EINVAL;
 
@@ -624,7 +634,7 @@ static int os08a20_enum_framesizes(struct v4l2_subdev *sd,
 				   struct v4l2_subdev_pad_config *cfg,
 				   struct v4l2_subdev_frame_size_enum *fse)
 {
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	if (fse->index > os08a20_mode_MAX)
 		return -EINVAL;
 
@@ -656,7 +666,7 @@ static int os08a20_enum_frameintervals(struct v4l2_subdev *sd,
 {
 	int i, j, count;
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	if (fie->index < 0 || fie->index > os08a20_mode_MAX)
 		return -EINVAL;
 
@@ -744,7 +754,7 @@ static int os08a20_probe(struct i2c_client *client,
 	/* u8 chip_id_high, chip_id_low; */
 	struct os08a20 *sensor;
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	sensor = devm_kmalloc(dev, sizeof(*sensor), GFP_KERNEL);
 	if (!sensor)
 		return -ENOMEM;
@@ -884,7 +894,7 @@ static int os08a20_remove(struct i2c_client *client)
 	struct v4l2_subdev *sd = i2c_get_clientdata(client);
 	struct os08a20 *sensor = client_to_os08a20(client);
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	v4l2_device_unregister_subdev(sd);
 
 	/* clk_unprepare(sensor->sensor_clk); */
@@ -912,4 +922,232 @@ int os08a20_hw_register(struct v4l2_device *vdev)
 void os08a20_hw_unregister(void)
 {
 	i2c_del_driver(&os08a20_i2c_driver);
+}
+
+
+int os08a20_s_gain(void *dev, struct vvsensor_gain_context *gain)
+{
+	struct os08a20 *sensor = dev;
+
+	/* pr_info("enter %s\n", __func__); */
+	os08a20_write_reg(sensor, 0x320d, 0x00);
+	os08a20_write_reg(sensor, 0x3208, 0x00);
+
+	os08a20_write_reg(sensor, 0x350a, (gain->dgain & 0xFF00) >> 8);
+	os08a20_write_reg(sensor, 0x350b, gain->dgain & 0x00FF);
+	os08a20_write_reg(sensor, 0x350e, (gain->dgain & 0xFF000000) >> 24);
+	os08a20_write_reg(sensor, 0x350f, gain->dgain & (0x00FF0000) >> 16);
+
+	os08a20_write_reg(sensor, 0x320d, 0x00);
+	os08a20_write_reg(sensor, 0x3208, 0xe0);
+
+	return 0;
+}
+
+int os08a20_s_vsgain(void *dev, struct vvsensor_gain_context *gain)
+{
+	struct os08a20 *sensor = dev;
+	__u8 again = 0;
+
+	os08a20_write_reg(sensor, 0x3467, 0x00);
+	os08a20_write_reg(sensor, 0x3464, 0x04);
+
+	os08a20_write_reg(sensor, 0x315e, (gain->dgain & 0xFF00) >> 8);
+	os08a20_write_reg(sensor, 0x315f, gain->dgain & (0x00FF));
+
+	os08a20_read_reg(sensor, 0x30bb, &again);
+	again &= 0x3F;
+	again |= gain->again;
+	os08a20_write_reg(sensor, 0x30bb, again);
+
+	os08a20_write_reg(sensor, 0x3464, 0x14);
+	os08a20_write_reg(sensor, 0x3467, 0x01);
+
+	return 0;
+}
+
+int os08a20_s_exp(void *dev, __u32 exp)
+{
+	struct os08a20 *sensor = dev;
+
+	/* pr_info("enter %s 0x%08x\n", __func__, exp); */
+	os08a20_write_reg(sensor, 0x320d, 0x00);
+	os08a20_write_reg(sensor, 0x3208, 0x00);
+
+	os08a20_write_reg(sensor, 0x3501, (exp & 0xFF00) >> 8);
+	os08a20_write_reg(sensor, 0x3502, exp & 0x00FF);
+
+	os08a20_write_reg(sensor, 0x320d, 0x00);
+	os08a20_write_reg(sensor, 0x3208, 0xe0);
+	return 0;
+}
+
+int os08a20_s_vsexp(void *dev, __u32 exp)
+{
+	struct os08a20 *sensor = dev;
+
+	/* pr_info("enter %s 0x%08x\n", __func__, exp); */
+	os08a20_write_reg(sensor, 0x350d, 0x00);
+	os08a20_write_reg(sensor, 0x3508, 0x00);
+
+	os08a20_write_reg(sensor, 0x3511, (exp & 0xFF00) >> 8);
+	os08a20_write_reg(sensor, 0x3512, exp & 0x00FF);
+
+	os08a20_write_reg(sensor, 0x350d, 0x00);
+	os08a20_write_reg(sensor, 0x350f, 0xe0);
+	return 0;
+}
+
+int os08a20_g_gain(void *dev, struct vvsensor_gain_context *gain)
+{
+	struct os08a20 *sensor = dev;
+	__u8 val = 0;
+
+	os08a20_read_reg(sensor, 0x3513, &val);
+	gain->dgain = val << 8;
+	os08a20_read_reg(sensor, 0x3514, &val);
+	gain->dgain |= val << 0;
+	os08a20_read_reg(sensor, 0x3516, &val);
+	gain->dgain |= val << 24;
+	os08a20_read_reg(sensor, 0x3517, &val);
+	gain->dgain |= val << 16;
+	return 0;
+}
+
+int os08a20_g_version(void *dev, __u32 *version)
+{
+	struct os08a20 *sensor = dev;
+	__u8 val = 0;
+
+	os08a20_read_reg(sensor, 0x300a, &val);
+	*version = val << 16;
+	os08a20_read_reg(sensor, 0x300b, &val);
+	*version |= val << 8;
+	os08a20_read_reg(sensor, 0x300c, &val);
+	*version |= val;
+	return 0;
+}
+
+int os08a20_streamon(void *dev)
+{
+	struct os08a20 *sensor = dev;
+
+	os08a20_write_reg(sensor, 0x0100, 0x01);
+	return 0;
+}
+
+int os08a20_streamoff(void *dev)
+{
+	struct os08a20 *sensor = dev;
+
+	os08a20_write_reg(sensor, 0x0100, 0x00);
+	return 0;
+}
+
+int os08a20_s_bayer_pattern(void *dev, __u8 pattern)
+{
+	struct os08a20 *sensor = dev;
+	u8 h_shift = 0, v_shift = 0;
+	u8 val_h, val_l, val;
+
+	h_shift = pattern % 2;
+	v_shift = pattern / 2;
+
+	os08a20_read_reg(sensor, 0x30a0, &val_h);
+	os08a20_read_reg(sensor, 0x30a1, &val_l);
+	val = (((val_h << 8) & 0xff00) | (val_l & 0x00ff)) + h_shift;
+	val_h = (val >> 8) & 0xff;
+	val_l = val & 0xff;
+	os08a20_write_reg(sensor, 0x30a0, val_h);
+	os08a20_write_reg(sensor, 0x30a1, val_l);
+
+	os08a20_read_reg(sensor, 0x30a2, &val_h);
+	os08a20_read_reg(sensor, 0x30a3, &val_l);
+	val = (((val_h << 8) & 0xff00) | (val_l & 0x00ff)) + v_shift;
+	val_h = (val >> 8) & 0xff;
+	val_l = val & 0xff;
+	os08a20_write_reg(sensor, 0x30a2, val_h);
+	os08a20_write_reg(sensor, 0x30a3, val_l);
+
+	os08a20_read_reg(sensor, 0x30a4, &val_h);
+	os08a20_read_reg(sensor, 0x30a5, &val_l);
+	val = (((val_h << 8) & 0xff00) | (val_l & 0x00ff)) + h_shift;
+	val_h = (val >> 8) & 0xff;
+	val_l = val & 0xff;
+	os08a20_write_reg(sensor, 0x30a4, val_h);
+	os08a20_write_reg(sensor, 0x30a5, val_l);
+
+	os08a20_read_reg(sensor, 0x30a6, &val_h);
+	os08a20_read_reg(sensor, 0x30a7, &val_l);
+	val = (((val_h << 8) & 0xff00) | (val_l & 0x00ff)) + v_shift;
+	val_h = (val >> 8) & 0xff;
+	val_l = val & 0xff;
+	os08a20_write_reg(sensor, 0x30a6, val_h);
+	os08a20_write_reg(sensor, 0x30a7, val_l);
+	return 0;
+}
+
+int os08a20_ioc_qcap(void *dev, void *args)
+{
+	struct v4l2_capability *cap = (struct v4l2_capability *)args;
+
+	strcpy((char *)cap->driver, "os08a20");
+	return 0;
+}
+
+long os08a20_priv_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct os08a20 *sensor = client_to_os08a20(client);
+	struct vvsensor_reg_setting_t reg;
+	int ret = -1;
+
+	/* pr_info("enter %s\n", __func__); */
+	switch (cmd) {
+	case VVSENSORIOC_G_GAIN:
+		ret = os08a20_g_gain(sensor, (struct vvsensor_gain_context *)arg);
+		break;
+	case VVSENSORIOC_S_GAIN:
+		ret = os08a20_s_gain(sensor, (struct vvsensor_gain_context *)arg);
+		break;
+	case VVSENSORIOC_S_VSGAIN:
+		/* gain = (struct vvsensor_gain_context *)arg; */
+		/* ret = os08a20_s_vsgain(sensor, gain); */
+		ret = 0;
+		break;
+	case VVSENSORIOC_G_VERSION:
+		ret = os08a20_g_version(sensor, (__u32 *) arg);
+		break;
+	case VVSENSORIOC_STREAMON:
+		ret = os08a20_streamon(sensor);
+		break;
+	case VVSENSORIOC_STREAMOFF:
+		ret = os08a20_streamoff(sensor);
+		break;
+	case VVSENSORIOC_S_EXP:
+		ret = os08a20_s_exp(sensor, *(__u32 *) arg);
+		break;
+	case VVSENSORIOC_S_VSEXP:
+		ret = os08a20_s_vsexp(sensor, *(__u32 *) arg);
+		break;
+	case VVSENSORIOC_S_PATTERN:
+		ret = os08a20_s_bayer_pattern(sensor, *(__u32 *) arg);
+		break;
+	case VVSENSORIOC_WRITE_REG:
+		reg = *(struct vvsensor_reg_setting_t *)arg;
+		ret = os08a20_write_reg(sensor, reg.addr, reg.val) < 0;
+		break;
+	case VVSENSORIOC_READ_REG:
+		reg = *(struct vvsensor_reg_setting_t *)arg;
+		ret = os08a20_read_reg(sensor, reg.addr, &reg.val) < 0;
+		break;
+	case VIDIOC_QUERYCAP:
+		ret = os08a20_ioc_qcap(NULL, arg);
+		break;
+	default:
+		/* pr_err("unsupported os08a20 command %d.", cmd); */
+		break;
+	}
+
+	return ret;
 }

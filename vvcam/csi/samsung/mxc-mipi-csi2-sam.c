@@ -1330,7 +1330,7 @@ static struct platform_driver mipi_csis_driver = {
 
 static void pdev_release(struct device *dev)
 {
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 }
 
 static struct resource mipi_resource[] = {
@@ -1355,7 +1355,7 @@ static struct platform_device csi_pdev = {
 static int __init csi_init_module(void)
 {
 	int ret = 0;
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 
 	platform_device_register(&csi_pdev);
 	ret = platform_driver_register(&mipi_csis_driver);
@@ -1369,7 +1369,7 @@ static int __init csi_init_module(void)
 
 static void __exit csi_exit_module(void)
 {
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	platform_driver_unregister(&mipi_csis_driver);
 	platform_device_unregister(&csi_pdev);
 }
@@ -1378,16 +1378,29 @@ module_init(csi_init_module);
 module_exit(csi_exit_module);
 
 #else
-int mipi_csi_sam_add(struct platform_device *pdev, struct v4l2_device *vdev)
+static struct platform_device *pdev;
+
+int mipi_csi_sam_add(struct v4l2_device *vdev)
 {
+	int ret = 0;
+
 	mxc_mipi_v4l2_device = vdev;
+	pdev = platform_device_alloc("mipi_csi", -1);
+	if (!pdev)
+		return -ENOMEM;
+	ret = platform_device_add(pdev);
+	if (ret) {
+		platform_device_put(pdev);
+                return ret;
+	}
 	mipi_csis_probe(pdev);
 	return 0;
 }
 
-int mipi_csi_sam_del(struct platform_device *pdev)
+int mipi_csi_sam_del()
 {
 	mipi_csis_remove(pdev);
+	platform_device_unregister(pdev);
 	return 0;
 }
 #endif

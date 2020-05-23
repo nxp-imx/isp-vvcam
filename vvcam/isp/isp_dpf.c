@@ -69,7 +69,7 @@ int isp_s_dpf(struct isp_ic_dev *dev, struct isp_dpf_context *dpf)
 	int i = 0;
 	u32 isp_dpf_mode = isp_read_reg(dev, REG_ADDR(isp_dpf_mode));
 
-	/* pr_info("enter %s\n", __func__); */
+	/* pr_debug("enter %s\n", __func__); */
 
 	if (!dpf->enable) {
 		isp_write_reg(dev, REG_ADDR(isp_dpf_mode),

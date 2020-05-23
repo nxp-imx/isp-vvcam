@@ -85,7 +85,7 @@ int isp_open_node(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 {
 	struct isp_device *isp_dev = v4l2_get_subdevdata(sd);
 
-	pr_info("%s E open_cnt %u\n", __func__, ++isp_dev->isp_open_cnt);
+	pr_debug("%s E open_cnt %u\n", __func__, ++isp_dev->isp_open_cnt);
 	return 0;
 }
 
@@ -93,7 +93,7 @@ int isp_close_node(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 {
 	struct isp_device *isp_dev = v4l2_get_subdevdata(sd);
 
-	pr_info("%s E open_cnt %u\n", __func__, --isp_dev->isp_open_cnt);
+	pr_debug("%s E open_cnt %u\n", __func__, --isp_dev->isp_open_cnt);
 	return 0;
 }
 
@@ -169,7 +169,7 @@ static uint32_t isp_hw_handle_reg(struct isp_device *isp_dev)
 	mi_icr_addr = REG_ADDR(mi_icr);
 #endif
 	if (!isp_mis_addr || !isp_icr_addr || !mi_mis_addr || !mi_icr_addr) {
-		pr_info("get irq register addr faile.\n");
+		pr_err("get irq register addr failed.\n");
 		return ret;
 	}
 
@@ -180,7 +180,7 @@ static uint32_t isp_hw_handle_reg(struct isp_device *isp_dev)
 		event.type = VIV_VIDEO_ISPIRQ_TYPE;
 		irq_data->addr = isp_mis_addr;
 		irq_data->val = isp_mis_val;
-		pr_info("%s isp irq addr:0x%x, isp_mis:0x%x.\n", __func__,
+		pr_err("%s isp irq addr:0x%x, isp_mis:0x%x.\n", __func__,
 			irq_data->addr, irq_data->val);
 		v4l2_event_queue(isp_dev->subdev.devnode, &event);
 		ret = true;
@@ -194,7 +194,7 @@ static uint32_t isp_hw_handle_reg(struct isp_device *isp_dev)
 		event.type = VIV_VIDEO_MIIRQ_TYPE;
 		irq_data->addr = isp_icr_addr;
 		irq_data->val = mi_mis_val;
-		pr_info("%s mi irq addr:0x%x, mi_mis:0x%x.\n", __func__,
+		pr_err("%s mi irq addr:0x%x, mi_mis:0x%x.\n", __func__,
 			irq_data->addr, irq_data->val);
 		v4l2_event_queue(isp_dev->subdev.devnode, &event);
 		ret = true;
@@ -276,13 +276,14 @@ struct isp_device *isp_hw_register(struct v4l2_device *vdev, u64 base, u64 size)
 #ifdef ISP_REG_RESET
 	isp_dev->ic_dev.reset = ioremap(ISP_REG_RESET, 4);
 #endif
-	pr_info("ioremap addr: 0x%llx 0x%llx, %p", base, size,
+	pr_debug("ioremap addr: 0x%llx 0x%llx, %p", base, size,
 		isp_dev->ic_dev.base);
 #ifdef ENABLE_IRQ
 	rc = request_irq(ISP_HW_IRQ_NUMBER, isp_hw_isr, IRQF_SHARED, "vsi_isp_irq",
 			 isp_dev);
-	pr_info("request_irq num:%d, rc:%d", ISP_HW_IRQ_NUMBER, rc);
+	pr_debug("request_irq num:%d, rc:%d", ISP_HW_IRQ_NUMBER, rc);
 #endif
+	pr_info("vvcam isp driver registered\n");
 	return isp_dev;
 end:
 	return NULL;

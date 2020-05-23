@@ -53,10 +53,9 @@
 #ifndef _VVCAM_OS08a20_REGS_4k_H_
 #define _VVCAM_OS08a20_REGS_4k_H_
 
-#include "os08a20_mipi_v3.h"
+#include "vvsensor.h"
 
-static struct reg_value os08a20_init_setting_4k_hdr[] = {
-
+static struct vvsensor_reg_value_t os08a20_init_setting_4k_hdr[] = {
 	{0x0100, 0x00, 0, 0},
 	{0x5081, 0x80, 0, 0},
 	{0x0103, 0x01, 0, 0},

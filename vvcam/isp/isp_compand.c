@@ -80,7 +80,7 @@ int isp_s_comp(struct isp_ic_dev *dev)
 	int ri, valr, valy;
 	u32 isp_compand_ctrl = isp_read_reg(dev, REG_ADDR(isp_compand_ctrl));
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 
 	if (!comp->enable) {
 		REG_SET_SLICE(isp_compand_ctrl, COMPAND_CTRL_BLS_ENABLE, 0);

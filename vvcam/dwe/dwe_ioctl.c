@@ -56,7 +56,7 @@
 
 int dwe_reset(struct dwe_ic_dev *dev)
 {
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 #ifdef DWE_REG_RESET
 	__raw_writel(0, dev->reset);
 	__raw_writel(1, dev->reset);
@@ -74,7 +74,7 @@ int dwe_s_params(struct dwe_ic_dev *dev)
 	u32 vDown = (info->split_v2 & ~0x0F) | 0x0C;
 	u32 hLine = (info->split_h & ~0x0F) | 0x0C;
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 
 	dwe_write_reg(dev, MAP_LUT_SIZE,
 		      ((info->map_w & 0x7ff) | ((info->map_h & 0x7ff) << 16)));
@@ -118,7 +118,7 @@ int dwe_enable_bus(struct dwe_ic_dev *dev, bool enable)
 {
 	u32 reg = dwe_read_reg(dev, BUS_CTRL);
 
-	/* pr_info("enter %s\n", __func__); */
+	/* pr_debug("enter %s\n", __func__); */
 
 	if (enable) {
 		dwe_write_reg(dev, BUS_CTRL, reg | DEWRAP_BUS_CTRL_ENABLE_MASK);
@@ -132,7 +132,7 @@ int dwe_enable_bus(struct dwe_ic_dev *dev, bool enable)
 
 int dwe_disable_irq(struct dwe_ic_dev *dev)
 {
-	/* pr_info("enter %s\n", __func__); */
+	/* pr_debug("enter %s\n", __func__); */
 	dwe_write_reg(dev, INTERRUPT_STATUS, INT_RESET_MASK);
 	return 0;
 }
@@ -141,7 +141,7 @@ int dwe_clear_irq(struct dwe_ic_dev *dev)
 {
 	u32 reg_dewarp_ctrl;
 
-	/* pr_info("enter %s\n", __func__); */
+	/* pr_debug("enter %s\n", __func__); */
 	reg_dewarp_ctrl = dwe_read_reg(dev, DEWARP_CTRL);
 	dwe_write_reg(dev, DEWARP_CTRL, reg_dewarp_ctrl | 2);
 	dwe_write_reg(dev, DEWARP_CTRL, reg_dewarp_ctrl);
@@ -172,7 +172,7 @@ int dwe_start_dma_read(struct dwe_ic_dev *dev, u64 addr)
 	u32 reg_y_rbuff_size = ALIGN_UP(info->src_stride * info->src_h, 16);
 	u32 reg_dst_uv_base = reg_dst_y_base + reg_y_rbuff_size;
 
-	/* pr_info("enter %s\n", __func__); */
+	/* pr_debug("enter %s\n", __func__); */
 
 	dwe_write_reg(dev, SRC_IMG_Y_BASE, (reg_dst_y_base) >> 4);
 	dwe_write_reg(dev, SRC_IMG_UV_BASE, (reg_dst_uv_base) >> 4);
@@ -193,7 +193,7 @@ int dwe_set_buffer(struct dwe_ic_dev *dev, u64 addr)
 	u32 reg_y_rbuff_size = ALIGN_UP(info->dst_stride * info->dst_h, 16);
 	u32 reg_dst_uv_base = reg_dst_y_base + reg_y_rbuff_size;
 
-	/* pr_info("enter %s\n", __func__); */
+	/* pr_debug("enter %s\n", __func__); */
 	dwe_write_reg(dev, DST_IMG_Y_BASE, (reg_dst_y_base) >> 4);
 	dwe_write_reg(dev, DST_IMG_UV_BASE, (reg_dst_uv_base) >> 4);
 

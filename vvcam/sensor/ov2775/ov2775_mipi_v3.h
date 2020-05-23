@@ -53,6 +53,8 @@
 #ifndef _VVCAM_OV2775_MIPI_V3_H_
 #define _VVCAM_OV2775_MIPI_V3_H_
 
+#include "vvsensor.h"
+
 #define OV2775_VOLTAGE_ANALOG			2800000
 #define OV2775_VOLTAGE_DIGITAL_CORE		1500000
 #define OV2775_VOLTAGE_DIGITAL_IO		1800000
@@ -100,25 +102,18 @@ enum ov2775_downsize_mode {
 	SCALING,
 };
 
-struct reg_value {
-	u16 u16RegAddr;
-	u8 u8Val;
-	u8 u8Mask;
-	u32 u32Delay_ms;
-};
-
 struct ov2775_mode_info {
 	enum ov2775_mode mode;
 	enum ov2775_downsize_mode dn_mode;
 	u32 width;
 	u32 height;
-	struct reg_value *init_data_ptr;
+	struct vvsensor_reg_value_t *init_data_ptr;
 	u32 init_data_size;
 };
 
 struct ov2775_pll_info {
 	enum ov2775_mode mode;
-	struct reg_value *init_data_ptr;
+	struct vvsensor_reg_value_t *init_data_ptr;
 	u32 init_data_size;
 };
 

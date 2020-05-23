@@ -356,8 +356,8 @@ struct csi_state {
 };
 
 /* regsiter csi as v4l2 sub device of vdev */
-int mipi_csi_sam_add(struct platform_device *pdev, struct v4l2_device *vdev);
-int mipi_csi_sam_del(struct platform_device *pdev);
+int mipi_csi_sam_add(struct v4l2_device *vdev);
+int mipi_csi_sam_del(void);
 
 void mipi_csis_sw_reset(struct csi_state *state);
 int mipi_csis_s_power(struct v4l2_subdev *mipi_sd, int on);

@@ -53,10 +53,10 @@
 #ifndef _VVCAM_OS08a20_REGS_1080P_H_
 #define _VVCAM_OS08a20_REGS_1080P_H_
 
-#include "os08a20_mipi_v3.h"
+#include "vvsensor.h"
 
 /* 1080P RAW10 */
-static struct os08a20_reg_value os08a20_init_setting_1080p[] = {
+static struct vvsensor_reg_value_t os08a20_init_setting_1080p[] = {
 	{0x0100, 0x00, 0, 0},
 	{0x0103, 0x01, 0, 0},
 	{0x0303, 0x01, 0, 0},
@@ -64,7 +64,7 @@ static struct os08a20_reg_value os08a20_init_setting_1080p[] = {
 	{0x0306, 0x00, 0, 0},
 	{0x0308, 0x03, 0, 0},
 	{0x0309, 0x04, 0, 0},
-	{0x032a, 0x02, 0, 0},
+	{0x032a, 0x00, 0, 0},
 	{0x300f, 0x11, 0, 0},
 	{0x3010, 0x01, 0, 0},
 	{0x3011, 0x04, 0, 0},

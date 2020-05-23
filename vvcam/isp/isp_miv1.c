@@ -107,7 +107,7 @@ int isp_ioc_start_dma_read(struct isp_ic_dev *dev, void *args)
 	u32 llength = 0, mcm_rd_fmt_bit = 0;
 	u32 mi_imsc = 0, mcm_fmt = 0;
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	viv_check_retval(copy_from_user(&dma, args, sizeof(dma)));
 
 	REG_SET_SLICE(mi_dma_ctrl, MRV_MI_DMA_BURST_LEN_LUM, dma.burst_y);
@@ -240,7 +240,7 @@ int isp_mi_start(struct isp_ic_dev *dev)
 	u32 out_stride;
 	int i;
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 
 	isp_write_reg(dev, REG_ADDR(mrsz_ctrl), 0);
 	isp_write_reg(dev, REG_ADDR(mrsz_ctrl_shd), 0);
@@ -424,7 +424,7 @@ int isp_mi_start(struct isp_ic_dev *dev)
 
 int isp_mi_stop(struct isp_ic_dev *dev)
 {
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	isp_write_reg(dev, REG_ADDR(mi_imsc), 0);
 	return 0;
 }

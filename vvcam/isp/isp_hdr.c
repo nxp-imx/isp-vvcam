@@ -69,7 +69,7 @@ int isp_s_hdr(struct isp_ic_dev *dev)
 	u32 val;
 	int i;
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 
 	val = 0;
 #if 0
@@ -182,7 +182,7 @@ int isp_s_hdr_wb(struct isp_ic_dev *dev)
 	u32 isp_stitching_ctrl =
 	    isp_read_reg(dev, REG_ADDR(isp_stitching_ctrl));
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	REG_SET_SLICE(val, STITCHING_EXP0_AWB_GAIN_GR, hdr->gr);
 	REG_SET_SLICE(val, STITCHING_EXP0_AWB_GAIN_GB, hdr->gb);
 	isp_write_reg(dev, REG_ADDR(isp_stitching_exp0_awb_gain_g), val);
@@ -209,7 +209,7 @@ int isp_s_hdr_bls(struct isp_ic_dev *dev)
 	u32 val = 0;
 	int i;
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 
 	for (i = 0; i < 12; i++) {
 		val = 0;
@@ -229,7 +229,7 @@ int isp_enable_hdr(struct isp_ic_dev *dev)
 	u32 dpcl;
 	int val = 0;
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	addr = REG_ADDR(isp_stitching_ctrl);
 	isp_stitching_ctrl = isp_read_reg(dev, addr);
 	REG_SET_SLICE(val, STITCHING_FRAME_WIDTH, dev->ctx.acqWindow.width);
@@ -251,7 +251,7 @@ int isp_disable_hdr(struct isp_ic_dev *dev)
 {
 	u32 addr, isp_stitching_ctrl = 0;
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	addr = REG_ADDR(isp_stitching_ctrl);
 	isp_stitching_ctrl = isp_read_reg(dev, addr);
 	REG_SET_SLICE(isp_stitching_ctrl, COMBINE_ENABLE_BIT, 1);

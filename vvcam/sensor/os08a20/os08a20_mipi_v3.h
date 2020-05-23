@@ -53,6 +53,8 @@
 #ifndef _VVCAM_OS08a20_MIPI_V3_H_
 #define _VVCAM_OS08a20_MIPI_V3_H_
 
+#include "vvsensor.h"
+
 #define OS08a20_VOLTAGE_ANALOG			2800000
 #define OS08a20_VOLTAGE_DIGITAL_CORE		1500000
 #define OS08a20_VOLTAGE_DIGITAL_IO		1800000
@@ -101,25 +103,18 @@ enum os08a20_downsize_mode {
 	OS08A20_SCALING,
 };
 
-struct os08a20_reg_value {
-	u16 u16RegAddr;
-	u8 u8Val;
-	u8 u8Mask;
-	u32 u32Delay_ms;
-};
-
 struct os08a20_mode_info {
 	enum os08a20_mode mode;
 	enum os08a20_downsize_mode dn_mode;
 	u32 width;
 	u32 height;
-	struct os08a20_reg_value *init_data_ptr;
+	struct vvsensor_reg_value_t *init_data_ptr;
 	u32 init_data_size;
 };
 
 struct os08a20_pll_info {
 	enum os08a20_mode mode;
-	struct os08a20_reg_value *init_data_ptr;
+	struct vvsensor_reg_value_t *init_data_ptr;
 	u32 init_data_size;
 };
 

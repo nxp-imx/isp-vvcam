@@ -75,7 +75,7 @@ int dwe_open_node(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 {
 	struct dwe_device *dwe_dev = v4l2_get_subdevdata(sd);
 
-	pr_info("%s E open_cnt %u\n", __func__, ++dwe_dev->dwe_open_cnt);
+	pr_debug("%s E open_cnt %u\n", __func__, ++dwe_dev->dwe_open_cnt);
 	return 0;
 }
 
@@ -83,7 +83,7 @@ int dwe_close_node(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 {
 	struct dwe_device *dwe_dev = v4l2_get_subdevdata(sd);
 
-	pr_info("%s E open_cnt %u\n", __func__, --dwe_dev->dwe_open_cnt);
+	pr_debug("%s E open_cnt %u\n", __func__, --dwe_dev->dwe_open_cnt);
 	return 0;
 }
 
@@ -161,7 +161,7 @@ int dwe_hw_register(struct viv_video_device *vdev)
 	struct dwe_device *dwe_dev;
 	int rc = 0;
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	dwe_dev = kzalloc(sizeof(struct dwe_device), GFP_KERNEL);
 	if (!dwe_dev) {
 		rc = -ENOMEM;
@@ -181,9 +181,10 @@ int dwe_hw_register(struct viv_video_device *vdev)
 #ifdef DWE_REG_RESET
 	dwe_dev->ic_dev.reset = ioremap(DWE_REG_RESET, 4);
 #endif
-	pr_info("dwe ioremap addr: 0x%08x 0x%08x %p", DWE_REG_BASE,
+	pr_debug("dwe ioremap addr: 0x%08x 0x%08x %p", DWE_REG_BASE,
 		DWE_REG_SIZE, dwe_dev->ic_dev.base);
 	vdev->dwe = dwe_dev;
+	pr_info("vvcam dewarp driver registered\n");
 	return rc;
 end:
 	return rc;
@@ -193,7 +194,7 @@ int dwe_hw_unregister(struct viv_video_device *vdev)
 {
 	struct v4l2_subdev *sd = NULL;
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	if (!vdev)
 		return -1;
 	if (!vdev->dwe)
@@ -203,5 +204,6 @@ int dwe_hw_unregister(struct viv_video_device *vdev)
 	iounmap(vdev->dwe->ic_dev.base);
 	kzfree(vdev->dwe);
 	vdev->dwe = NULL;
+	pr_info("vvcam dewarp driver unregistered\n");
 	return 0;
 }

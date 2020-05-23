@@ -54,9 +54,9 @@
 #ifndef _VVCAM_OV2775_REGS_720P_H_
 #define _VVCAM_OV2775_REGS_720P_H_
 
-#include "ov2775_mipi_v3.h"
+#include "vvsensor.h"
 
-static struct reg_value ov2775_init_setting_720p[] = {
+static struct vvsensor_reg_value_t ov2775_init_setting_720p[] = {
 	{0x3000, 0x02, 0, 0},
 	{0x3001, 0x28, 0, 0},
 	{0x3002, 0x03, 0, 0},

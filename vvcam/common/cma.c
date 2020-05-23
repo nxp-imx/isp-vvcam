@@ -77,7 +77,7 @@ int cma_init(u64 base, u64 size, u64 align)
 {
 	struct block_list *item = NULL;
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 	if (!size || (size <= align))
 		return -EINVAL;
 	g_cma_mem_ctx = kzalloc(sizeof(struct cma_mem_context), GFP_KERNEL);
@@ -87,7 +87,7 @@ int cma_init(u64 base, u64 size, u64 align)
 	g_cma_mem_ctx->size = size - (g_cma_mem_ctx->base - base);
 	g_cma_mem_ctx->align = align;
 
-	pr_info("addr:0x%llx, size:0x%llx, alignment:0x%llx.\n",
+	pr_debug("addr:0x%llx, size:0x%llx, alignment:0x%llx.\n",
 		g_cma_mem_ctx->base, g_cma_mem_ctx->size, g_cma_mem_ctx->align);
 
 	item = kzalloc(sizeof(struct block_list), GFP_KERNEL);
@@ -143,10 +143,10 @@ u64 cma_alloc(u64 size)
 		return ~0U;
 	}
 
-	pr_info("enter %s\n", __func__);
-	pr_info("addr:0x%llx, size:0x%llx, alignment:0x%llx, reqsize:0x%llx.\n",
-		g_cma_mem_ctx->base, g_cma_mem_ctx->size,
-		g_cma_mem_ctx->align, size);
+	pr_debug("enter %s\n", __func__);
+	pr_debug("addr:0x%llx, size:0x%llx, alignment:0x%llx, reqsize:0x%llx.\n",
+		 g_cma_mem_ctx->base, g_cma_mem_ctx->size,
+		 g_cma_mem_ctx->align, size);
 
 	size += g_cma_mem_ctx->align - 1;
 	size &= ~(g_cma_mem_ctx->align - 1);
@@ -164,27 +164,27 @@ u64 cma_alloc(u64 size)
 				item->base_addr = found->base_addr + size;
 				item->size = found->size - size;
 				found->size = size;
-				pr_info("new free block: base_addr=0x%llx,\n",
+				pr_debug("new free block: base_addr=0x%llx,\n",
 					item->base_addr);
 				add_free_blocks(item);
 			}
 		}
 
-		pr_info("new used block: base_addr=0x%llx, size=0x%llx \n",
-			found->base_addr, found->size);
+		pr_debug("new used block: base_addr=0x%llx, size=0x%llx \n",
+			 found->base_addr, found->size);
 		add_used_blocks(found);
 		addr = found->base_addr;
 	}
 
-	pr_info("block allocated: base_addr=0x%llx\n", addr);
+	pr_debug("block allocated: base_addr=0x%llx\n", addr);
 	mutex_unlock(&viv_cma_mutex);
 	return addr;
 }
 
 void cma_free(u64 addr)
 {
-	pr_info("enter %s\n", __func__);
-	pr_info("block to free: base_addr=0x%llx\n", addr);
+	pr_debug("enter %s\n", __func__);
+	pr_debug("block to free: base_addr=0x%llx\n", addr);
 	mutex_lock(&viv_cma_mutex);
 	if (addr) {
 		/*TODO: need to lock this block */
@@ -236,7 +236,7 @@ void cma_free(u64 addr)
 				kzfree(loc_item);
 			}
 		} else {
-			pr_info("no adjacent block free\n");
+			pr_err("no adjacent block free\n");
 		}
 		add_free_blocks(free_item);
 	}

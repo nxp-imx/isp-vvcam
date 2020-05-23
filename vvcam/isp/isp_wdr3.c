@@ -123,12 +123,12 @@ void wdr3_hw_init(struct isp_ic_dev *dev)
 	bool reg_flag = false;
 	int i, pos;
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 
 	width = isp_read_reg(dev, REG_ADDR(isp_acq_h_size));
 	height = isp_read_reg(dev, REG_ADDR(isp_acq_v_size));
 
-	pr_info("wdr3 res: %d %d \n", width, height);
+	pr_debug("wdr3 res: %d %d \n", width, height);
 	/* firware initilization */
 	slice_strength = 128;	/* control WDR3 effect */
 	slice_max_gain = 16;
@@ -435,8 +435,9 @@ int isp_s_wdr3(struct isp_ic_dev *dev)
 		return 0;
 	}
 
-	pr_info("enter %s: %d %d %d\n", __func__, wdr3->strength,
-	    wdr3->max_gain, wdr3->global_strength);
+	pr_debug("enter %s: strength %d max_gain %d global_strength %d\n",
+		 __func__, wdr3->strength,
+		 wdr3->max_gain, wdr3->global_strength);
 	width /= 32;
 	height /= 32;
 	REG_SET_SLICE(isp_wdr3_strength, WDR3_MAXIMUM_GAIN, wdr3->max_gain);
