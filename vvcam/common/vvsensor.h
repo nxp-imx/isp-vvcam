@@ -1,0 +1,66 @@
+#ifndef _VVSENSOR_PUBLIC_HEADER_H_
+#define _VVSENSOR_PUBLIC_HEADER_H_
+
+#ifndef __KERNEL__
+#include <stdint.h>
+#endif
+
+#include <linux/ioctl.h>
+
+enum {
+	VVSENSORIOC_RESET = 0x100,
+	VVSENSORIOC_S_CLK,
+	VVSENSORIOC_G_CLK,  
+	VVSENSORIOC_S_POWER,
+	VVSENSORIOC_G_POWER,
+
+	VVSENSORIOC_SENSOR_SCCB_CFG,
+	VVSENSORIOC_FOCUS_SCCB_CFG,
+	VVSENSORIOC_READ_REG,
+	VVSENSORIOC_WRITE_REG,
+	VVSENSORIOC_READ_ARRAY,
+	VVSENSORIOC_WRITE_ARRAY,
+	VVSENSORIOC_AF_READ_REG,
+	VVSENSORIOC_AF_WRITE_REG,
+
+	VVSENSORIOC_G_NAME,
+	VVSENSORIOC_G_RESERVE_ID,
+	VVSENSORIOC_G_CHIP_ID,
+	VVSENSORIOC_S_INIT,
+	VVSENSORIOC_S_STREAM,
+	VVSENSORIOC_S_EXP,
+	VVSENSORIOC_S_VSEXP,
+	VVSENSORIOC_S_GAIN,
+	VVSENSORIOC_S_VSGAIN,
+	VVSENSORIOC_S_FRAMESIZE,
+	VVSENSORIOC_ENUM_FRAMESIZES,
+	VVSENSORIOC_S_HDR_MODE,
+	VVSENSORIOC_G_HDR_MODE,
+    VVSENSORIOC_S_FPS,
+    VVSENSORIOC_G_FPS,
+
+	VVSENSOR_IOC_G_AE_INFO,
+	VVSENSOR_IOC_MAX,
+};
+
+/* W/R registers */
+struct vvcam_sccb_data {
+	uint32_t addr;
+	uint32_t data;
+};
+
+/* init settings */
+struct vvsensor_reg_value_t {
+	uint16_t addr;
+	uint8_t val;
+	uint8_t mask;
+	uint32_t delay;
+};
+
+/* priv ioctl */
+struct vvsensor_gain_context {
+	uint32_t again;
+	uint32_t dgain;
+};
+
+#endif
