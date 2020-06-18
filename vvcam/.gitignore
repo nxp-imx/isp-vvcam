@@ -1,6 +1,0 @@
-*.cmd
-*.mod
-*.o
-*.swp
-.vscode/*
-.tmp_versions/*
