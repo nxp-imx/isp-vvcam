@@ -86,6 +86,9 @@ struct ov2775_mode_info {
 	u32 height;
 	struct vvsensor_reg_value_t *init_data_ptr;
 	u32 init_data_size;
+	u32 bit_width;
+	u32 fps;
+	bool is_default;
 };
 
 struct ov2775_pll_info {
@@ -142,22 +145,23 @@ static int ov2775_framerates[] = {
 	[ov2775_30_fps] = 30,
 };
 
-static struct ov2775_mode_info ov2775_mode_info_data[3][ov2775_mode_MAX + 1] = {
+static struct ov2775_mode_info ov2775_mode_info_data[4][ov2775_mode_MAX + 1] = {
 	{
 		{
-			ov2775_mode_1080P_1920_1080, -1, 0, 0, NULL, 0},
+			ov2775_mode_1080P_1920_1080, -1, 0, 0, NULL, 0, 0, 0, false},
 		},
+	/* linear mode */
 	{
 		{
 			ov2775_mode_1080P_1920_1080, SCALING, 1920, 1080,
 			ov2775_init_setting_1080p,
-			ARRAY_SIZE(ov2775_init_setting_1080p)
+			ARRAY_SIZE(ov2775_init_setting_1080p), 12, 30, true,
 		},
 
 		{
 			ov2775_mode_720P_1280_720, SCALING, 1280, 720,
 			ov2775_init_setting_720p,
-			ARRAY_SIZE(ov2775_init_setting_720p)
+			ARRAY_SIZE(ov2775_init_setting_720p), 12, 30, false,
 		},
 	},
 
@@ -166,9 +170,15 @@ static struct ov2775_mode_info ov2775_mode_info_data[3][ov2775_mode_MAX + 1] = {
 		{
 			ov2775_mode_1080P_1920_1080, SCALING, 1920, 1080,
 			ov2775_init_setting_1080p_hdr,
-			ARRAY_SIZE(ov2775_init_setting_1080p_hdr)
+			ARRAY_SIZE(ov2775_init_setting_1080p_hdr), 12, 30, false,
 		},
 	},
+
+	/* hdr settings native*/
+	{
+		
+	},
+
 };
 
 static struct ov2775_hs_info hs_setting[] = {
@@ -1376,6 +1386,31 @@ int ov2775_ioc_qcap(void *dev, void *args)
 	return 0;
 }
 
+int ov2775_ioc_query_mode(struct ov2775 *sensor, struct vvcam_mode_info_arry *array)
+{
+	int bp = BAYER_BGGR;
+	int i = 1;
+	int j = 0;
+
+	array->count = 0;
+	for (i = 1; i < 4; i++) {
+		for (j = 0; j < ARRAY_SIZE(ov2775_mode_info_data[i]); j++) {
+			if (ov2775_mode_info_data[i][j].width) {
+				array->modes[array->count].width             = ov2775_mode_info_data[i][j].width;
+				array->modes[array->count].height            = ov2775_mode_info_data[i][j].height;
+				array->modes[array->count].fps               = ov2775_mode_info_data[i][j].fps;
+				array->modes[array->count].bit_width         = ov2775_mode_info_data[i][j].bit_width;
+				array->modes[array->count].default_mode_flag = ov2775_mode_info_data[i][j].is_default;
+				array->modes[array->count].hdr_mode          = i - 1;
+				array->modes[array->count].stitching_mode    = SENSOR_STITCHING_3DOL;
+				array->modes[array->count].bayer_pattern     = bp;
+				array->count++;
+			}
+		}
+	}
+	return 0;
+}
+
 #ifdef CONFIG_HARDENED_USERCOPY
 #define USER_TO_KERNEL(TYPE) \
 	do {\
@@ -1476,6 +1511,12 @@ long ov2775_priv_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg_user)
 	case VVSENSORIOC_S_HDR_MODE: {
 		USER_TO_KERNEL(bool);
 		ret = ov2775_s_hdr(sensor, *(bool *)arg);
+		break;
+	}
+	case VVSENSORIOC_QUERY: {
+		USER_TO_KERNEL(struct vvcam_mode_info_arry);
+		ov2775_ioc_query_mode(sensor, arg);
+		KERNEL_TO_USER(struct vvcam_mode_info_arry);
 		break;
 	}
 	default:

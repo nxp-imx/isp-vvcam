@@ -50,24 +50,18 @@
  * version of this file.
  *
  *****************************************************************************/
-#ifndef _VSE_DRIVER_H_
-#define _VSE_DRIVER_H_
+#ifndef _SOC_I2C_H_
+#define _SOC_I2C_H_
 
-#include <linux/clk.h>
-#include <linux/interrupt.h>
-#include <linux/completion.h>
-#include <linux/io.h>
-#include <linux/list.h>
-#include <linux/delay.h>
-#include <media/v4l2-subdev.h>
-#include <linux/platform_device.h>
-#include "vse_dev.h"
+//int gen6_i2c_wr(unsigned int dev_address, unsigned int reg_address, unsigned int reg_data);
+//unsigned int gen6_i2c_rd(unsigned int dev_address, unsigned int reg_address);
 
-struct vse_device {
-	/* Driver private data */
-	struct v4l2_subdev sd;
-	struct v4l2_device *vd;
-	struct vse_ic_dev ic_dev;
-};
+int soc_gpio_i2c_driver_init(void);
+void soc_gpio_i2c_driver_exit(void);
+int soc_gpio_i2c_register_bus(unsigned int index,unsigned int bus,unsigned long base_addr, unsigned int size,
+								void * virt_base);
 
-#endif /* _VSE_DRIVER_H_ */
+void soc_gpio_i2c_unregister_bus(unsigned int index);
+
+
+#endif

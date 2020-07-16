@@ -369,6 +369,80 @@ int calc_raw_lval(int width, int out_mode, int align_mode)
 	return lval;
 }
 
+#define PATHNUM 3  // hw related
+
+// only config write bits,  SP2 read bit at 3dnr.c
+// read defined is same as write
+struct miv2_format_bit {
+	u32 nyv, nv12;
+	u32 raw_aligned, yuv_aligned;
+	u32 raw_bit, yuv_str;
+	u32 yuv_fmt, yuv_bit, jdp_fmt;
+};
+
+static struct miv2_format_bit fmt_bit[PATHNUM] = {
+	{
+		.nyv = 3 << 13, .nv12 = 1 << 12,
+		.raw_aligned = 3 << 10,
+		.yuv_aligned = 1 << 9,
+		.raw_bit = 7 << 6,
+		.yuv_str = 3 << 4,
+		.yuv_fmt = 3 << 2,
+		.yuv_bit = 1 << 1,
+		.jdp_fmt = 1,
+	},
+	{
+		.nyv = 3 << 7,
+		.nv12 =  1 << 6,
+		.yuv_aligned = 1 << 5,
+		.yuv_str = 3 << 3,
+		.yuv_fmt = 3 << 1,
+		.yuv_bit = 1,
+	},
+	{
+		.nyv = 3 << 12,
+		.nv12 =  1 << 11,
+		.raw_aligned = 3 << 9,
+		.yuv_aligned = 1 << 8,
+		.raw_bit = 7 << 5,
+		.yuv_str = 3 << 3,
+		.yuv_fmt = 3 << 1,
+		.yuv_bit = 1,
+	},
+};
+
+u32 bit_shift(u32 i) {
+	u32 shift = 0;
+	while(!(i&1)) {
+		shift++;
+		i >>= 1;
+	}
+	return shift;
+}
+
+void mi_set_slice(u32* val, u32 mask, u32 slice)
+{
+	// mp, sp1, sp2 have different masks.
+	if (mask) {
+		*val &= ~mask;
+		*val |= (slice << bit_shift(mask));
+	}
+}
+
+struct miv2_path_address {
+	u32 bus_cfg_addr;
+	u32 bus_id_addr;
+	u32 path_ctrl_addr;
+	u32 format_addr;
+	u32 y_length_addr;
+	u32 raw_llength;
+	u32 raw_pic_width;
+	u32 raw_pic_height;
+	u32 raw_pic_size;
+	u32 ycbcr_enable_bit;
+	u32 format_conv_ctrl;
+};
+
 void set_data_path(int id, struct isp_mi_data_path_context *path,
 		   struct isp_ic_dev *dev)
 {
@@ -376,15 +450,41 @@ void set_data_path(int id, struct isp_mi_data_path_context *path,
 	u32 format;
 	u32 imsc, miv2_ctrl;
 	u32 path_ctrl;
-	u32 lval = 0;
-	u32 ycbcr_enable_bit;
+	u32 lval;
 	u32 acq_proc;
-	u32 path_ctrl_addr, bus_cfg_addr, format_addr;
-	u32 raw_llength, raw_pic_width, raw_pic_height, raw_pic_size;
 	u32 mcm_bus_cfg = isp_read_reg(dev, REG_ADDR(miv2_mcm_bus_cfg));
-	u32 y_length_addr, bus_id_addr;
-	u32 conv_format_ctrl =
-	    isp_read_reg(dev, REG_ADDR(mrsz_format_conv_ctrl));
+	u32 conv_format_ctrl;
+	u32 y_length_addr;
+
+	// please take care the register order
+#if 0
+    struct miv2_path_address  path_list[PATHNUM] = {
+		{ 0x1318, 0x131c, 0x1310, 0x1314, 0x1330, 0x13a0, 0x13a4, 0x13a8, 0x13ac, 1, 0x0c6c },
+		{ 0x1434, 0x1438, 0x142c, 0x1430, 0x144c, 0, 0, 0, 8, 0x106c },
+		{ 0x14ec, 0x14f0, 0x14e4, 0x14e8, 0x1504, 0x1574, 0x1578, 0x157c, 0x1580, 0x10, 0x116c },
+	};
+#else
+	struct miv2_path_address  path_list[PATHNUM] = {
+		{ 
+			REG_ADDR(miv2_mp_bus_cfg), REG_ADDR(miv2_mp_bus_id), REG_ADDR(miv2_mp_ctrl),
+			REG_ADDR(miv2_mp_fmt), REG_ADDR(miv2_mp_y_llength), REG_ADDR(miv2_mp_raw_llength),
+			REG_ADDR(miv2_mp_raw_pic_width), REG_ADDR(miv2_mp_raw_pic_height), REG_ADDR(miv2_mp_raw_pic_size),
+			MP_YCBCR_PATH_ENABLE_MASK, REG_ADDR(mrsz_format_conv_ctrl),
+		},
+		{
+			REG_ADDR(miv2_sp1_bus_cfg), REG_ADDR(miv2_sp1_bus_id), REG_ADDR(miv2_sp1_ctrl),
+			REG_ADDR(miv2_sp1_fmt), REG_ADDR(miv2_sp1_y_llength), 0,
+			0, 0, 0,
+			SP1_YCBCR_PATH_ENABLE_MASK, REG_ADDR(srsz_phase_format_conv_ctr),
+		},
+		{
+			REG_ADDR(miv2_sp2_bus_cfg), REG_ADDR(miv2_sp2_bus_id), REG_ADDR(miv2_sp2_ctrl),
+			REG_ADDR(miv2_sp2_fmt), REG_ADDR(miv2_sp2_y_llength), REG_ADDR(miv2_sp2_raw_llength),
+			REG_ADDR(miv2_sp2_raw_pic_width), REG_ADDR(miv2_sp2_raw_pic_height), REG_ADDR(miv2_sp2_raw_pic_size),
+			SP2_YCBCR_PATH_ENABLE_MASK, REG_ADDR(srsz2_phase_format_conv_ctr),
+		},
+	};
+#endif
 
 	if (!path->enable)
 		return;
@@ -393,101 +493,67 @@ void set_data_path(int id, struct isp_mi_data_path_context *path,
 		set_scaling(id, dev, dev->is.enable);
 	}
 
-	if (id == 0) {
-		bus_cfg_addr = REG_ADDR(miv2_mp_bus_cfg);
-		bus_id_addr = REG_ADDR(miv2_mp_bus_id);
-		path_ctrl_addr = REG_ADDR(miv2_mp_ctrl);
-		format_addr = REG_ADDR(miv2_mp_fmt);
-		y_length_addr = REG_ADDR(miv2_mp_y_llength);
-
-		raw_llength = REG_ADDR(miv2_mp_raw_llength);
-		raw_pic_width = REG_ADDR(miv2_mp_raw_pic_width);
-		raw_pic_height = REG_ADDR(miv2_mp_raw_pic_height);
-		raw_pic_size = REG_ADDR(miv2_mp_raw_pic_size);
-		ycbcr_enable_bit = MP_YCBCR_PATH_ENABLE_MASK;
-	} else if (id == 1) {
-		bus_cfg_addr = REG_ADDR(miv2_sp1_bus_cfg);
-		bus_id_addr = REG_ADDR(miv2_sp1_bus_id);
-		path_ctrl_addr = REG_ADDR(miv2_sp1_ctrl);
-		format_addr = REG_ADDR(miv2_sp1_fmt);
-		y_length_addr = REG_ADDR(miv2_sp1_y_llength);
-		ycbcr_enable_bit = SP1_YCBCR_PATH_ENABLE_MASK;
-	} else if (id == 2) {
-		bus_cfg_addr = REG_ADDR(miv2_sp2_bus_cfg);
-		bus_id_addr = REG_ADDR(miv2_sp2_bus_id);
-		path_ctrl_addr = REG_ADDR(miv2_sp2_ctrl);
-		format_addr = REG_ADDR(miv2_sp2_fmt);
-		y_length_addr = REG_ADDR(miv2_sp2_y_llength);
-		raw_llength = REG_ADDR(miv2_sp2_raw_llength);
-		raw_pic_width = REG_ADDR(miv2_sp2_raw_pic_width);
-		raw_pic_height = REG_ADDR(miv2_sp2_raw_pic_height);
-		raw_pic_size = REG_ADDR(miv2_sp2_raw_pic_size);
-
-		ycbcr_enable_bit = SP2_YCBCR_PATH_ENABLE_MASK;
-	}
-
 	miv2_ctrl = isp_read_reg(dev, REG_ADDR(miv2_ctrl));
 	imsc = isp_read_reg(dev, REG_ADDR(miv2_imsc));
-	bus_cfg = isp_read_reg(dev, bus_id_addr);
-	format = isp_read_reg(dev, format_addr);
+	bus_cfg = isp_read_reg(dev, path_list[id].bus_id_addr);
+	format = isp_read_reg(dev, path_list[id].format_addr);
+	conv_format_ctrl = isp_read_reg(dev, path_list[id].format_conv_ctrl);
+	y_length_addr = path_list[id].y_length_addr;
 
 	switch (path->out_mode) {
 	case IC_MI_DATAMODE_YUV444:
-		REG_SET_SLICE(format, MP_WR_YUV_FMT, 2);
-		miv2_ctrl |= ycbcr_enable_bit;
+		mi_set_slice(&format, fmt_bit[id].yuv_fmt, 2);
+		miv2_ctrl |= path_list[id].ycbcr_enable_bit;
 		REG_SET_SLICE(conv_format_ctrl, MRV_MRSZ_COVERT_OUTPUT, 3);
 		REG_SET_SLICE(conv_format_ctrl, MRV_MRSZ_COVERT_INPUT, 2);
 		break;
 	case IC_MI_DATAMODE_YUV422:
-		REG_SET_SLICE(format, MP_WR_YUV_FMT, 1);
-		miv2_ctrl |= ycbcr_enable_bit;
+		mi_set_slice(&format, fmt_bit[id].yuv_fmt, 1);
+		miv2_ctrl |= path_list[id].ycbcr_enable_bit;
 		break;
 	case IC_MI_DATAMODE_YUV420:
-		REG_SET_SLICE(format, MP_WR_YUV_FMT, 0);
-		miv2_ctrl |= ycbcr_enable_bit;
+		mi_set_slice(&format, fmt_bit[id].yuv_fmt, 0);
+		miv2_ctrl |= path_list[id].ycbcr_enable_bit;
 		break;
 	case IC_MI_DATAMODE_YUV400:
 	case IC_MI_DATAMODE_JPEG:
-		REG_SET_SLICE(format, MP_WR_JDP_FMT, 1);
+		mi_set_slice(&format, fmt_bit[id].jdp_fmt, 1);
 		REG_SET_SLICE(miv2_ctrl, MP_JDP_PATH_ENABLE, 1);
 		break;
 	case IC_MI_DATAMODE_RAW8:
-		REG_SET_SLICE(format, MP_WR_RAW_BIT, 0);
+		mi_set_slice(&format, fmt_bit[id].raw_bit, 0);
 		REG_SET_SLICE(miv2_ctrl, MP_RAW_PATH_ENABLE, 1);
 		REG_SET_SLICE(miv2_ctrl, SP2_RAW_PATH_ENABLE, 1);
 		break;
 	case IC_MI_DATAMODE_RAW10:
-		REG_SET_SLICE(format, MP_WR_RAW_BIT, 1);
+		mi_set_slice(&format, fmt_bit[id].raw_bit, 1);
 		REG_SET_SLICE(miv2_ctrl, MP_RAW_PATH_ENABLE, 1);
 		REG_SET_SLICE(miv2_ctrl, SP2_RAW_PATH_ENABLE, 1);
 		REG_SET_SLICE(bus_cfg, MP_WR_SWAP_RAW, 1);
-
 		break;
-	case IC_MI_DATAMODE_RAW12:
-		REG_SET_SLICE(format, MP_WR_RAW_BIT, 2);
+	case IC_MI_DATAMODE_RAW12: 
+		mi_set_slice(&format, fmt_bit[id].raw_bit, 2);
 		REG_SET_SLICE(miv2_ctrl, MP_RAW_PATH_ENABLE, 1);
 		REG_SET_SLICE(miv2_ctrl, SP2_RAW_PATH_ENABLE, 1);
 		REG_SET_SLICE(bus_cfg, MP_WR_SWAP_RAW, 1);
-
 		break;
 	case IC_MI_DATAMODE_RAW14:
-		REG_SET_SLICE(format, MP_WR_RAW_BIT, 3);
+		mi_set_slice(&format, fmt_bit[id].raw_bit, 3);
 		REG_SET_SLICE(miv2_ctrl, MP_RAW_PATH_ENABLE, 1);
 		REG_SET_SLICE(miv2_ctrl, SP2_RAW_PATH_ENABLE, 1);
 		REG_SET_SLICE(bus_cfg, MP_WR_SWAP_RAW, 1);
-
 		break;
 	case IC_MI_DATAMODE_RAW16:
-		REG_SET_SLICE(format, MP_WR_RAW_BIT, 4);
+		mi_set_slice(&format, fmt_bit[id].raw_bit, 4);
 		REG_SET_SLICE(miv2_ctrl, MP_RAW_PATH_ENABLE, 1);
 		REG_SET_SLICE(miv2_ctrl, SP2_RAW_PATH_ENABLE, 1);
 		REG_SET_SLICE(bus_cfg, MP_WR_SWAP_RAW, 1);
 		break;
 	case IC_MI_DATAMODE_RGB888:
-		REG_SET_SLICE(format, MP_WR_YUV_FMT, 2);
+		mi_set_slice(&format, fmt_bit[id].yuv_fmt, 2);
 		REG_SET_SLICE(conv_format_ctrl, MRV_MRSZ_COVERT_OUTPUT, 6);
 		REG_SET_SLICE(conv_format_ctrl, MRV_MRSZ_COVERT_INPUT, 2);
-		miv2_ctrl |= ycbcr_enable_bit;
+		miv2_ctrl |= path_list[id].ycbcr_enable_bit;
 		break;
 	default:
 		pr_err("mi %s unsupport format: %d", __func__, path->out_mode);
@@ -496,20 +562,20 @@ void set_data_path(int id, struct isp_mi_data_path_context *path,
 
 	switch (path->data_layout) {
 	case IC_MI_DATASTORAGE_PLANAR:
-		REG_SET_SLICE(format, MP_WR_YUV_STR, 2);
+		mi_set_slice(&format, fmt_bit[id].yuv_str, 2);
 		break;
 	case IC_MI_DATASTORAGE_SEMIPLANAR:
-		REG_SET_SLICE(format, MP_WR_YUV_STR, 0);
+		mi_set_slice(&format, fmt_bit[id].yuv_str, 0);
 		break;
 	case IC_MI_DATASTORAGE_INTERLEAVED:
-		REG_SET_SLICE(format, MP_WR_YUV_STR, 1);
+		mi_set_slice(&format, fmt_bit[id].yuv_str, 1);
 		break;
 	default:
 		break;
 	}
 
-	REG_SET_SLICE(format, MP_WR_YUV_BIT, 0);
-	REG_SET_SLICE(format, MP_WR_RAW_ALIGNED, path->data_alignMode);
+	mi_set_slice(&format, fmt_bit[id].yuv_bit, 0);
+	mi_set_slice(&format, fmt_bit[id].raw_aligned, path->data_alignMode);
 	REG_SET_SLICE(bus_cfg, MP_WR_BURST_LEN, dev->mi.burst_len);
 	REG_SET_SLICE(mcm_bus_cfg, MCM_WR_BURST_LEN, dev->mi.burst_len);
 	isp_write_reg(dev, y_length_addr, path->out_width);
@@ -524,12 +590,13 @@ void set_data_path(int id, struct isp_mi_data_path_context *path,
 		    calc_raw_lval(path->out_width, path->out_mode,
 				  path->data_alignMode);
 		lval <<= 4;
-		isp_write_reg(dev, raw_llength, lval);
-		isp_write_reg(dev, raw_pic_width, path->out_width);
-		isp_write_reg(dev, raw_pic_height, path->out_height);
-		isp_write_reg(dev, raw_pic_size, path->out_height * lval);
+		isp_write_reg(dev, path_list[id].raw_llength, lval);
+		isp_write_reg(dev, path_list[id].raw_pic_width, path->out_width);
+		isp_write_reg(dev, path_list[id].raw_pic_height, path->out_height);
+		isp_write_reg(dev, path_list[id].raw_pic_size, path->out_height * lval);
 	}
 
+	// aev2, 3dnr
 	if (id == 0) {
 		if (dev->exp2.enable) {
 			REG_SET_SLICE(miv2_ctrl, MP_JDP_PATH_ENABLE, 1);
@@ -547,13 +614,13 @@ void set_data_path(int id, struct isp_mi_data_path_context *path,
 
 	}
 
-	path_ctrl = isp_read_reg(dev, path_ctrl_addr);
+	path_ctrl = isp_read_reg(dev, path_list[id].path_ctrl_addr);
 	REG_SET_SLICE(path_ctrl, MP_MI_CFG_UPD, 1);
 	path_ctrl |= (MP_INIT_BASE_EN_MASK | MP_INIT_OFFSET_EN_MASK);
 	acq_proc = isp_read_reg(dev, REG_ADDR(isp_acq_prop));
 	isp_write_reg(dev, REG_ADDR(isp_acq_prop),
 		      acq_proc & ~MRV_ISP_LATENCY_FIFO_SELECTION_MASK);
-	bus_id = isp_read_reg(dev, bus_id_addr);
+	bus_id = isp_read_reg(dev, path_list[id].bus_id_addr);
 	if (id == 1) {
 		bus_id <<= 4;
 	}
@@ -564,13 +631,13 @@ void set_data_path(int id, struct isp_mi_data_path_context *path,
 	} else {
 		bus_id |= MP_BUS_SW_EN_MASK;
 	}
-	isp_write_reg(dev, bus_id_addr, bus_id);
-	isp_write_reg(dev, bus_cfg_addr, bus_cfg);
+	isp_write_reg(dev, path_list[id].bus_id_addr, bus_id);
+	isp_write_reg(dev, path_list[id].bus_cfg_addr, bus_cfg);
 	isp_write_reg(dev, REG_ADDR(miv2_mcm_bus_cfg), mcm_bus_cfg);
-	isp_write_reg(dev, format_addr, format);
+	isp_write_reg(dev, path_list[id].format_addr, format);
 	isp_write_reg(dev, REG_ADDR(miv2_ctrl), miv2_ctrl);
-	isp_write_reg(dev, path_ctrl_addr, path_ctrl);
-	isp_write_reg(dev, REG_ADDR(mrsz_format_conv_ctrl), conv_format_ctrl);
+	isp_write_reg(dev, path_list[id].path_ctrl_addr, path_ctrl);
+	isp_write_reg(dev, path_list[id].format_conv_ctrl, conv_format_ctrl);
 }
 
 int isp_mi_start(struct isp_ic_dev *dev)

@@ -50,61 +50,23 @@
  * version of this file.
  *
  *****************************************************************************/
-#ifndef _DWE_DEV_H
-#define _DWE_DEV_H
+#ifndef _VIVCSI_HUB_H_
+#define _VIVCSI_HUB_H_
 
-#include "vvdefs.h"
+unsigned int vvcsi_register_hardware(struct vvcam_csi_dev *dev, struct vvcam_csi_hardware_function_s *func);
 
-#define DST_RECYCLING_BUF_NUM       (1)
+int vivcsi_hub_init(struct vvcam_csi_dev *dev);
+int vivcsi_hub_reset(struct vvcam_csi_dev *dev);
+int vivcsi_hub_set_power(struct vvcam_csi_dev *dev);
+int vivcsi_hub_get_power(struct vvcam_csi_dev *dev);
+int vivcsi_hub_set_clock(struct vvcam_csi_dev *dev);
+int vivcsi_hub_get_clock(struct vvcam_csi_dev *dev);
+int vivcsi_hub_set_stream_control(struct vvcam_csi_dev *dev);
+int vivcsi_hub_get_stream_control(struct vvcam_csi_dev *dev);
+int vivcsi_hub_set_fmt(struct vvcam_csi_dev *dev);
+int vivcsi_hub_get_fmt(struct vvcam_csi_dev *dev);
+int vivcsi_hub_set_vc_select(struct vvcam_csi_dev *dev);
+int vivcsi_hub_get_vc_select(struct vvcam_csi_dev *dev);
+int vivcsi_hub_set_csi_lane_cfg(struct vvcam_csi_dev *dev);
 
-#ifndef __KERNEL__
-#define copy_from_user(a, b, c) dwe_copy_data(a, b, c)
-#define copy_to_user(a, b, c) dwe_copy_data(a, b, c)
-
-typedef bool(*pReadBar) (uint32_t bar, uint32_t *data);
-typedef bool(*pWriteBar) (uint32_t bar, uint32_t data);
-
-extern void dwe_set_func(pReadBar read_func, pWriteBar write_func);
-extern long dwe_copy_data(void *dst, void *src, int size);
-#endif
-
-struct dwe_hw_info {
-	u32 split_line;
-	u32 scale_factor;
-	u32 in_format;
-	u32 out_format;
-	u32 hand_shake;
-	u32 roi_x, roi_y;
-	u32 boundary_y, boundary_u, boundary_v;
-	u32 map_w, map_h;
-	u32 src_auto_shadow, dst_auto_shadow;
-	u32 src_w, src_stride, src_h;
-	u32 dst_w, dst_stride, dst_h, dst_size_uv;
-	u32 split_h, split_v1, split_v2;
-};
-
-enum BUF_ERR_TYPE {
-	BUF_ERR_UNDERFLOW = 1,
-	BUF_ERR_OVERFLOW0 = 1 << 1,
-	BUF_ERR_OVERFLOW1 = 1 << 2,
-	BUF_ERR_NO_DIST_MAP0 = 1 << 3,
-	BUF_ERR_NO_DIST_MAP1 = 1 << 4
-};
-
-struct dwe_ic_dev {
-	struct dwe_hw_info info;
-	void __iomem *base;
-	void __iomem *reset;
-#if defined(__KERNEL__) && defined(ENABLE_IRQ)
-	dma_addr_t dist_map[2];
-	struct vb2_dc_buf *src;
-	struct vb2_dc_buf *dst;
-	u32 error;
-#endif
-
-};
-
-void dwe_write_reg(struct dwe_ic_dev *dev, u32 offset, u32 val);
-u32 dwe_read_reg(struct dwe_ic_dev *dev, u32 offset);
-
-#endif /* _DWE_DEV_H */
+#endif /* _VIVCSI_HUB_H_ */

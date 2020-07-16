@@ -50,61 +50,104 @@
  * version of this file.
  *
  *****************************************************************************/
-#ifndef _DWE_DEV_H
-#define _DWE_DEV_H
-
-#include "vvdefs.h"
-
-#define DST_RECYCLING_BUF_NUM       (1)
+#ifndef _CSI_IOC_H_
+#define _CSI_IOC_H_
 
 #ifndef __KERNEL__
-#define copy_from_user(a, b, c) dwe_copy_data(a, b, c)
-#define copy_to_user(a, b, c) dwe_copy_data(a, b, c)
-
-typedef bool(*pReadBar) (uint32_t bar, uint32_t *data);
-typedef bool(*pWriteBar) (uint32_t bar, uint32_t data);
-
-extern void dwe_set_func(pReadBar read_func, pWriteBar write_func);
-extern long dwe_copy_data(void *dst, void *src, int size);
+#include <stdint.h>
 #endif
+#include <linux/ioctl.h>
 
-struct dwe_hw_info {
-	u32 split_line;
-	u32 scale_factor;
-	u32 in_format;
-	u32 out_format;
-	u32 hand_shake;
-	u32 roi_x, roi_y;
-	u32 boundary_y, boundary_u, boundary_v;
-	u32 map_w, map_h;
-	u32 src_auto_shadow, dst_auto_shadow;
-	u32 src_w, src_stride, src_h;
-	u32 dst_w, dst_stride, dst_h, dst_size_uv;
-	u32 split_h, split_v1, split_v2;
+enum {
+	VVCSI_IOC_S_RESET = _IO('r', 0),
+	VVCSI_IOC_S_POWER,
+	VVCSI_IOC_G_POWER,
+	VVCSI_IOC_S_CLOCK,
+	VVCSI_IOC_G_CLOCK,
+	VVCSI_IOC_S_STREAM,
+	VVCSI_IOC_G_STREAM,
+	VVCSI_IOC_S_FMT,
+	VVCSI_IOC_G_FMT,
+	VVCSI_IOC_S_VC_SELECT,
+	VVCSI_IOC_G_VC_SELECT,
+	VVCSI_IOC_S_LANE_CFG,
+	VVCSI_IOC_MAX,
 };
 
-enum BUF_ERR_TYPE {
-	BUF_ERR_UNDERFLOW = 1,
-	BUF_ERR_OVERFLOW0 = 1 << 1,
-	BUF_ERR_OVERFLOW1 = 1 << 2,
-	BUF_ERR_NO_DIST_MAP0 = 1 << 3,
-	BUF_ERR_NO_DIST_MAP1 = 1 << 4
+struct csi_vc_select_context {
+	uint32_t csi_vc_select_mode;
+	uint32_t vc_channel;
 };
 
-struct dwe_ic_dev {
-	struct dwe_hw_info info;
+struct csi_format_context {
+	uint32_t format;
+	uint32_t width;
+	uint32_t height;
+};
+
+struct vvcam_csi_hardware_function_s
+{
+	int (*init)(void* dev);
+	int (*exit)(void* dev);
+	int (*reset)(void* dev);
+	int (*set_power)(void* dev);
+	int (*get_power)(void* dev);
+	int (*set_clock)(void* dev);
+	int (*get_clock)(void* dev);
+	int (*set_stream_control)(void* dev);
+	int (*get_stream_control)(void* dev);
+	int (*set_fmt)(void* dev);
+	int (*get_fmt)(void* dev);
+	int (*set_vc_select)(void* dev);
+	int (*get_vc_select)(void* dev);
+	int (*set_lane_cfg)(void* dev);
+};
+
+struct vvcam_csi_lane_cfg
+{
+	uint32_t mipi_lane_num;
+};
+
+struct vvcam_csi_access_s
+{
+	int (*write)(void * ctx, uint32_t address, uint32_t data);
+	int (*read)(void * ctx, uint32_t address, uint32_t *data);
+};
+
+
+#ifdef __KERNEL__
+
+struct vvcam_csi_dev {
 	void __iomem *base;
-	void __iomem *reset;
-#if defined(__KERNEL__) && defined(ENABLE_IRQ)
-	dma_addr_t dist_map[2];
-	struct vb2_dc_buf *src;
-	struct vb2_dc_buf *dst;
-	u32 error;
-#endif
+	char name[16];
 
+	int present;
+	int device_idx;
+
+	uint32_t power_status;
+	uint32_t clock;
+
+	uint32_t streaming_enable;
+	struct csi_vc_select_context csi_vc_select;
+	struct csi_format_context csi_format;
+	struct vvcam_csi_hardware_function_s csi_hard_func;
+	struct vvcam_csi_access_s  csi_access;
+	struct vvcam_csi_lane_cfg csi_lane_cfg;
+	void * csi_private;
 };
 
-void dwe_write_reg(struct dwe_ic_dev *dev, u32 offset, u32 val);
-u32 dwe_read_reg(struct dwe_ic_dev *dev, u32 offset);
+// internal functions
 
-#endif /* _DWE_DEV_H */
+long csi_priv_ioctl(struct vvcam_csi_dev *dev, unsigned int cmd, void *args);
+int vvnative_csi_init(struct vvcam_csi_dev *dev);
+int vvnative_csi_deinit(struct vvcam_csi_dev *dev);
+
+
+
+#else
+//User space connections
+
+
+#endif
+
+#endif  // _CSI_IOC_H_

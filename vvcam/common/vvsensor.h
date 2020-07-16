@@ -90,8 +90,9 @@ enum {
 	VVSENSORIOC_S_FPS,
 	VVSENSORIOC_G_FPS,
 	VVSENSORIOC_S_HDR_RADIO,
-	VVSENSOR_IOC_G_AE_INFO,
-	VVSENSOR_IOC_MAX,
+	VVSENSORIOC_G_AE_INFO,
+	VVSENSORIOC_QUERY,
+	VVSENSORIOC_MAX,
 };
 
 /* W/R registers */
@@ -147,10 +148,57 @@ struct sensor_mode_s {
 	uint32_t max_fps;
 	uint32_t cur_fps;
 	uint32_t width;
-	uint32_t heigth;
+	uint32_t height;
 	uint32_t hdr_mode;
 	uint32_t hdr_radio;
 	struct vvcam_ae_info_s ae_info;
+};
+
+enum sensor_hdr_mode_s
+{
+	SENSOR_MODE_LINEAR ,
+	SENSOR_MODE_HDR_STITCH,
+	SENSOR_MODE_HDR_NATIVE,
+};
+
+enum SENSOR_BAYER_PATTERN_E
+{
+    BAYER_BGGR    = 0,
+    BAYER_GBRG    = 1,
+    BAYER_GRBG    = 2,
+    BAYER_RGGB    = 3,
+    BAYER_BUTT    
+};
+
+enum sensor_stitching_mode_e
+{
+	SENSOR_STITCHING_DUAL_DCG        = 0,   /**< dual DCG mode 3x12-bit */
+	SENSOR_STITCHING_3DOL            = 1,   /**< dol3 frame 3x12-bit */
+	SENSOR_STITCHING_LINEBYLINE      = 2,   /**< 3x12-bit line by line without waiting */
+	SENSOR_STITCHING_16BIT_COMPRESS  = 3,   /**< 16-bit compressed data + 12-bit RAW */
+	SENSOR_STITCHING_DUAL_DCG_NOWAIT = 4,   /**< 2x12-bit dual DCG without waiting */
+	SENSOR_STITCHING_2DOL            = 5,   /**< dol2 frame or 1 CG+VS sx12-bit RAW */
+	SENSOR_STITCHING_L_AND_S         = 6,   /**< L+S 2x12-bit RAW */
+	SENSOR_STITCHING_MAX
+
+};
+
+#define VVCAM_SUPPORT_MAX_MODE_COUNT 20
+
+struct vvcam_mode_info {
+	uint32_t width;
+	uint32_t height;
+	uint32_t fps;
+	uint32_t hdr_mode;
+	uint32_t stitching_mode;
+	uint32_t bit_width;
+	uint32_t bayer_pattern;
+	uint32_t default_mode_flag;
+};
+
+struct vvcam_mode_info_arry {
+	uint32_t count;
+	struct vvcam_mode_info modes[VVCAM_SUPPORT_MAX_MODE_COUNT];
 };
 
 #endif

@@ -98,6 +98,7 @@ struct v4l2_user_buffer {
 	void *file;
 };
 
+/* UNUSED */
 #define VIV_JSON_BUFFER_SIZE  (64*1024)
 struct viv_control_event {
 	/* physical address of json request, fixed size 64K */
@@ -107,9 +108,17 @@ struct viv_control_event {
 	u32 id;
 };
 
+
 struct ext_buf_info {
 	u64 addr;
 	u64 size;
+};
+
+struct vvcam_constant_modeinfo {
+	unsigned index;
+	unsigned w;
+	unsigned h;
+	unsigned fps;
 };
 
 #define VIV_VIDEO_ISPIRQ_TYPE	(V4L2_EVENT_PRIVATE_START + 0x0)
@@ -127,5 +136,6 @@ struct ext_buf_info {
 #define VIV_VIDIOC_BUFDONE				_IOW('V', BASE_VIDIOC_PRIVATE + 105, struct v4l2_user_buffer)
 #define VIV_VIDIOC_QUERY_EXTMEM			_IOWR('V', BASE_VIDIOC_PRIVATE + 106, struct ext_buf_info)
 #define VIV_VIDIOC_S_ENDPOINT			_IOW('V', BASE_VIDIOC_PRIVATE + 107, int)
+#define VIV_VIDIOC_S_MODEINFO			_IOW('V', BASE_VIDIOC_PRIVATE + 108, struct vvcam_constant_modeinfo)
 
 #endif

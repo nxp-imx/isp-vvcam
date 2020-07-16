@@ -122,67 +122,6 @@ struct v4l2_subdev_ops isp_v4l2_subdev_ops = {
 	.video = &isp_v4l2_subdev_video_ops,
 };
 
-#if 0
-static uint32_t isp_hw_handle_reg(struct isp_device *isp_dev)
-{
-	uint32_t ret = 0;
-	uint32_t isp_mis_addr = 0;
-	uint32_t isp_icr_addr = 0;
-	uint32_t isp_mis_val;
-	uint32_t mi_mis_addr = 0;
-	uint32_t mi_icr_addr = 0;
-	uint32_t mi_mis_val;
-	struct v4l2_event event;
-	struct isp_irq_data *irq_data =
-	    (struct isp_irq_data *)(&event.u.data[0]);
-
-	isp_mis_addr = REG_ADDR(isp_mis);
-	isp_icr_addr = REG_ADDR(isp_icr);
-#ifdef ISP_MIV2
-	mi_mis_addr = REG_ADDR(miv2_mis);
-	mi_icr_addr = REG_ADDR(miv2_icr);
-#endif
-#ifdef ISP_MIV1
-	mi_mis_addr = REG_ADDR(mi_mis);
-	mi_icr_addr = REG_ADDR(mi_icr);
-#endif
-	if (!isp_mis_addr || !isp_icr_addr || !mi_mis_addr || !mi_icr_addr) {
-		pr_err("get irq register addr failed.\n");
-		return ret;
-	}
-
-	isp_mis_val = __raw_readl(isp_dev->ic_dev.base + isp_mis_addr);
-	if (isp_mis_val != 0x0 && isp_mis_val != 0x20) {
-		memset(irq_data, 0x0, sizeof(struct isp_irq_data));
-		event.id = 1;
-		event.type = VIV_VIDEO_ISPIRQ_TYPE;
-		irq_data->addr = isp_mis_addr;
-		irq_data->val = isp_mis_val;
-		pr_err("%s isp irq addr:0x%x, isp_mis:0x%x.\n", __func__,
-		       irq_data->addr, irq_data->val);
-		v4l2_event_queue(isp_dev->sd.devnode, &event);
-		ret = true;
-	}
-	__raw_writel(isp_mis_val, isp_dev->ic_dev.base + isp_icr_addr);
-
-	mi_mis_val = __raw_readl(isp_dev->ic_dev.base + mi_mis_addr);
-	if (mi_mis_val != 0x0) {
-		memset(irq_data, 0x0, sizeof(struct isp_irq_data));
-		event.id = 1;
-		event.type = VIV_VIDEO_MIIRQ_TYPE;
-		irq_data->addr = isp_icr_addr;
-		irq_data->val = mi_mis_val;
-		pr_err("%s mi irq addr:0x%x, mi_mis:0x%x.\n", __func__,
-		       irq_data->addr, irq_data->val);
-		v4l2_event_queue(isp_dev->sd.devnode, &event);
-		ret = true;
-	}
-	__raw_writel(mi_mis_val, isp_dev->ic_dev.base + mi_icr_addr);
-
-	return ret;
-}
-#endif
-
 int isp_hw_probe(struct platform_device *pdev)
 {
 	struct isp_device *isp_dev;

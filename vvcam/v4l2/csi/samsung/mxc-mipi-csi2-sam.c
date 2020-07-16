@@ -1041,7 +1041,7 @@ int mipi_csis_s_stream(struct v4l2_subdev *mipi_sd, int enable)
 {
 	struct csi_state *state = mipi_sd_to_csi_state(mipi_sd);
 
-	v4l2_dbg(1, debug, mipi_sd, "%s: %d, state: 0x%x\n",
+	pr_err("%s: %d, state: 0x%x\n",
 		 __func__, enable, state->flags);
 
 	if (enable) {

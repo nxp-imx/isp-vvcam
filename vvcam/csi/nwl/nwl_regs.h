@@ -50,61 +50,48 @@
  * version of this file.
  *
  *****************************************************************************/
-#ifndef _DWE_DEV_H
-#define _DWE_DEV_H
+#ifndef _NWL_REGS_H_
+#define _NWL_REGS_H_
 
-#include "vvdefs.h"
+/*
+ * MRV_MIPICSI1_NUM_LANES
+ * Config num lanes register [3:0] rw
+ * 0000b - controller off
+ * 0001b - 1 Lane
+ * 0010b - 2 Lanes
+ * 0011b - 3 Lanes
+ * 0100b - 4 Lanes
+ */
+#define MRV_MIPICSI_NUM_LANES 0x0
 
-#define DST_RECYCLING_BUF_NUM       (1)
+/*
+ * MRV_MIPICSI1_LANES_CLK
+ * Configure lanes clock [0]
+ * 0b - disable
+ * 1b - enable
+ */
+#define MRV_MIPICSI_LANES_CLK 0x4
 
-#ifndef __KERNEL__
-#define copy_from_user(a, b, c) dwe_copy_data(a, b, c)
-#define copy_to_user(a, b, c) dwe_copy_data(a, b, c)
+/*
+ * MRV_MIPICSI1_LANES_DATA
+ * enable/disable lanes data [7:0]
+ * setting bits to a '1' value enable data lane
+ */
+#define MRV_MIPICSI_LANES_DATA 0x8
 
-typedef bool(*pReadBar) (uint32_t bar, uint32_t *data);
-typedef bool(*pWriteBar) (uint32_t bar, uint32_t data);
+/*
+ * MRV_MIPICSI1_IGNORE_VC
+ * enable/disable lanes clock [0]
+ * setting bits to a '1' value enable data value
+ */
+#define MRV_MIPICSI_IGNORE_VC 0x80
 
-extern void dwe_set_func(pReadBar read_func, pWriteBar write_func);
-extern long dwe_copy_data(void *dst, void *src, int size);
-#endif
+/*
+ * MRV_MIPICSI1_OUT_SHIFT
+ * Configure csi_vid_out register
+ */
 
-struct dwe_hw_info {
-	u32 split_line;
-	u32 scale_factor;
-	u32 in_format;
-	u32 out_format;
-	u32 hand_shake;
-	u32 roi_x, roi_y;
-	u32 boundary_y, boundary_u, boundary_v;
-	u32 map_w, map_h;
-	u32 src_auto_shadow, dst_auto_shadow;
-	u32 src_w, src_stride, src_h;
-	u32 dst_w, dst_stride, dst_h, dst_size_uv;
-	u32 split_h, split_v1, split_v2;
-};
+#define MRV_MIPICSI0_CTRL 0x108240 //0x308240
+#define MRV_MIPICSI1_CTRL 0x8244   //0x308244
 
-enum BUF_ERR_TYPE {
-	BUF_ERR_UNDERFLOW = 1,
-	BUF_ERR_OVERFLOW0 = 1 << 1,
-	BUF_ERR_OVERFLOW1 = 1 << 2,
-	BUF_ERR_NO_DIST_MAP0 = 1 << 3,
-	BUF_ERR_NO_DIST_MAP1 = 1 << 4
-};
-
-struct dwe_ic_dev {
-	struct dwe_hw_info info;
-	void __iomem *base;
-	void __iomem *reset;
-#if defined(__KERNEL__) && defined(ENABLE_IRQ)
-	dma_addr_t dist_map[2];
-	struct vb2_dc_buf *src;
-	struct vb2_dc_buf *dst;
-	u32 error;
-#endif
-
-};
-
-void dwe_write_reg(struct dwe_ic_dev *dev, u32 offset, u32 val);
-u32 dwe_read_reg(struct dwe_ic_dev *dev, u32 offset);
-
-#endif /* _DWE_DEV_H */
+#endif /* _NWL_REGS_H_ */

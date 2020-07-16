@@ -545,9 +545,12 @@ struct isp_3dnr_context {
 	bool enable_h, enable_v;
 	bool enable_temperal;
 	bool enable_dilate;
+        bool init;
 	u32 spacial_curve[17];
 	u32 temperal_curve[17];
 	u32 strength;
+	u16 motion_factor;
+	u16 delta_factor;
 	/* write full denoise3d reference raw image to dma by MI SP2. */
 	/* physical address, alloacte by user */
 	u64 pa;

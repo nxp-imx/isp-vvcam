@@ -1880,7 +1880,7 @@ static struct vvsensor_reg_value_t ov2775_init_setting_1080p_hdr[] = {
 	{0x30ae, 0x04, 0, 0},
 	{0x30af, 0x38, 0, 0},
 	{0x30c0, 0x09, 0, 0},
-	{0x30a9, 0x04, 0, 0},
+	{0x30a9, 0x05, 0, 0},
 };
 
 #endif

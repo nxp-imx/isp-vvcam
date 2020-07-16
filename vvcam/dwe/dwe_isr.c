@@ -50,7 +50,7 @@
  * version of this file.
  *
  *****************************************************************************/
-#ifdef ENABLE_IRQ
+#if defined(__KERNEL__) && defined(ENABLE_IRQ)
 
 #include "dwe_ioctl.h"
 #include "dwe_regs.h"

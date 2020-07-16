@@ -50,25 +50,107 @@
  * version of this file.
  *
  *****************************************************************************/
-#ifndef _DW200_DRIVER_H_
-#define _DW200_DRIVER_H_
+#ifdef __KERNEL__
+#include "nwl_driver.h"
+#endif
+#include "nwl_ioctl.h"
+#include "nwl_regs.h"
 
-#include <linux/clk.h>
-#include <linux/interrupt.h>
-#include <linux/completion.h>
-#include <linux/io.h>
-#include <linux/list.h>
-#include <linux/delay.h>
-#include <linux/videodev2.h>
-#include <media/v4l2-subdev.h>
-#include <linux/platform_device.h>
-#include "dw200_subdev.h"
+#ifndef __KERNEL__
+#include <hal/hal_api.h>
+#include "common_dev.h"
 
-struct dw200_device {
-	/* Driver private data */
-	struct v4l2_subdev sd;
-	struct v4l2_device *vd;
-	struct dw200_subdev ic_dev;
-};
+#define NWL_EXTREG_OFFSET 0x308244
+#define NWL_REG_OFFSET 0x300000
 
-#endif // _DW200_DRIVER_H_
+static HalHandle_t hal_handle;
+void nwl_ic_set_hal(HalHandle_t hal)
+{
+	hal_handle = hal;
+}
+
+void nwl_write_reg(u32 offset, u32 val)
+{
+	offset += NWL_REG_OFFSET;
+	HalWriteReg(hal_handle, offset, val);
+}
+
+u32 nwl_read_reg(u32 offset)
+{
+	offset += NWL_REG_OFFSET;
+	return HalReadReg(hal_handle, offset);
+}
+
+u32 nwl_write_extreg(u32 offset, u32 val)
+{
+	offset += NWL_EXTREG_OFFSET;
+	return HalReadReg(hal_handle, offset);
+}
+
+int nwl_set_stream(void *dev, int enable)
+{
+	u32 clock_status;
+	u32 data_status;
+
+	nwl_write_reg(MRV_MIPICSI1_NUM_LANES, 0x4);
+
+	if (enable == true) {
+		clock_status = 0x1;
+		data_status = 0xFF;
+	} else {
+		clock_status = 0x0;
+		data_status = 0x0;
+	}
+	nwl_write_reg(MRV_MIPICSI1_LANES_CLK, clock_status);
+	nwl_write_reg(MRV_MIPICSI1_LANES_DATA, data_status);
+
+	return 0;
+}
+
+int nwl_init(void)
+{
+	nwl_write_reg(MRV_MIPICSI1_NUM_LANES, 0x4);
+	nwl_write_reg(MRV_MIPICSI1_LANES_CLK, 0x1);
+	nwl_write_reg(MRV_MIPICSI1_LANES_DATA, 0xF);
+	nwl_write_reg(MRV_MIPICSI1_IGNORE_VC, 0x1);
+	nwl_write_extreg(MRV_MIPICSI1_OUT_SHIFT, 0x4);
+
+	return 0;
+}
+#endif
+
+int nwl_ioc_init(void)
+{
+	nwl_init();
+
+	return 0;
+}
+
+int nwl_ioc_s_stream(void *dev, void *__user args)
+{
+	int enable;
+
+	copy_from_user(&enable, args, sizeof(enable));
+	nwl_set_stream(dev, enable);
+	return 0;
+}
+
+long nwl_priv_ioctl(void *dev, unsigned int cmd, void *args)
+{
+	int ret = -1;
+
+	switch (cmd) {
+	case CSIIOC_INIT:
+		ret = nwl_ioc_init();
+		break;
+	case CSIIOC_S_STREAM:{
+			ret = nwl_ioc_s_stream(dev, args);
+		}
+		break;
+	default:
+		pr_err("Unsupported csi command %d.\n", cmd);
+		break;
+	}
+
+	return ret;
+}

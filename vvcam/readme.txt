@@ -15,7 +15,7 @@ setup environment:
 
 build:
   cd vvcam/native
-  make VERISON_CFG=ISP8000NANO_V1802
+  make VERSION_CFG=ISP8000NANO_V1802
 clean:
 	cd vvcam/native
 	make clean

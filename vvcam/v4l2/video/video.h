@@ -83,6 +83,8 @@ struct viv_video_device {
 	struct video_device *video;
 	struct v4l2_device *v4l2_dev;
 	struct viv_custom_ctrls ctrls;
+	struct vvcam_constant_modeinfo modeinfo[20];
+	int id;
 };
 
 typedef int (*on_notify_func)(int streamid, void *data);

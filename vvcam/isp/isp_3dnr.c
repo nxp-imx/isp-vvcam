@@ -60,6 +60,7 @@
 
 extern MrvAllRegister_t *all_regs;
 
+
 void dnr3_hw_init(struct isp_ic_dev *dev)
 {
 	struct isp_3dnr_context *dnr3 = &dev->dnr3;
@@ -84,9 +85,15 @@ void dnr3_hw_init(struct isp_ic_dev *dev)
 	u32 thr_delta_h_inv = 1023;
 	u32 thr_delta_v_inv = 1023;
 	u32 thr_delta_t_inv = 1023;
-
 	strength = dnr3->strength;
 	strength = MIN(MAX(strength, 0), 128);
+
+	if (dnr3->init) {  //for 3dnr init
+	u32 isp_denoise3d_ctrl =
+	    isp_read_reg(dev, REG_ADDR(isp_denoise3d_ctrl));
+	    REG_SET_SLICE(isp_denoise3d_ctrl, DENOISE3D_ENABLE, 1);
+	isp_write_reg(dev, REG_ADDR(isp_denoise3d_ctrl), isp_denoise3d_ctrl);
+	}
 
 	regVal = 0;
 	REG_SET_SLICE(regVal, DENOISE3D_STRENGTH_CURVE_SPACIAL,
@@ -152,7 +159,7 @@ void dnr3_hw_init(struct isp_ic_dev *dev)
 	}
 
 	regVal = 0;
-	REG_SET_SLICE(regVal, DENOISE3D_STRENGTH, dnr3->strength);
+	REG_SET_SLICE(regVal, DENOISE3D_STRENGTH, strength);
 	REG_SET_SLICE(regVal, DENOISE3D_UPDATE_SPACIAL, update_spacial);
 	REG_SET_SLICE(regVal, DENOISE3D_UPDATE_TEMPERAL, update_temperal);
 	isp_write_reg(dev, REG_ADDR(isp_denoise3d_strength), regVal);
@@ -192,36 +199,37 @@ int isp_s_3dnr(struct isp_ic_dev *dev)
 	return -1;
 #else
 	struct isp_3dnr_context *dnr3 = &dev->dnr3;
-	u32 isp_denoise3d_strength = 0;
 	u32 in_width, in_height;
-	u32 size;
-
-	u32 isp_denoise3d_ctrl =
-	    isp_read_reg(dev, REG_ADDR(isp_denoise3d_ctrl));
+	u32 size, isp_denoise3d_strength, isp_denoise3d_motion, isp_denoise3d_delta_inv;
+	u32 isp_denoise3d_ctrl;
 
 	pr_info("enter %s\n", __func__);
 	if (dnr3->update_bin) {
 		dnr3_hw_init(dev);
+        }
+	
+	isp_denoise3d_strength = isp_read_reg(dev, REG_ADDR(isp_denoise3d_strength));
+	if (!dnr3->enable) {
+	    REG_SET_SLICE(isp_denoise3d_strength, DENOISE3D_STRENGTH, 0);
+	} else {
+	    REG_SET_SLICE(isp_denoise3d_strength, DENOISE3D_STRENGTH, dnr3->strength);
 	}
-
-	isp_denoise3d_strength =
-	    isp_read_reg(dev, REG_ADDR(isp_denoise3d_strength));
-	REG_SET_SLICE(isp_denoise3d_strength, DENOISE3D_STRENGTH,
-		      dnr3->strength);
 	isp_write_reg(dev, REG_ADDR(isp_denoise3d_strength),
 		      isp_denoise3d_strength);
 
-	if (!dnr3->enable) {
-		REG_SET_SLICE(isp_denoise3d_ctrl, DENOISE3D_ENABLE, 0);
-		REG_SET_SLICE(isp_denoise3d_ctrl, DENOISE3D_HORIZONTAL_EN, 0);
-		REG_SET_SLICE(isp_denoise3d_ctrl, DENOISE3D_VERTICAL_EN, 0);
-		REG_SET_SLICE(isp_denoise3d_ctrl, DENOISE3D_TEMPERAL_EN, 0);
-		REG_SET_SLICE(isp_denoise3d_ctrl, DENOISE3D_DILATE_EN, 0);
-		isp_write_reg(dev, REG_ADDR(isp_denoise3d_ctrl),
-			      isp_denoise3d_ctrl);
-		return 0;
-	}
+	isp_denoise3d_motion =
+	    isp_read_reg(dev, REG_ADDR(isp_denoise3d_motion));
+        REG_SET_SLICE(isp_denoise3d_motion, DENOISE3D_MOTION_INV, dnr3->motion_factor);
+	isp_write_reg(dev, REG_ADDR(isp_denoise3d_motion),
+		      isp_denoise3d_motion);
+	isp_denoise3d_delta_inv =
+	    isp_read_reg(dev, REG_ADDR(isp_denoise3d_delta_inv));
+	REG_SET_SLICE(isp_denoise3d_delta_inv, DENOISE3D_DELTA_T_INV, dnr3->delta_factor);
+	isp_write_reg(dev, REG_ADDR(isp_denoise3d_delta_inv),
+		      isp_denoise3d_delta_inv);
+	
 	isp_write_reg(dev, REG_ADDR(isp_denoise3d_dummy_hblank), 0x80);
+	isp_denoise3d_ctrl = isp_read_reg(dev, REG_ADDR(isp_denoise3d_ctrl));
 	REG_SET_SLICE(isp_denoise3d_ctrl, DENOISE3D_HORIZONTAL_EN,
 		      dnr3->enable_h);
 	REG_SET_SLICE(isp_denoise3d_ctrl, DENOISE3D_VERTICAL_EN,
@@ -230,9 +238,6 @@ int isp_s_3dnr(struct isp_ic_dev *dev)
 		      dnr3->enable_temperal);
 	REG_SET_SLICE(isp_denoise3d_ctrl, DENOISE3D_DILATE_EN,
 		      dnr3->enable_dilate);
-	REG_SET_SLICE(isp_denoise3d_ctrl, DENOISE3D_ENABLE, 0U);
-	isp_write_reg(dev, REG_ADDR(isp_denoise3d_ctrl), isp_denoise3d_ctrl);
-	REG_SET_SLICE(isp_denoise3d_ctrl, DENOISE3D_ENABLE, 1);
 	isp_write_reg(dev, REG_ADDR(isp_denoise3d_ctrl), isp_denoise3d_ctrl);
 
 	in_width = isp_read_reg(dev, REG_ADDR(isp_acq_h_size));
@@ -250,7 +255,9 @@ int isp_s_3dnr(struct isp_ic_dev *dev)
 	isp_write_reg(dev, REG_ADDR(miv2_sp2_raw_pic_size), size);
 #else
 	isp_s_3dnr_cmp(dev);
+	isp_denoise3d_ctrl = isp_read_reg(dev, REG_ADDR(isp_denoise3d_ctrl));
 	REG_SET_SLICE(isp_denoise3d_ctrl, DENOISE3D_WRITE_REF_EN, 1);
+	isp_write_reg(dev, REG_ADDR(isp_denoise3d_ctrl), isp_denoise3d_ctrl);
 
 #endif
 	    return 0;

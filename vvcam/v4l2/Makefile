@@ -9,6 +9,13 @@ EXTRA_CFLAGS += -I$(PWD)/../common/
 EXTRA_CFLAGS += -I$(PWD)/../isp/
 EXTRA_CFLAGS += -I$(PWD)/../v4l2/
 
+# Enable interrupt mode for vvcam modules (yes, no)
+ENABLE_IRQ := yes 
+
+ifeq ($(ENABLE_IRQ), yes)
+  EXTRA_CFLAGS += -DENABLE_IRQ
+endif
+
 obj-m += video/
 
 include $(PWD)/../version/ISP8000NANO_V1802.mk
@@ -41,14 +48,18 @@ EXTRA_CFLAGS += -DDWE_REG_BASE=0x32E30000
 EXTRA_CFLAGS += -DDWE_REG_SIZE=0x00010000
 vvcam-dwe-objs += ../dwe/dwe_ioctl.o
 vvcam-dwe-objs += ../dwe/dwe_isr.o
-vvcam-dwe-objs += dwe_driver.o
+ifeq ($(ENABLE_IRQ), yes)
+  vvcam-dwe-objs += dwe_driver_of.o
+else
+  vvcam-dwe-objs += dwe_driver.o
+endif
 obj-m += vvcam-dwe.o
 
 obj-m += csi/
 obj-m += sensor/
 
 all:
-	make -C $(KERNEL_SRC) M=$(SRC)
+	make -C $(KERNEL_SRC) M=$(SRC) ENABLE_IRQ=$(ENABLE_IRQ)
 
 modules_install:
 	make -C $(KERNEL_SRC) M=$(SRC) modules_install

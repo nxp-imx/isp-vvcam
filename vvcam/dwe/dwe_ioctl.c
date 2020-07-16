@@ -233,7 +233,7 @@ int dwe_read_irq(struct dwe_ic_dev *dev, u32 *ret)
 
 int dwe_start(struct dwe_ic_dev *dev)
 {
-#ifdef ENABLE_IRQ
+#if defined(__KERNEL__) && defined(ENABLE_IRQ)
 	struct vb2_dc_buf *buf;
 	int i, j;
 
@@ -255,7 +255,7 @@ int dwe_start(struct dwe_ic_dev *dev)
 
 int dwe_stop(struct dwe_ic_dev *dev)
 {
-#ifdef ENABLE_IRQ
+#if defined(__KERNEL__) && defined(ENABLE_IRQ)
 	struct vb2_dc_buf *buf;
 
 	dev->error = 0;
@@ -388,8 +388,8 @@ long dwe_priv_ioctl(struct dwe_ic_dev *dev, unsigned int cmd, void *args)
 		struct lut_info info;
 
 		viv_check_retval(copy_from_user(&info, args, sizeof(info)));
-#ifdef ENABLE_IRQ
-		if (info.port <= 2)
+#if defined(__KERNEL__) && defined(ENABLE_IRQ)
+		if (info.port == 0 || info.port == 1)
 			dev->dist_map[info.port] = info.addr;
 #else
 		ret = dwe_set_lut(dev, info.addr);

@@ -50,61 +50,103 @@
  * version of this file.
  *
  *****************************************************************************/
-#ifndef _DWE_DEV_H
-#define _DWE_DEV_H
-
-#include "vvdefs.h"
-
-#define DST_RECYCLING_BUF_NUM       (1)
+#ifndef _SOC_IOC_H_
+#define _SOC_IOC_H_
 
 #ifndef __KERNEL__
-#define copy_from_user(a, b, c) dwe_copy_data(a, b, c)
-#define copy_to_user(a, b, c) dwe_copy_data(a, b, c)
-
-typedef bool(*pReadBar) (uint32_t bar, uint32_t *data);
-typedef bool(*pWriteBar) (uint32_t bar, uint32_t data);
-
-extern void dwe_set_func(pReadBar read_func, pWriteBar write_func);
-extern long dwe_copy_data(void *dst, void *src, int size);
+#include <stdint.h>
 #endif
 
-struct dwe_hw_info {
-	u32 split_line;
-	u32 scale_factor;
-	u32 in_format;
-	u32 out_format;
-	u32 hand_shake;
-	u32 roi_x, roi_y;
-	u32 boundary_y, boundary_u, boundary_v;
-	u32 map_w, map_h;
-	u32 src_auto_shadow, dst_auto_shadow;
-	u32 src_w, src_stride, src_h;
-	u32 dst_w, dst_stride, dst_h, dst_size_uv;
-	u32 split_h, split_v1, split_v2;
+#include <linux/ioctl.h>
+
+enum {
+	VVSOC_IOC_S_RESET_ISP = _IO('r', 0),
+	VVSOC_IOC_S_POWER_ISP,
+	VVSOC_IOC_G_POWER_ISP,
+	VVSOC_IOC_S_CLOCK_ISP,
+	VVSOC_IOC_G_CLOCK_ISP,
+
+	VVSOC_IOC_S_RESET_DWE,
+	VVSOC_IOC_S_POWER_DWE,
+	VVSOC_IOC_G_POWER_DWE,
+	VVSOC_IOC_S_CLOCK_DWE,
+	VVSOC_IOC_G_CLOCK_DWE,
+
+	VVSOC_IOC_S_RESET_VSE,
+	VVSOC_IOC_S_POWER_VSE,
+	VVSOC_IOC_G_POWER_VSE,
+	VVSOC_IOC_S_CLOCK_VSE,
+	VVSOC_IOC_G_CLOCK_VSE,
+
+	VVSOC_IOC_S_RESET_CSI,
+	VVSOC_IOC_S_POWER_CSI,
+	VVSOC_IOC_G_POWER_CSI,
+	VVSOC_IOC_S_CLOCK_CSI,
+	VVSOC_IOC_G_CLOCK_CSI,
+
+	VVSOC_IOC_S_RESET_SENSOR,
+	VVSOC_IOC_S_POWER_SENSOR,
+	VVSOC_IOC_G_POWER_SENSOR,
+	VVSOC_IOC_S_CLOCK_SENSOR,
+	VVSOC_IOC_G_CLOCK_SENSOR,
+
+	VVSOC_IOC_MAX,
 };
 
-enum BUF_ERR_TYPE {
-	BUF_ERR_UNDERFLOW = 1,
-	BUF_ERR_OVERFLOW0 = 1 << 1,
-	BUF_ERR_OVERFLOW1 = 1 << 2,
-	BUF_ERR_NO_DIST_MAP0 = 1 << 3,
-	BUF_ERR_NO_DIST_MAP1 = 1 << 4
+struct soc_control_context {
+	uint32_t device_idx;
+	uint32_t control_value;
 };
 
-struct dwe_ic_dev {
-	struct dwe_hw_info info;
+struct vvcam_soc_func_s
+{
+	int (*set_power)(void*,unsigned int,unsigned int);
+	int (*get_power)(void*,unsigned int,unsigned int *);
+	int (*set_reset)(void*,unsigned int,unsigned int);
+	int (*set_clk)(void*,unsigned int,unsigned int);
+	int (*get_clk)(void*,unsigned int,unsigned int *);
+};
+
+struct vvcam_soc_function_s
+{
+	struct vvcam_soc_func_s isp_func;
+	struct vvcam_soc_func_s dwe_func;
+	struct vvcam_soc_func_s vse_func;
+	struct vvcam_soc_func_s csi_func;
+	struct vvcam_soc_func_s sensor_func;
+};
+
+struct vvcam_soc_access_s
+{
+	int (*write)(void * ctx, uint32_t address, uint32_t data);
+	int (*read)(void * ctx, uint32_t address, uint32_t *data);
+};
+
+
+#ifdef __KERNEL__
+
+struct vvcam_soc_dev {
 	void __iomem *base;
-	void __iomem *reset;
-#if defined(__KERNEL__) && defined(ENABLE_IRQ)
-	dma_addr_t dist_map[2];
-	struct vb2_dc_buf *src;
-	struct vb2_dc_buf *dst;
-	u32 error;
+	struct soc_control_context isp0;
+	struct soc_control_context isp1;
+	struct soc_control_context dwe;
+	struct soc_control_context vse;
+	struct vvcam_soc_function_s soc_func;
+	struct vvcam_soc_access_s soc_access;
+	void * csi_private;
+};
+// internal functions
+
+long soc_priv_ioctl(struct vvcam_soc_dev *dev, unsigned int cmd, void *args);
+int vvnative_soc_init(struct vvcam_soc_dev *dev);
+int vvnative_soc_deinit(struct vvcam_soc_dev *dev);
+
+
+
+#else
+//User space connections
+
+
 #endif
 
-};
-
-void dwe_write_reg(struct dwe_ic_dev *dev, u32 offset, u32 val);
-u32 dwe_read_reg(struct dwe_ic_dev *dev, u32 offset);
-
-#endif /* _DWE_DEV_H */
+#endif  // _SOC_IOC_H_

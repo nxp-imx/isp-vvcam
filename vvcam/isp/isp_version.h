@@ -96,6 +96,9 @@
 #ifndef ISP_COMPAND
 #define ISP_COMPAND
 #endif
+#ifndef ISP_FILTER
+#define ISP_FILTER
+#endif
 #endif /* ISP8000NANO_V1802 */
 
 #ifdef ISP8000NANO_V1801
@@ -119,6 +122,7 @@
 #endif /* ISP8000L_V1901 */
 
 #ifdef ISP8000L_V1903
+#define ISP_CNR
 #define ISP_EE
 #define ISP_2DNR
 #define ISP_WDR_V3
@@ -128,6 +132,7 @@
 #define ISP_AE_SHADOW
 #define ISP_COMPAND
 #define ISPVI_EXPAND_CHAN
+#define ISP_FILTER
 #endif /* ISP8000L_V1903 */
 
 #ifdef ISP8000L_V1905
@@ -180,6 +185,9 @@
 #ifndef ISP_HDR_STITCH
 #define ISP_HDR_STITCH
 #endif
+#ifndef ISP_FILTER
+#define ISP_FILTER
+#endif
 #endif /* ISP8000_V1901 */
 
 #ifdef ISP8000L_V2002
@@ -213,6 +221,9 @@
 #ifndef ISP_HDR_STITCH
 #define ISP_HDR_STITCH
 #endif
+#ifndef ISP_FILTER
+#define ISP_FILTER
+#endif
 #endif /* ISP8000L_V2002 */
 
 #ifdef ISP8000_V2003
@@ -228,7 +239,10 @@
 #define ISPVI_EXPAND_CHAN
 #define ISP_3DNR_DDR_LESS
 #define ISP_FILTER
-
+#define ISP_DEMOSAIC2
+#ifndef ISP_HDR_STITCH
+#define ISP_HDR_STITCH
+#endif
 #endif /* ISP8000_V2003 */
 
 #define ISP_EE_SUPPORT 1
@@ -736,7 +750,9 @@
 #define MRV_LSC_VERSION                 1
 #define MRV_IS_VERSION                  1
 #define MRV_HISTOGRAM_VERSION           1
-//#define MRV_FILTER_VERSION              1
+#ifdef ISP_FILTER
+#define MRV_FILTER_VERSION              1
+#endif
 #define MRV_CAC_VERSION                 1
 #define MRV_DPCC_VERSION                1
 #define MRV_WDR_VERSION                 1

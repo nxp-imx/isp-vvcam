@@ -717,6 +717,23 @@ const struct vb2_mem_ops cma_memops = {
 };
 #endif
 
+static int query_session_caps(struct file *file)
+{
+	struct viv_video_device *dev = video_drvdata(file);
+	struct viv_video_file *handle = priv_to_handle(file->private_data);
+	struct v4l2_event event;
+	struct viv_video_event *v_event;
+
+	v_event = (struct viv_video_event *)&event.u.data[0];
+	v_event->stream_id = 0;
+	v_event->file = &handle->vfh;
+	v_event->sync = true;
+	v_event->buf_index = dev->id;
+	event.type = VIV_VIDEO_EVENT_TYPE;
+	event.id = VIV_VIDEO_EVENT_QUERYCAPS;
+	return viv_post_event(&event, &handle->vfh, true);
+}
+
 static int video_open(struct file *file)
 {
 	struct viv_video_device *dev = video_drvdata(file);
@@ -912,6 +929,8 @@ static long private_ioctl(struct file *file, void *fh,
 	struct v4l2_user_buffer *user_buffer;
 	struct ext_buf_info *ext_buf;
 	struct viv_control_event *control_event;
+	struct vvcam_constant_modeinfo* modeinfo;
+	struct viv_video_device *dev = video_drvdata(file);
 	unsigned long flags;
 	int rc = 0;
 
@@ -967,7 +986,14 @@ static long private_ioctl(struct file *file, void *fh,
 	case VIV_VIDIOC_S_ENDPOINT:
 #ifdef ENABLE_IRQ
 		pr_debug("priv ioctl VIV_VIDIOC_S_ENDPOINT\n");
-		handle->is_endpoint = *((int *)arg) & 1;
+		spin_lock_irqsave(&file_list_lock, flags);
+			list_for_each_entry(ph, &file_list_head, entry) {
+				if (ph->streamid == handle->streamid) {
+					ph->is_endpoint = *((int *)arg) & 1;
+					break;
+				}
+			}
+		spin_unlock_irqrestore(&file_list_lock, flags);
 #endif
 		break;
 	case VIV_VIDIOC_BUFFER_ALLOC: {
@@ -1027,11 +1053,21 @@ static long private_ioctl(struct file *file, void *fh,
 		rc = viv_post_control_event(handle->streamid, &handle->vfh,
 					    control_event);
 		break;
-	case VIV_VIDIOC_QUERY_EXTMEM:{
-			pr_debug("priv ioctl VIV_VIDIOC_QUERY_EXTMEM\n");
-			ext_buf = (struct ext_buf_info *)arg;
-			ext_buf->addr = RESERVED_MEM_BASE;
-			ext_buf->size = RESERVED_MEM_SIZE;
+	case VIV_VIDIOC_QUERY_EXTMEM:
+		pr_debug("priv ioctl VIV_VIDIOC_QUERY_EXTMEM\n");
+		ext_buf = (struct ext_buf_info *)arg;
+		ext_buf->addr = RESERVED_MEM_BASE;
+		ext_buf->size = RESERVED_MEM_SIZE;
+		break;
+	case VIV_VIDIOC_S_MODEINFO:
+		modeinfo = (struct vvcam_constant_modeinfo *)arg;
+		if (dev) {
+			dev->modeinfo[modeinfo->index].index = modeinfo->index;
+			dev->modeinfo[modeinfo->index].w = modeinfo->w;
+			dev->modeinfo[modeinfo->index].h = modeinfo->h;
+			dev->modeinfo[modeinfo->index].fps = modeinfo->fps;
+		} else {
+			rc = -EINVAL;
 		}
 		break;
 	}
@@ -1183,7 +1219,6 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 	event.type = VIV_VIDEO_EVENT_TYPE;
 	event.id = VIV_VIDEO_EVENT_SET_FMT;
 	return viv_post_event(&event, &handle->vfh, true);
-
 }
 
 static int vidioc_querybuf(struct file *file, void *priv, struct v4l2_buffer *p)
@@ -1283,29 +1318,25 @@ static int vidioc_s_input(struct file *filep, void *fh, unsigned int input)
 	return input == 0 ? 0 : -EINVAL;
 }
 
-static struct vvcam_constant_modeinfo {
-	unsigned w;
-	unsigned h;
-	unsigned fps;
-} vvcam_info[] = {
-	{3840, 2160, 30},
-	{1920, 1080, 30},
-	{1280, 720, 30},
-	{640, 480, 30},
-};
-
 static int vidioc_enum_framesizes(struct file *file, void *priv,
 							struct v4l2_frmsizeenum *fsize)
 {
-	if (fsize->index >= ARRAY_SIZE(vvcam_info))
+	struct viv_video_device *dev = video_drvdata(file);
+	if (fsize->index >= ARRAY_SIZE(dev->modeinfo))
 		return -EINVAL;
+
+	query_session_caps(file);
+
 	switch (fsize->pixel_format) {
 	case V4L2_PIX_FMT_YUYV:
 	case V4L2_PIX_FMT_NV12:
 	case V4L2_PIX_FMT_NV16:
+		if (dev->modeinfo[fsize->index].w == 0) {
+			return -EINVAL;
+		}
 		fsize->type = V4L2_FRMSIZE_TYPE_DISCRETE;
-		fsize->discrete.width = vvcam_info[fsize->index].w;
-		fsize->discrete.height = vvcam_info[fsize->index].h;
+		fsize->discrete.width = dev->modeinfo[fsize->index].w;
+		fsize->discrete.height = dev->modeinfo[fsize->index].h;
 		return 0;
 	default:
 		return -EINVAL;
@@ -1344,6 +1375,34 @@ static int vidioc_s_parm(struct file *file, void *fh,
 	return 0;
 }
 
+static int vidioc_enum_frameintervals(struct file *filp, void *priv,
+			                          struct v4l2_frmivalenum *fival)
+{
+	struct viv_video_device *dev = video_drvdata(filp);
+	if (fival->index >= ARRAY_SIZE(dev->modeinfo))
+		return -EINVAL;
+
+	query_session_caps(filp);
+
+	switch (fival->pixel_format) {
+	case V4L2_PIX_FMT_YUYV:
+	case V4L2_PIX_FMT_NV12:
+	case V4L2_PIX_FMT_NV16:
+		if (dev->modeinfo[fival->index].w == 0) {
+			return -EINVAL;
+		}
+		fival->width = dev->modeinfo[fival->index].w;
+		fival->height = dev->modeinfo[fival->index].h;
+		fival->discrete.denominator = dev->modeinfo[fival->index].fps * 1000;
+		fival->discrete.numerator = 1001;
+		fival->type = V4L2_FRMIVAL_TYPE_DISCRETE;
+		return 0;
+	default:
+		return -EINVAL;
+	}
+	return 0;
+}
+
 static const struct v4l2_ioctl_ops video_ioctl_ops = {
 	.vidioc_querycap = video_querycap,
 	.vidioc_enum_fmt_vid_cap = vidioc_enum_fmt_vid_cap,
@@ -1364,6 +1423,7 @@ static const struct v4l2_ioctl_ops video_ioctl_ops = {
 	.vidioc_g_input = vidioc_g_input,
 	.vidioc_s_input = vidioc_s_input,
 	.vidioc_enum_framesizes = vidioc_enum_framesizes,
+	//.vidioc_enum_frameintervals = vidioc_enum_frameintervals,
 	.vidioc_g_parm = vidioc_g_parm,
 	.vidioc_s_parm = vidioc_s_parm,
 };
@@ -1500,6 +1560,7 @@ static int viv_video_probe(struct platform_device *pdev)
 			goto probe_end;
 		}
 		vdev = vvdev[i];
+		vdev->id = i;
 		memset(vdev, 0, sizeof(*vdev));
 		vdev->v4l2_dev = kzalloc(sizeof(*vdev->v4l2_dev), GFP_KERNEL);
 		if (WARN_ON(!vdev->v4l2_dev)) {
