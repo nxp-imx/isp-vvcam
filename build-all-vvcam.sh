@@ -15,7 +15,7 @@ cd -
 cd vvcam/v4l2
 #make -f 1802_chip.mk clean
 make KERNEL_SRC=$KERNEL_SOURCE_DIR clean
-make KERNEL_SRC=$KERNEL_SOURCE_DIR
+make KERNEL_SRC=$KERNEL_SOURCE_DIR ENABLE_IRQ=yes
 cd -
 
 rm -rf modules
