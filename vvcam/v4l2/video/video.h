@@ -82,6 +82,7 @@ struct viv_video_device {
 	struct v4l2_device *v4l2_dev;
 	struct viv_custom_ctrls ctrls;
 	struct vvcam_constant_modeinfo modeinfo[20];
+	int modeinfocount;
 	int id;
 };
 
@@ -98,6 +99,7 @@ struct viv_video_file {
 	int state;
 	int sequence;
 	bool req;
+	bool capsqueried;
 	struct vb2_queue queue;
 	struct mutex event_mutex;
 	struct mutex buffer_mutex;

@@ -1075,7 +1075,7 @@ static long private_ioctl(struct file *file, void *fh,
 	struct vvcam_constant_modeinfo* modeinfo;
 	struct viv_video_device *dev = video_drvdata(file);
 	unsigned long flags;
-	int rc = 0;
+	int rc = 0, i;
 
 	if (!file || !fh)
 		return -EINVAL;
@@ -1203,15 +1203,23 @@ static long private_ioctl(struct file *file, void *fh,
 		ext_buf->size = RESERVED_MEM_SIZE;
 		break;
 	case VIV_VIDIOC_S_MODEINFO:
+		if (!dev)
+			break;
 		modeinfo = (struct vvcam_constant_modeinfo *)arg;
-		if (dev) {
-			dev->modeinfo[modeinfo->index].index = modeinfo->index;
-			dev->modeinfo[modeinfo->index].w = modeinfo->w;
-			dev->modeinfo[modeinfo->index].h = modeinfo->h;
-			dev->modeinfo[modeinfo->index].fps = modeinfo->fps;
-		} else {
-			rc = -EINVAL;
+		for (i = 0; i < dev->modeinfocount; ++i) {
+			if (dev->modeinfo[i].index == modeinfo->index) {
+				pr_info("sensor mode info already configured!\n");
+				break;
+			}
 		}
+		if (i < dev->modeinfocount || modeinfo->w == 0 ||
+			modeinfo->h == 0 || modeinfo->fps == 0) {
+			rc = -EINVAL;
+			break;
+		}
+		memcpy(&dev->modeinfo[dev->modeinfocount],
+				modeinfo, sizeof(*modeinfo));
+		dev->modeinfocount++;
 		break;
 	}
 	return rc;
@@ -1447,6 +1455,8 @@ static int vidioc_streamon(struct file *file, void *priv, enum v4l2_buf_type i)
 	struct viv_video_file *handle = priv_to_handle(file->private_data);
 
 	pr_debug("enter %s\n", __func__);
+	handle->capsqueried = false;
+	memset(&handle->timeperframe, 0, sizeof(handle->timeperframe));
 	return vb2_streamon(&handle->queue, i);
 }
 
@@ -1489,25 +1499,53 @@ static int vidioc_s_input(struct file *filep, void *fh, unsigned int input)
 static int vidioc_enum_framesizes(struct file *file, void *priv,
 							struct v4l2_frmsizeenum *fsize)
 {
+	struct viv_video_file *handle = priv_to_handle(file->private_data);
 	struct viv_video_device *dev = video_drvdata(file);
-	if (fsize->index >= ARRAY_SIZE(dev->modeinfo))
-		return -EINVAL;
 
-	query_session_caps(file);
+	if (!handle->capsqueried) {
+		handle->capsqueried = true;
+		dev->modeinfocount = 0;
+		query_session_caps(file);
+	}
+
+	if (fsize->index >= dev->modeinfocount)
+		return -EINVAL;
 
 	switch (fsize->pixel_format) {
 	case V4L2_PIX_FMT_YUYV:
 	case V4L2_PIX_FMT_NV12:
 	case V4L2_PIX_FMT_NV16:
-		if (dev->modeinfo[fsize->index].w == 0) {
-			return -EINVAL;
-		}
-		fsize->type = V4L2_FRMSIZE_TYPE_DISCRETE;
 		fsize->discrete.width = dev->modeinfo[fsize->index].w;
 		fsize->discrete.height = dev->modeinfo[fsize->index].h;
+		fsize->type = V4L2_FRMSIZE_TYPE_DISCRETE;
 		return 0;
 	default:
 		return -EINVAL;
+	}
+}
+
+static inline void update_timeperframe(struct file *file)
+{
+	struct viv_video_file *handle = priv_to_handle(file->private_data);
+	struct viv_video_device *dev = video_drvdata(file);
+	int i;
+
+	if (!handle->capsqueried) {
+		handle->capsqueried = true;
+		dev->modeinfocount = 0;
+		query_session_caps(file);
+	}
+
+	if (handle->timeperframe.numerator == 0 ||
+		handle->timeperframe.denominator == 0) {
+		handle->timeperframe.numerator = 1;
+		for (i = 0; i < dev->modeinfocount; ++i) {
+			if (handle->fmt.fmt.pix.width == dev->modeinfo[i].w &&
+				handle->fmt.fmt.pix.height == dev->modeinfo[i].h) {
+				handle->timeperframe.denominator = dev->modeinfo[i].fps;
+				break;
+			}
+		}
 	}
 }
 
@@ -1516,14 +1554,14 @@ static int vidioc_g_parm(struct file *file, void *fh,
 {
 	struct viv_video_file *handle = priv_to_handle(file->private_data);
 
-	if (a->type != V4L2_BUF_TYPE_VIDEO_OUTPUT)
+	if (a->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
 		return -EINVAL;
 
-	memset(a, 0, sizeof(*a));
-	a->type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
-	a->parm.output.capability = V4L2_CAP_TIMEPERFRAME;
-	a->parm.output.timeperframe = handle->timeperframe;
+	update_timeperframe(file);
 
+	memset(&a->parm, 0, sizeof(a->parm));
+	a->parm.capture.capability = V4L2_CAP_TIMEPERFRAME;
+	a->parm.capture.timeperframe = handle->timeperframe;
 	return 0;
 }
 
@@ -1532,46 +1570,59 @@ static int vidioc_s_parm(struct file *file, void *fh,
 {
 	struct viv_video_file *handle = priv_to_handle(file->private_data);
 
-	if (a->type != V4L2_BUF_TYPE_VIDEO_OUTPUT)
+	if (a->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
 		return -EINVAL;
 
-	if (a->parm.output.timeperframe.denominator == 0)
-		a->parm.output.timeperframe.denominator = 1;
-
+	if (a->parm.capture.timeperframe.numerator == 0 ||
+			a->parm.capture.timeperframe.denominator == 0) {
+		update_timeperframe(file);
+		memset(&a->parm, 0, sizeof(a->parm));
+		a->parm.capture.capability = V4L2_CAP_TIMEPERFRAME;
+		a->parm.capture.timeperframe = handle->timeperframe;
+		return 0;
+	}
 	handle->timeperframe = a->parm.output.timeperframe;
-
 	return 0;
 }
 
-#if 0
 static int vidioc_enum_frameintervals(struct file *filp, void *priv,
 			                          struct v4l2_frmivalenum *fival)
 {
+	struct viv_video_file *handle = priv_to_handle(filp->private_data);
 	struct viv_video_device *dev = video_drvdata(filp);
-	if (fival->index >= ARRAY_SIZE(dev->modeinfo))
-		return -EINVAL;
+	int i, count = fival->index;
 
-	query_session_caps(filp);
+	if (!handle->capsqueried) {
+		handle->capsqueried = true;
+		dev->modeinfocount = 0;
+		query_session_caps(filp);
+	}
+
+	if (fival->index >= dev->modeinfocount)
+		return -EINVAL;
 
 	switch (fival->pixel_format) {
 	case V4L2_PIX_FMT_YUYV:
 	case V4L2_PIX_FMT_NV12:
 	case V4L2_PIX_FMT_NV16:
-		if (dev->modeinfo[fival->index].w == 0) {
-			return -EINVAL;
+		for (i = 0; i < dev->modeinfocount; ++i) {
+			if (fival->width != dev->modeinfo[i].w ||
+				fival->height != dev->modeinfo[i].h)
+				continue;
+			if (count > 0) {
+				count--;
+				continue;
+			}
+			fival->discrete.numerator = 1;
+			fival->discrete.denominator = dev->modeinfo[i].fps;
+			fival->type = V4L2_FRMIVAL_TYPE_DISCRETE;
+			return 0;
 		}
-		fival->width = dev->modeinfo[fival->index].w;
-		fival->height = dev->modeinfo[fival->index].h;
-		fival->discrete.denominator = dev->modeinfo[fival->index].fps * 1000;
-		fival->discrete.numerator = 1001;
-		fival->type = V4L2_FRMIVAL_TYPE_DISCRETE;
-		return 0;
+		return -EINVAL;
 	default:
 		return -EINVAL;
 	}
-	return 0;
 }
-#endif
 
 int viv_gen_g_ctrl(struct v4l2_ctrl *ctrl)
 {
@@ -1685,7 +1736,7 @@ static const struct v4l2_ioctl_ops video_ioctl_ops = {
 	.vidioc_g_input = vidioc_g_input,
 	.vidioc_s_input = vidioc_s_input,
 	.vidioc_enum_framesizes = vidioc_enum_framesizes,
-	//.vidioc_enum_frameintervals = vidioc_enum_frameintervals,
+	.vidioc_enum_frameintervals = vidioc_enum_frameintervals,
 	.vidioc_g_parm = vidioc_g_parm,
 	.vidioc_s_parm = vidioc_s_parm,
 };
