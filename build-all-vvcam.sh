@@ -1,8 +1,6 @@
 #!/bin/sh
 
 export KERNEL_SOURCE_DIR=/build/users/nxa18621/proj/imx8/linux-imx
-#export KERNEL_SRC=/build/users/nxa18621/proj/imx8/linux-imx
-#export KERNEL_SOURCE_DIR=/build/users/nxa18621/proj/imx8/linux-imx-caf
 
 #manually clean vvcam (if needed)
 
@@ -27,4 +25,4 @@ cp vvcam/v4l2/sensor/os08a20/os08a20.ko modules
 cp vvcam/v4l2/csi/samsung/vvcam-csis.ko modules
 cp vvcam/v4l2/vvcam-isp.ko modules
 cp vvcam/v4l2/video/vvcam-video.ko modules
-
+cp vvcam/v4l2/sensor/camera-proxy-driver/basler-camera-driver-vvcam.ko modules
