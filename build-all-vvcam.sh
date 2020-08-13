@@ -1,7 +1,7 @@
 #!/bin/sh
 
-if [ "$KERNEL_SOURCE_DIR" == "" ]; then
-export KERNEL_SOURCE_DIR=/build/users/nxa18621/proj/imx8/linux-imx
+if [ -z "${KERNEL_SOURCE_DIR}" ]; then
+export KERNEL_SOURCE_DIR=/build/users/$USER/proj/imx8/linux-imx
 fi
 
 #manually clean vvcam (if needed)
