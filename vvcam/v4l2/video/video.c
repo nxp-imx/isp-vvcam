@@ -119,18 +119,17 @@ static struct viv_video_fmt *format_by_fourcc(unsigned int fourcc)
 static int viv_post_event(struct v4l2_event *event, void *fh, bool sync)
 {
 	struct viv_video_file *handle = priv_to_handle(fh);
-	int rc;
+
+	if (sync)
+		reinit_completion(&handle->wait);
 
 	mutex_lock(&handle->event_mutex);
 	v4l2_event_queue(handle->vdev->video, event);
 	mutex_unlock(&handle->event_mutex);
 
 	if (sync) {
-		reinit_completion(&handle->wait);
-		rc = wait_for_completion_timeout(&handle->wait,
-						 msecs_to_jiffies
-						 (VIV_VIDEO_EVENT_TIMOUT_MS));
-		if (rc == 0)
+		if (wait_for_completion_timeout(&handle->wait, msecs_to_jiffies(
+				VIV_VIDEO_EVENT_TIMOUT_MS)) == 0)
 			return -ETIMEDOUT;
 	}
 	return 0;
