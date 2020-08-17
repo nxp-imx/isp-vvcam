@@ -68,9 +68,6 @@
 
 #include "viv_video_kevent.h"
 
-#define VIV_CUSTOM_CID_BASE (V4L2_CID_USER_BASE | 0xf000)
-#define V4L2_CID_VIV_STRING (VIV_CUSTOM_CID_BASE + 1)
-
 struct viv_custom_ctrls {
 	struct v4l2_ctrl_handler handler;
 	struct v4l2_ctrl *request;

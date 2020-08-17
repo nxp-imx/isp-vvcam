@@ -1002,8 +1002,6 @@ static int subscribe_event(struct v4l2_fh *fh,
 
 	if (!handle || !sub)
 		return -EINVAL;
-	if (!fh->ctrl_handler)
-		fh->ctrl_handler = &vvdev[0]->ctrls.handler;
 	if (sub->type == VIV_VIDEO_EVENT_TYPE ||
 		sub->type == VIV_VIDEO_ISPIRQ_TYPE)
 		return v4l2_event_subscribe(fh, sub, 10, 0);
@@ -1559,137 +1557,96 @@ static int vidioc_enum_frameintervals(struct file *filp, void *priv,
 }
 #endif
 
-static int vidioc_g_ctrl(struct file *file, void *fh,
-		struct v4l2_control *a)
+int viv_gen_g_ctrl(struct v4l2_ctrl *ctrl)
 {
-	struct viv_video_device *vdev = video_drvdata(file);
+	struct viv_custom_ctrls *cc =
+		container_of(ctrl->handler, struct viv_custom_ctrls, handler);
+	struct viv_video_device *vdev =
+		container_of(cc, struct viv_video_device, ctrls);
 	struct v4l2_event event;
 	struct viv_video_event *v_event;
 	struct v4l2_ctrl_data *p_data;
 	struct v4l2_ext_control *p_ctrl;
 
-	if (a && a->id >= V4L2_CID_VIV_1ST_ID &&
-			a->id <= V4L2_CID_VIV_LAST_ID) {
-		memset(&event, 0, sizeof(event));
-		v_event = (struct viv_video_event *)&event.u.data[0];
-		v_event->file = NULL;
-		v_event->sync = true;
-		v_event->addr = vdev->ctrls.buf_pa;
-		event.type = VIV_VIDEO_EVENT_TYPE;
-		event.id = VIV_VIDEO_EVENT_EXTCTRL2;
+	pr_debug("%s:ctrl->id=0x%x\n",__func__,ctrl->id);
+	memset(&event, 0, sizeof(event));
+	v_event = (struct viv_video_event *)&event.u.data[0];
+	v_event->file = NULL;
+	v_event->sync = true;
+	v_event->addr = vdev->ctrls.buf_pa;
+	event.type = VIV_VIDEO_EVENT_TYPE;
+	event.id = VIV_VIDEO_EVENT_EXTCTRL2;
 
-		p_data = (struct v4l2_ctrl_data *)vdev->ctrls.buf_va;
-		if (unlikely(!p_data))
-			return -ENOMEM;
+	p_data = (struct v4l2_ctrl_data *)vdev->ctrls.buf_va;
+	if (unlikely(!p_data))
+		return -ENOMEM;
 
-		memset(p_data, 0, sizeof(*p_data));
-		p_data->dir = V4L2_CTRL_GET;
-		p_data->ctrls.count = 1;
-		p_ctrl = nextof(p_data, struct v4l2_ext_control *);
-		p_ctrl->id = a->id;
+	memset(p_data, 0, sizeof(*p_data));
+	p_data->dir = V4L2_CTRL_GET;
+	p_data->ctrls.count = 1;
+	p_ctrl = nextof(p_data, struct v4l2_ext_control *);
+	p_ctrl->id = ctrl->id;
 
-		v4l2_event_queue(vdev->video, &event);
+	v4l2_event_queue(vdev->video, &event);
 
-		reinit_completion(&vdev->ctrls.wait);
-		if (wait_for_completion_timeout(&vdev->ctrls.wait,
-				msecs_to_jiffies(VIV_VIDEO_EVENT_TIMOUT_MS)) == 0)
-			return -ETIMEDOUT;
+	reinit_completion(&vdev->ctrls.wait);
+	if (wait_for_completion_timeout(&vdev->ctrls.wait,
+			msecs_to_jiffies(VIV_VIDEO_EVENT_TIMOUT_MS)) == 0) {
+		pr_err("connecting to server timed out (g)!");
+		*ctrl->p_new.p_s32 = *ctrl->p_cur.p_s32;
+		return 0;
+	}
 
-		if (p_ctrl->id == a->id && !p_data->ret) {
-			a->value = p_ctrl->value;
-			return 0;
-		} else
-			return -EINVAL;
-	} else
-		return v4l2_g_ctrl(&vdev->ctrls.handler, a);
+	if (p_ctrl->id == ctrl->id && !p_data->ret) {
+		*ctrl->p_new.p_s32 = p_ctrl->value;
+		return 0;
+	}
+	return -EINVAL;
 }
 
-static int vidioc_s_ctrl(struct file *file, void *fh,
-		struct v4l2_control *a)
+int viv_gen_s_ctrl(struct v4l2_ctrl *ctrl)
 {
-	struct viv_video_device *vdev = video_drvdata(file);
+	struct viv_custom_ctrls *cc =
+		container_of(ctrl->handler, struct viv_custom_ctrls, handler);
+	struct viv_video_device *vdev =
+		container_of(cc, struct viv_video_device, ctrls);
 	struct v4l2_event event;
 	struct viv_video_event *v_event;
 	struct v4l2_ctrl_data *p_data;
 	struct v4l2_ext_control *p_ctrl;
 
-	if (a && a->id >= V4L2_CID_VIV_1ST_ID &&
-			a->id <= V4L2_CID_VIV_LAST_ID) {
-		memset(&event, 0, sizeof(event));
-		v_event = (struct viv_video_event *)&event.u.data[0];
-		v_event->file = NULL;
-		v_event->sync = true;
-		v_event->addr = vdev->ctrls.buf_pa;
-		event.type = VIV_VIDEO_EVENT_TYPE;
-		event.id = VIV_VIDEO_EVENT_EXTCTRL2;
+	pr_debug("%s:ctrl->id=0x%x\n",__func__,ctrl->id);
+	memset(&event, 0, sizeof(event));
+	v_event = (struct viv_video_event *)&event.u.data[0];
+	v_event->file = NULL;
+	v_event->sync = true;
+	v_event->addr = vdev->ctrls.buf_pa;
+	event.type = VIV_VIDEO_EVENT_TYPE;
+	event.id = VIV_VIDEO_EVENT_EXTCTRL2;
 
-		p_data = (struct v4l2_ctrl_data *)vdev->ctrls.buf_va;
-		if (unlikely(!p_data))
-			return -ENOMEM;
+	p_data = (struct v4l2_ctrl_data *)vdev->ctrls.buf_va;
+	if (unlikely(!p_data))
+		return -ENOMEM;
 
-		memset(p_data, 0, sizeof(*p_data));
-		p_data->dir = V4L2_CTRL_SET;
-		p_data->ctrls.count = 1;
-		p_ctrl = nextof(p_data, struct v4l2_ext_control *);
-		p_ctrl->id = a->id;
-		p_ctrl->value = a->value;
+	memset(p_data, 0, sizeof(*p_data));
+	p_data->dir = V4L2_CTRL_SET;
+	p_data->ctrls.count = 1;
+	p_ctrl = nextof(p_data, struct v4l2_ext_control *);
+	p_ctrl->id = ctrl->id;
+	p_ctrl->value = *ctrl->p_new.p_s32;
 
-		v4l2_event_queue(vdev->video, &event);
+	v4l2_event_queue(vdev->video, &event);
 
-		reinit_completion(&vdev->ctrls.wait);
-		if (wait_for_completion_timeout(&vdev->ctrls.wait,
-				msecs_to_jiffies(VIV_VIDEO_EVENT_TIMOUT_MS)) == 0)
-			return -ETIMEDOUT;
+	reinit_completion(&vdev->ctrls.wait);
+	if (wait_for_completion_timeout(&vdev->ctrls.wait,
+			msecs_to_jiffies(VIV_VIDEO_EVENT_TIMOUT_MS)) == 0) {
+		pr_err("connecting to server timed out (s)!");
+		return 0;
+	}
 
-		if (p_ctrl->id == a->id && !p_data->ret)
-			return 0;
-		else
-			return -EINVAL;
-	} else
-		return v4l2_s_ctrl(NULL, &vdev->ctrls.handler, a);
-}
-
-static int vidioc_queryctrl(struct file *file, void *fh,
-		struct v4l2_queryctrl *a)
-{
-	struct viv_video_device *vdev = video_drvdata(file);
-
-	return v4l2_queryctrl(&vdev->ctrls.handler, a);
-}
-
-static int vidioc_query_ext_ctrl(struct file *file, void *fh,
-		struct v4l2_query_ext_ctrl *a)
-{
-	struct viv_video_device *vdev = video_drvdata(file);
-
-	return v4l2_query_ext_ctrl(&vdev->ctrls.handler, a);
-}
-
-static int vidioc_g_ext_ctrls(struct file *file, void *fh,
-		struct v4l2_ext_controls *a)
-{
-	struct viv_video_device *vdev = video_drvdata(file);
-
-	return v4l2_g_ext_ctrls(&vdev->ctrls.handler, vdev->video,
-				vdev->video->v4l2_dev->mdev, a);
-}
-
-static int vidioc_s_ext_ctrls(struct file *file, void *fh,
-		struct v4l2_ext_controls *a)
-{
-	struct viv_video_device *vdev = video_drvdata(file);
-
-	return v4l2_s_ext_ctrls(NULL, &vdev->ctrls.handler,
-				vdev->video, vdev->video->v4l2_dev->mdev, a);
-}
-
-static int vidioc_try_ext_ctrls(struct file *file, void *fh,
-		struct v4l2_ext_controls *a)
-{
-	struct viv_video_device *vdev = video_drvdata(file);
-
-	return v4l2_try_ext_ctrls(&vdev->ctrls.handler,
-				vdev->video, vdev->video->v4l2_dev->mdev, a);
+	if (p_ctrl->id == ctrl->id && !p_data->ret)
+		return 0;
+	return -EINVAL;
 }
 
 static const struct v4l2_ioctl_ops video_ioctl_ops = {
@@ -1715,13 +1672,6 @@ static const struct v4l2_ioctl_ops video_ioctl_ops = {
 	//.vidioc_enum_frameintervals = vidioc_enum_frameintervals,
 	.vidioc_g_parm = vidioc_g_parm,
 	.vidioc_s_parm = vidioc_s_parm,
-	.vidioc_g_ctrl = vidioc_g_ctrl,
-	.vidioc_s_ctrl = vidioc_s_ctrl,
-	.vidioc_queryctrl = vidioc_queryctrl,
-	.vidioc_query_ext_ctrl = vidioc_query_ext_ctrl,
-	.vidioc_g_ext_ctrls = vidioc_g_ext_ctrls,
-	.vidioc_s_ext_ctrls = vidioc_s_ext_ctrls,
-	.vidioc_try_ext_ctrls = vidioc_try_ext_ctrls,
 };
 
 /* sys /dev/mem can't map large memory size */
@@ -1872,12 +1822,14 @@ static int viv_video_probe(struct platform_device *pdev)
 		v4l2_ctrl_handler_init(&vdev->ctrls.handler, 1);
 		vdev->ctrls.request = v4l2_ctrl_new_custom(&vdev->ctrls.handler,
 					        &viv_ext_ctrl, NULL);
+		create_controls(&vdev->ctrls.handler);
 
 		vdev->video->release = video_device_release;
 		vdev->video->fops = &video_ops;
 		vdev->video->ioctl_ops = &video_ioctl_ops;
 		vdev->video->minor = -1;
 		vdev->video->vfl_type = VFL_TYPE_GRABBER;
+		vdev->video->ctrl_handler = &vdev->ctrls.handler;
 #if LINUX_VERSION_CODE > KERNEL_VERSION(5, 0, 0)
 		vdev->video->device_caps = V4L2_CAP_VIDEO_CAPTURE | V4L2_CAP_STREAMING;
 #endif
