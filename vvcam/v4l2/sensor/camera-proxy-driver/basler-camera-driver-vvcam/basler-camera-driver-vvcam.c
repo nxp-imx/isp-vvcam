@@ -525,10 +525,24 @@ static int basler_ioc_qcap(void *dev, void *args)
 	return 0;
 }
 
-static long basler_camera_priv_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
+#ifdef CONFIG_HARDENED_USERCOPY
+#define USER_TO_KERNEL(TYPE) \
+		TYPE tmp; \
+		arg = (void *)(&tmp); \
+		copy_from_user(arg, arg_user, sizeof(TYPE));
+
+#define KERNEL_TO_USER(TYPE) \
+		copy_to_user(arg_user, arg, sizeof(TYPE));
+#else
+#define USER_TO_KERNEL(TYPE)
+#define KERNEL_TO_USER(TYPE)
+#endif
+
+static long basler_camera_priv_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg_user)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct basler_camera_dev * sensor = to_basler_camera_dev(sd);
+	void *arg = arg_user;
 
 	int ret = -1;
 
@@ -538,12 +552,17 @@ static long basler_camera_priv_ioctl(struct v4l2_subdev *sd, unsigned int cmd, v
 		break;
 
 	case BASLER_IOC_G_INTERFACE_VERSION:
+	{
+		USER_TO_KERNEL(__u32)
 		*((__u32*)arg) = (((__u32)BASLER_INTERFACE_VERSION_MAJOR) << 16) | BASLER_INTERFACE_VERSION_MINOR;
+		KERNEL_TO_USER(__u32)
 		ret = 0;
 		break;
+	}
 
 	case BASLER_IOC_READ_REGISTER:
 	{
+		USER_TO_KERNEL(struct register_access)
 		struct register_access *ra_p = (struct register_access *)arg;
 		ret = basler_read_register(client,
 					   ra_p->data,
@@ -553,12 +572,14 @@ static long basler_camera_priv_ioctl(struct v4l2_subdev *sd, unsigned int cmd, v
 			ra_p->data_size = 0;
 		else
 			ra_p->data_size = ret;
+		KERNEL_TO_USER(struct register_access)
 	}
 	break;
 
 	case BASLER_IOC_WRITE_REGISTER:
 	{
 		struct register_access ra;
+		USER_TO_KERNEL(struct register_access)
 		struct register_access * ra_p = (struct register_access *)arg;
 
 		memcpy (&ra, ra_p, sizeof(ra));
@@ -575,13 +596,21 @@ static long basler_camera_priv_ioctl(struct v4l2_subdev *sd, unsigned int cmd, v
 	break;
 
 	case BASLER_IOC_G_DEVICE_INFORMATION:
+	{
+		USER_TO_KERNEL(struct basler_device_information);
 		memcpy((struct basler_device_information *)arg, &sensor->device_information, sizeof(struct basler_device_information));
+		KERNEL_TO_USER(struct basler_device_information);
 		ret = 0;
 		break;
+	}
 
 	case BASLER_IOC_G_CSI_INFORMATION:
+	{
+		USER_TO_KERNEL(struct basler_csi_information)
 		ret = basler_retrieve_csi_information(sensor, (struct basler_csi_information*)arg);
+		KERNEL_TO_USER(struct basler_csi_information)
 		break;
+	}
 
 	default:
 		break;
@@ -934,7 +963,7 @@ static int basler_camera_remove(struct i2c_client *client)
 }
 
 static const struct i2c_device_id basler_camera_id[] = {
-	{ "basler-camera", 0 },
+	{ "basler-camera-vvcam", 0 },
 	{ },
 };
 MODULE_DEVICE_TABLE(i2c, basler_camera_id);
@@ -949,10 +978,20 @@ static const struct of_device_id basler_camera_dt_ids[] = {
 };
 MODULE_DEVICE_TABLE(of, basler_camera_dt_ids);
 
-static struct i2c_driver basler_camera_i2c_driver = {
+static struct
+#ifdef CONFIG_BASLER_CAMERA_VVCAM
+    i2c_driver basler_camera_i2c_driver_vvcam
+#else
+    i2c_driver basler_camera_i2c_driver
+#endif
+   = {
 	.driver = {
 		.owner = THIS_MODULE,
+#ifdef CONFIG_BASLER_CAMERA_VVCAM
+		.name  = "basler-camera-vvcam",
+#else
 		.name  = "basler-camera",
+#endif
 		.of_match_table	= basler_camera_dt_ids,
 	},
 	.id_table = basler_camera_id,
@@ -960,8 +999,12 @@ static struct i2c_driver basler_camera_i2c_driver = {
 	.remove   = basler_camera_remove,
 };
 
+#ifdef CONFIG_BASLER_CAMERA_VVCAM
+module_i2c_driver(basler_camera_i2c_driver_vvcam);
+#else
 module_i2c_driver(basler_camera_i2c_driver);
+#endif
 
-MODULE_DESCRIPTION("Basler camera subdev driver");
+MODULE_DESCRIPTION("Basler camera subdev driver for vvcam");
 MODULE_AUTHOR("Sebastian Suesens <sebastian.suesens@baslerweb.com>");
 MODULE_LICENSE("GPL");
