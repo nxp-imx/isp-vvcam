@@ -1257,24 +1257,41 @@ static int vidioc_try_fmt_vid_cap(struct file *file, void *priv,
 				  struct v4l2_format *f)
 {
 	struct viv_video_fmt *format;
+	int sizeimage;
+	int bytesperline;
 
 	pr_debug("enter %s\n", __func__);
+
+	if (f->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
+		return -EINVAL;
 
 	format = format_by_fourcc(f->fmt.pix.pixelformat);
 	if (format == NULL) {
 		return -EINVAL;
 	}
 
-	if (f->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
+	switch (f->fmt.pix.pixelformat) {
+	case V4L2_PIX_FMT_YUYV:
+		bytesperline = f->fmt.pix.width * 2;
+		break;
+	case V4L2_PIX_FMT_NV12:
+	case V4L2_PIX_FMT_NV16:
+		bytesperline = f->fmt.pix.width;
+		break;
+	default:
 		return -EINVAL;
+	}
 
 	f->fmt.pix.field = V4L2_FIELD_NONE;
 	v4l_bound_align_image(&f->fmt.pix.width, 48, 3840, 2,
 			      &f->fmt.pix.height, 32, 2160, 0, 0);
-	f->fmt.pix.bytesperline =
-	    ALIGN_UP((f->fmt.pix.width * format->depth) / 8, 16);
-	f->fmt.pix.sizeimage =
-	    ALIGN_UP(f->fmt.pix.height * f->fmt.pix.bytesperline, 4096);
+	bytesperline = ALIGN_UP(bytesperline, 16);
+	if (f->fmt.pix.bytesperline < bytesperline)
+		f->fmt.pix.bytesperline = bytesperline;
+	sizeimage = ALIGN_UP(f->fmt.pix.height * ALIGN_UP((f->fmt.pix.width *
+			format->depth) / 8, 16), 4096);
+	if (f->fmt.pix.sizeimage < sizeimage)
+		f->fmt.pix.sizeimage = sizeimage;
 	f->fmt.pix.colorspace = V4L2_COLORSPACE_REC709;
 	return 0;
 }
