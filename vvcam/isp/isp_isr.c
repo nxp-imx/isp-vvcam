@@ -120,7 +120,8 @@ int update_dma_buffer(struct isp_ic_dev *dev)
 			if (!buf)
 				return -ENOMEM;
 		} else if (dev->mi_buf[i]) {
-			if (dev->dropped[i]) {
+			//if (dev->dropped[i]) {
+			if(0){
 				dev->dropped[i]--;
 				viv_queue_buffer(RESV_STREAMID_ISP(dev->id), buf);
 				buf = dev->mi_buf[i];
