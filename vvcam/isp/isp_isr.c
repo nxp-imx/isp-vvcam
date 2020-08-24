@@ -111,25 +111,23 @@ int update_dma_buffer(struct isp_ic_dev *dev)
 	struct isp_buffer_context dmabuf;
 	int i;
 
-	for (i = 0; i < 2; ++i) {
+	for (i = 0; i < MI_PATH_NUM; ++i) {
 		if (!mi->path[i].enable)
 			continue;
+		if (dev->mi_buf[i]) {
+			viv_buffer_ready(RESV_STREAMID_ISP(dev->id),
+					dev->mi_buf[i]);
+			dev->mi_buf[i] = NULL;
+		}
 		buf = viv_dequeue_buffer(RESV_STREAMID_ISP(dev->id));
 		if (!buf) {
-			buf = dev->mi_buf[i];
+			buf = dev->mi_buf_shd[i];
 			if (!buf)
 				return -ENOMEM;
-		} else if (dev->mi_buf[i]) {
-			//if (dev->dropped[i]) {
-			if(0){
-				dev->dropped[i]--;
-				viv_queue_buffer(RESV_STREAMID_ISP(dev->id), buf);
-				buf = dev->mi_buf[i];
-			} else {
-				viv_buffer_ready(RESV_STREAMID_ISP(dev->id),
-						dev->mi_buf[i]);
-				dev->mi_buf[i] = NULL;
-			}
+			dev->mi_buf_shd[i] = NULL;
+		} else if (dev->mi_buf_shd[i]) {
+			dev->mi_buf[i] = dev->mi_buf_shd[i];
+			dev->mi_buf_shd[i] = NULL;
 		}
 
 		memset(&dmabuf, 0, sizeof(dmabuf));
@@ -139,7 +137,7 @@ int update_dma_buffer(struct isp_ic_dev *dev)
 			continue;
 		}
 		isp_set_buffer(dev, &dmabuf);
-		dev->mi_buf[i] = buf;
+		dev->mi_buf_shd[i] = buf;
 	}
 #endif
 	return 0;

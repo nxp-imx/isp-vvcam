@@ -508,10 +508,10 @@ int isp_mi_start(struct isp_ic_dev *dev)
 	if (!is_endpoint)
 		for (i = 0; i < ISP_INT_DEF_BUF_NUM; ++i)
 			viv_queue_buffer(RESV_STREAMID_ISP0, dev->mi_buf2[i]);
-	dev->dropped[0] = ISP_DROPPED_FRAMES;
-	dev->dropped[1] = ISP_DROPPED_FRAMES;
-	dev->mi_buf[0] = NULL;
-	dev->mi_buf[1] = NULL;
+	for (i = 0; i < MI_PATH_NUM; ++i) {
+		dev->mi_buf[i] = NULL;
+		dev->mi_buf_shd[i] = NULL;
+	}
 	update_dma_buffer(dev);
 #endif
 

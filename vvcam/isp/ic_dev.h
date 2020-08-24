@@ -80,9 +80,14 @@ void isp_ic_set_hal(HalHandle_t hal);
 #define ISP_BUF_GAP             (0)
 #endif
 
+#ifdef ISP_MI_BP
+# define MI_PATH_NUM            (3)
+#else
+# define MI_PATH_NUM            (2)
+#endif
+
 #define ISP_INT_DEF_BUF_NUM     (3)
 #define ISP_INT_DEF_BUF_SIZE    (3840*2160*2)
-#define ISP_DROPPED_FRAMES      (6)
 
 struct isp_reg_t {
 	u32 offset;
@@ -691,8 +696,8 @@ struct isp_ic_dev {
 	void __iomem *reset;
 	int id;
 #ifdef __KERNEL__
-	struct vb2_dc_buf *mi_buf[3];
-	int dropped[3];
+	struct vb2_dc_buf *mi_buf[MI_PATH_NUM];
+	struct vb2_dc_buf *mi_buf_shd[MI_PATH_NUM];
 	struct vb2_dc_buf *mi_buf2[ISP_INT_DEF_BUF_NUM];
 	void *mi_vaddr[ISP_INT_DEF_BUF_NUM];
 #endif
