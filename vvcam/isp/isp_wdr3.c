@@ -403,6 +403,12 @@ void wdr3_hw_init(struct isp_ic_dev *dev)
 	REG_SET_SLICE(isp_wdr3_shift_1, WDR3_HISTOGRAM_SHIFT13,
 		      wdr3->shift[13]);
 	isp_write_reg(dev, REG_ADDR(isp_wdr3_shift_1), isp_wdr3_shift_1);
+	
+	{
+	uint32_t isp_wdr3_ctrl = isp_read_reg(dev, REG_ADDR(isp_wdr3_ctrl));
+	REG_SET_SLICE(isp_wdr3_ctrl, WDR3_ENABLE, 1);
+	isp_write_reg(dev, REG_ADDR(isp_wdr3_ctrl), isp_wdr3_ctrl);
+	}
 }
 
 int isp_enable_wdr3(struct isp_ic_dev *dev)
@@ -416,6 +422,12 @@ int isp_enable_wdr3(struct isp_ic_dev *dev)
 	wdr3->enable = true;
 	REG_SET_SLICE(isp_wdr3_ctrl, WDR3_ENABLE, 1);
 	isp_write_reg(dev, REG_ADDR(isp_wdr3_ctrl), isp_wdr3_ctrl);
+
+	{
+	uint32_t isp_ctrl = isp_read_reg(dev, REG_ADDR(isp_ctrl));
+	REG_SET_SLICE(isp_ctrl, MRV_ISP_ISP_GEN_CFG_UPD, 1);
+	isp_write_reg(dev, REG_ADDR(isp_ctrl), isp_ctrl);
+	}
 	return 0;
 #endif
 }
@@ -431,6 +443,12 @@ int isp_disable_wdr3(struct isp_ic_dev *dev)
 	wdr3->enable = false;
 	REG_SET_SLICE(isp_wdr3_ctrl, WDR3_ENABLE, 0);
 	isp_write_reg(dev, REG_ADDR(isp_wdr3_ctrl), isp_wdr3_ctrl);
+
+	{
+	uint32_t isp_ctrl = isp_read_reg(dev, REG_ADDR(isp_ctrl));
+	REG_SET_SLICE(isp_ctrl, MRV_ISP_ISP_GEN_CFG_UPD, 1);
+	isp_write_reg(dev, REG_ADDR(isp_ctrl), isp_ctrl);
+	}
 	return 0;
 #endif
 }
@@ -470,6 +488,12 @@ int isp_s_wdr3(struct isp_ic_dev *dev)
 		      width | (height << 9));
 	isp_write_reg(dev, REG_ADDR(isp_wdr3_strength), isp_wdr3_strength);
 	isp_write_reg(dev, REG_ADDR(isp_wdr3_strength_shd), isp_wdr3_strength);	/* cmodel use */
+
+	{
+	uint32_t isp_ctrl = isp_read_reg(dev, REG_ADDR(isp_ctrl));
+	REG_SET_SLICE(isp_ctrl, MRV_ISP_ISP_GEN_CFG_UPD, 1);
+	isp_write_reg(dev, REG_ADDR(isp_ctrl), isp_ctrl);
+	}
 	return 0;
 #endif
 }

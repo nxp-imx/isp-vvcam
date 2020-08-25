@@ -245,6 +245,13 @@ int isp_enable_lsc(struct isp_ic_dev *dev)
 	isp_info("enter %s\n", __func__);
 	REG_SET_SLICE(isp_lsc_ctrl, MRV_LSC_LSC_EN, 1U);
 	isp_write_reg(dev, REG_ADDR(isp_lsc_ctrl), isp_lsc_ctrl);
+
+	{
+	uint32_t isp_ctrl = isp_read_reg(dev, REG_ADDR(isp_ctrl));
+	REG_SET_SLICE(isp_ctrl, MRV_ISP_ISP_GEN_CFG_UPD, 1);
+	isp_write_reg(dev, REG_ADDR(isp_ctrl), isp_ctrl);
+	}
+
 	return 0;
 }
 
@@ -255,6 +262,13 @@ int isp_disable_lsc(struct isp_ic_dev *dev)
 	isp_info("enter %s\n", __func__);
 	REG_SET_SLICE(isp_lsc_ctrl, MRV_LSC_LSC_EN, 0U);
 	isp_write_reg(dev, REG_ADDR(isp_lsc_ctrl), isp_lsc_ctrl);
+
+	{
+	uint32_t isp_ctrl = isp_read_reg(dev, REG_ADDR(isp_ctrl));
+	REG_SET_SLICE(isp_ctrl, MRV_ISP_ISP_GEN_CFG_UPD, 1);
+	isp_write_reg(dev, REG_ADDR(isp_ctrl), isp_ctrl);
+	}
+
 	return 0;
 }
 

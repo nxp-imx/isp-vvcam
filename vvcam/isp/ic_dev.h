@@ -499,7 +499,8 @@ struct isp_vsm_context {
 #endif
 struct isp_wdr3_context {
 	bool enable;
-    bool changed;
+	bool changed;
+	bool inited;
 	u32 strength;
 	u32 max_gain;
 	u32 global_strength;
