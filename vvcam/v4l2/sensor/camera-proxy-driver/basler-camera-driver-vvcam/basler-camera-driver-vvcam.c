@@ -538,6 +538,32 @@ static int basler_ioc_qcap(void *dev, void *args)
 #define KERNEL_TO_USER(TYPE)
 #endif
 
+/*
+Use USER_TO_KERNEL/KERNEL_TO_USER to fix "uaccess" exception on run time.
+Also, use "copy_ret" to fix the build issue as below.
+error: ignoring return value of function declared with 'warn_unused_result' attribute.
+*/
+
+#ifdef CONFIG_HARDENED_USERCOPY
+#define USER_TO_KERNEL(TYPE) \
+	do {\
+		TYPE tmp; \
+		unsigned long copy_ret; \
+		arg = (void *)(&tmp); \
+		copy_ret = copy_from_user(arg, arg_user, sizeof(TYPE));\
+	} while (0)
+
+#define KERNEL_TO_USER(TYPE) \
+	do {\
+		unsigned long copy_ret; \
+		copy_ret = copy_to_user(arg_user, arg, sizeof(TYPE));\
+	} while (0)
+#else
+#define USER_TO_KERNEL(TYPE)
+#define KERNEL_TO_USER(TYPE)
+#endif
+
+
 static long basler_camera_priv_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg_user)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);

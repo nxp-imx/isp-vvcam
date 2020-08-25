@@ -1039,7 +1039,7 @@ static void viv_buffer_done(struct viv_video_file *handle, u64 addr)
 
 	mutex_lock(&handle->buffer_mutex);
 	list_for_each_entry(vb, &handle->queue.queued_list, queued_entry) {
-		if (!vb || !vb->planes)
+		if (!vb)
 			continue;
 #ifdef CONFIG_VIDEOBUF2_DMA_CONTIG
 		if (vb2_dma_contig_plane_dma_addr(vb, DEF_PLANE_NO) == addr) {
