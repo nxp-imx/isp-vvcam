@@ -736,6 +736,8 @@ struct isp_ic_dev {
 	struct isp_ge_context ge;
 	struct isp_ca_context ca;
 	struct isp_dummy_hblank_cxt hblank;
+#define ISP_FLT_UPDATE    (1 << 0)
+	u32    isp_update_flag;
 };
 
 struct isp_extmem_info {

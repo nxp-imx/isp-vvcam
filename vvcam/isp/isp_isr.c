@@ -205,6 +205,15 @@ irqreturn_t isp_hw_isr(int irq, void *data)
 		rc = update_dma_buffer(dev);
 
 	if (isp_mis) {
+		if(isp_mis & MRV_ISP_MIS_FRAME_MASK)
+		{
+			if(dev->isp_update_flag & ISP_FLT_UPDATE)
+			{
+				isp_s_flt(dev);
+				dev->isp_update_flag &= (~ISP_FLT_UPDATE);
+			}
+		}
+		
 		memset(&irq_data, 0, sizeof(irq_data));
 		irq_data.val = isp_mis;
 		viv_post_irq_event(RESV_STREAMID_ISP(dev->id),
