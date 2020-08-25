@@ -135,53 +135,13 @@ struct ov2775 {
 	bool hdr;
 	int fps;
 
-	u8 curr_modeinfo_index;
+	vvcam_mode_info_t cur_mode;
 };
 
 #define client_to_ov2775(client)\
 	container_of(i2c_get_clientdata(client), struct ov2775, subdev)
 
 long ov2775_priv_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg);
-
-static int ov2775_framerates[] = {
-	[ov2775_15_fps] = 15,
-	[ov2775_30_fps] = 30,
-};
-
-static struct ov2775_mode_info ov2775_mode_info_data[4][ov2775_mode_MAX + 1] = {
-	{
-		{
-			ov2775_mode_1080P_1920_1080, -1, 0, 0, NULL, 0, 0, 0, false},
-		},
-	/* linear mode */
-	{
-		{
-			ov2775_mode_1080P_1920_1080, SCALING, 1920, 1080,
-			ov2775_init_setting_1080p,
-			ARRAY_SIZE(ov2775_init_setting_1080p), 12, 30, true,
-		},
-
-		{
-			ov2775_mode_720P_1280_720, SCALING, 1280, 720,
-			ov2775_init_setting_720p,
-			ARRAY_SIZE(ov2775_init_setting_720p), 12, 30, false,
-		},
-	},
-
-	/* hdr settings */
-	{
-		{
-			ov2775_mode_1080P_1920_1080, SCALING, 1920, 1080,
-			ov2775_init_setting_1080p_hdr,
-			ARRAY_SIZE(ov2775_init_setting_1080p_hdr), 12, 30, false,
-		},
-	},
-
-	/* hdr settings native*/
-	{
-	},
-
-};
 
 static struct vvcam_mode_info pov2775_mode_info[] = {
 	{
@@ -192,16 +152,38 @@ static struct vvcam_mode_info pov2775_mode_info[] = {
 		.hdr_mode  = SENSOR_MODE_LINEAR,
 		.bit_width = 12,
 		.bayer_pattern = BAYER_BGGR,
+		.ae_info = {
+			.MaxFrameLengthLines = 0x466,
+			.one_line_exp_time_ns = 29583,
+			.max_interrgation_time = 0x466 - 2,
+			.min_interrgation_time = 1,
+			.gain_accuracy = 1024,
+			.max_gain = 22 * 1024,
+			.min_gain = 3 * 1024,
+		},
+		.preg_data = ov2775_init_setting_1080p,
+		.reg_data_count = ARRAY_SIZE(ov2775_init_setting_1080p), 
 	},
 	{
 		.index     = 1,
 		.width    = 1920,
 		.height   = 1080,
-		.fps      = 30,
+		.fps      = 15,
 		.hdr_mode = SENSOR_MODE_HDR_STITCH,
 		.stitching_mode = SENSOR_STITCHING_DUAL_DCG,
 		.bit_width = 12,
 		.bayer_pattern = BAYER_BGGR,
+		.ae_info = {
+			.MaxFrameLengthLines = 0x466,
+			.one_line_exp_time_ns = 59167,
+			.max_interrgation_time = 0x466 - 64 - 2,
+			.min_interrgation_time = 1,
+			.gain_accuracy = 1024,
+			.max_gain = 22 * 1024,
+			.min_gain = 3 * 1024,
+		},
+		.preg_data = ov2775_init_setting_1080p_hdr,
+		.reg_data_count = ARRAY_SIZE(ov2775_init_setting_1080p_hdr), 
 	},
 	{
 		.index     = 2,
@@ -211,6 +193,17 @@ static struct vvcam_mode_info pov2775_mode_info[] = {
 		.hdr_mode = SENSOR_MODE_LINEAR,
 		.bit_width = 12,
 		.bayer_pattern = BAYER_BGGR,
+		.ae_info = {
+			.MaxFrameLengthLines = 0x466,
+			.one_line_exp_time_ns = 29583,
+			.max_interrgation_time = 0x466 - 2,
+			.min_interrgation_time = 1,
+			.gain_accuracy = 1024,
+			.max_gain = 22 * 1024,
+			.min_gain = 3 * 1024,
+		},
+		.preg_data = ov2775_init_setting_720p,
+		.reg_data_count = ARRAY_SIZE(ov2775_init_setting_720p), 
 	}
 };
 
@@ -839,21 +832,28 @@ static int ov2775_set_fmt(struct v4l2_subdev *sd,
 	if (format->which == V4L2_SUBDEV_FORMAT_TRY)
 		return 0;
 
-	if (sensor->hdr) {
-		for (i = 0; i < ARRAY_SIZE(ov2775_mode_info_data[2]); i++) {
-		if (ov2775_mode_info_data[2][i].width == mf->width &&
-			ov2775_mode_info_data[2][i].height == mf->height) {
-				mode_setting = ov2775_mode_info_data[2][i].init_data_ptr;
-				array_size = ov2775_mode_info_data[2][i].init_data_size;
+	for (i=0; i<ARRAY_SIZE(pov2775_mode_info); i++)
+	{
+		if (sensor->hdr)
+		{
+			if (mf->width == pov2775_mode_info[i].width && 
+			    mf->height == pov2775_mode_info[i].height &&
+			    pov2775_mode_info[i].hdr_mode != SENSOR_MODE_LINEAR)
+			{
+				memcpy(&(sensor->cur_mode), &pov2775_mode_info[i], sizeof(struct vvcam_mode_info));
+				mode_setting = pov2775_mode_info[i].preg_data;
+				array_size = pov2775_mode_info[i].reg_data_count;
 				return ov2775_download_firmware(sensor, mode_setting, array_size);
 			}
-		}
-	} else {
-		for (i = 0; i < ARRAY_SIZE(ov2775_mode_info_data[1]); i++) {
-		if (ov2775_mode_info_data[1][i].width == mf->width &&
-			ov2775_mode_info_data[1][i].height == mf->height) {
-				mode_setting = ov2775_mode_info_data[1][i].init_data_ptr;
-				array_size = ov2775_mode_info_data[1][i].init_data_size;
+		}else
+		{
+			if (mf->width == pov2775_mode_info[i].width && 
+			    mf->height == pov2775_mode_info[i].height &&
+			    pov2775_mode_info[i].hdr_mode == SENSOR_MODE_LINEAR)
+			{
+				memcpy(&(sensor->cur_mode), &pov2775_mode_info[i], sizeof(struct vvcam_mode_info));
+				mode_setting = pov2775_mode_info[i].preg_data;
+				array_size = pov2775_mode_info[i].reg_data_count;
 				return ov2775_download_firmware(sensor, mode_setting, array_size);
 			}
 		}
@@ -917,18 +917,14 @@ static int ov2775_enum_framesizes(struct v4l2_subdev *sd,
 				  struct v4l2_subdev_frame_size_enum *fse)
 {
 	pr_debug("enter %s\n", __func__);
-	if (fse->index > ov2775_mode_MAX)
+	
+	if (fse->index > ARRAY_SIZE(pov2775_mode_info))
 		return -EINVAL;
 
-	fse->max_width =
-	    max(ov2775_mode_info_data[0][fse->index].width,
-		ov2775_mode_info_data[1][fse->index].width);
-	fse->min_width = fse->max_width;
-
-	fse->max_height =
-	    max(ov2775_mode_info_data[0][fse->index].height,
-		ov2775_mode_info_data[1][fse->index].height);
-	fse->min_height = fse->max_height;
+	fse->min_width = pov2775_mode_info[fse->index].width;   
+	fse->max_width = fse->min_width;
+	fse->min_height = pov2775_mode_info[fse->index].height;    
+	fse->max_height = fse->min_height;
 
 	return 0;
 }
@@ -946,10 +942,8 @@ static int ov2775_enum_frameintervals(struct v4l2_subdev *sd,
 				      struct v4l2_subdev_frame_interval_enum
 				      *fie)
 {
-	int i, j, count;
-
 	pr_debug("enter %s\n", __func__);
-	if (fie->index < 0 || fie->index > ov2775_mode_MAX)
+	if (fie->index < 0 || fie->index > ARRAY_SIZE(pov2775_mode_info))
 		return -EINVAL;
 
 	if (fie->width == 0 || fie->height == 0 || fie->code == 0) {
@@ -958,25 +952,9 @@ static int ov2775_enum_frameintervals(struct v4l2_subdev *sd,
 	}
 
 	fie->interval.numerator = 1;
+	fie->interval.denominator = pov2775_mode_info[fie->index].fps;
 
-	count = 0;
-	for (i = 0; i < ARRAY_SIZE(ov2775_framerates); i++) {
-		for (j = 0; j < (ov2775_mode_MAX + 1); j++) {
-			if (fie->width == ov2775_mode_info_data[i][j].width
-			    && fie->height == ov2775_mode_info_data[i][j].height
-			    && ov2775_mode_info_data[i][j].init_data_ptr !=
-			    NULL) {
-				count++;
-			}
-			if (fie->index == (count - 1)) {
-				fie->interval.denominator =
-				    ov2775_framerates[i];
-				return 0;
-			}
-		}
-	}
-
-	return -EINVAL;
+	return 0;
 }
 
 static int ov2775_link_setup(struct media_entity *entity,
@@ -1121,12 +1099,12 @@ static int ov2775_probe(struct i2c_client *client,
 	sensor->i2c_client = client;
 
 	sensor->pix.pixelformat = V4L2_PIX_FMT_UYVY;
-	sensor->pix.width = ov2775_mode_info_data[1][0].width;
-	sensor->pix.height = ov2775_mode_info_data[1][0].height;
+	sensor->pix.width = pov2775_mode_info[0].width;
+	sensor->pix.height = pov2775_mode_info[0].height;
 	sensor->streamcap.capability = V4L2_MODE_HIGHQUALITY |
 	    V4L2_CAP_TIMEPERFRAME;
 	sensor->streamcap.capturemode = 0;
-	sensor->streamcap.timeperframe.denominator = DEFAULT_FPS;
+	sensor->streamcap.timeperframe.denominator = pov2775_mode_info[0].fps;
 	sensor->streamcap.timeperframe.numerator = 1;
 
 	ov2775_regulator_enable(&client->dev);
@@ -1445,8 +1423,7 @@ int ov2775_s_fps(struct ov2775 *sensor, __u32 fps)
 	u16 hts;
 	u32 vts;
 	pr_debug("%s: %d\n", __func__, fps);
-	if (sensor->hdr)
-		return 0;
+
 	if (fps < 5) {
 		fps = 5;
 	}
@@ -1462,6 +1439,10 @@ int ov2775_s_fps(struct ov2775 *sensor, __u32 fps)
 		ov2775_write_reg(sensor, 0x30B2, (u8)(vts >> 8));
 		ov2775_write_reg(sensor, 0x30B3, (u8)(vts & 0xff));
 		sensor->fps = fps;
+		
+		sensor->cur_mode.ae_info.cur_fps = sensor->fps;
+		sensor->cur_mode.ae_info.CurFrameLengthLines = vts;
+		sensor->cur_mode.ae_info.max_interrgation_time = vts - 2;
 	}
 
 	return 0;
@@ -1505,12 +1486,21 @@ int ov2775_g_mode(struct ov2775 *sensor, struct vvcam_mode_info *pmode)
 {
 	int i = 0;
 	struct vvcam_mode_info *pcur_mode = NULL;
+
+	if (sensor->cur_mode.index == pmode->index && 
+	    sensor->cur_mode.width != 0 &&
+	    sensor->cur_mode.height != 0)
+	{
+		pcur_mode = &(sensor->cur_mode);
+		memcpy(pmode,pcur_mode,sizeof(struct vvcam_mode_info));
+		return 0;
+	}
+	
 	for(i=0; i < ARRAY_SIZE(pov2775_mode_info); i++)
 	{
 		if (pmode->index == pov2775_mode_info[i].index)
 		{
 			pcur_mode = &pov2775_mode_info[i];
-			sensor->curr_modeinfo_index = i;
 			sensor->fps = pov2775_mode_info[i].fps;
 			break;
 		}

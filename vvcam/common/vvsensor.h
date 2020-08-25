@@ -128,7 +128,7 @@ struct vvcam_sccb_array {
 	struct vvcam_sccb_data *sccb_data;
 };
 
-struct vvcam_ae_info_s {
+typedef struct vvcam_ae_info_s {
 	uint32_t MaxFrameLengthLines;
 	uint32_t CurFrameLengthLines;
 	uint32_t one_line_exp_time_ns;
@@ -140,7 +140,7 @@ struct vvcam_ae_info_s {
 	uint32_t gain_accuracy;
 	uint32_t cur_fps;
 	uint32_t hdr_radio;
-};
+} vvcam_ae_info_t;
 
 struct sensor_mipi_info {
 	uint32_t mipi_lane;
@@ -187,6 +187,10 @@ typedef struct vvcam_mode_info {
 	uint32_t stitching_mode;
 	uint32_t bit_width;
 	uint32_t bayer_pattern;
+	vvcam_ae_info_t ae_info;
+	void *preg_data;
+	uint32_t reg_data_count;
+	
 } vvcam_mode_info_t;
 
 typedef struct vvcam_mode_info_arry {
