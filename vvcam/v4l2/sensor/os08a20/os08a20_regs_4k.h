@@ -157,8 +157,8 @@ static struct vvsensor_reg_value_t os08a20_init_setting_4k[] = {
 	{0x380b, 0x70, 0, 0},
 	{0x380c, 0x08, 0, 0},   /* hts_h */
 	{0x380d, 0x00, 0, 0},   /* hts_l */
-	{0x380e, 0x09, 0, 0},   /* vts_h */
-	{0x380f, 0x0A, 0, 0},   /* vts_l */
+	{0x380e, 0x0D, 0, 0},   /* vts_h */
+	{0x380f, 0x8F, 0, 0},   /* vts_l */
 	{0x3813, 0x10, 0, 0},
 	{0x3814, 0x01, 0, 0},
 	{0x3815, 0x01, 0, 0},
