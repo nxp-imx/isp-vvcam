@@ -525,19 +525,6 @@ static int basler_ioc_qcap(void *dev, void *args)
 	return 0;
 }
 
-#ifdef CONFIG_HARDENED_USERCOPY
-#define USER_TO_KERNEL(TYPE) \
-		TYPE tmp; \
-		arg = (void *)(&tmp); \
-		copy_from_user(arg, arg_user, sizeof(TYPE));
-
-#define KERNEL_TO_USER(TYPE) \
-		copy_to_user(arg_user, arg, sizeof(TYPE));
-#else
-#define USER_TO_KERNEL(TYPE)
-#define KERNEL_TO_USER(TYPE)
-#endif
-
 /*
 Use USER_TO_KERNEL/KERNEL_TO_USER to fix "uaccess" exception on run time.
 Also, use "copy_ret" to fix the build issue as below.
@@ -579,17 +566,18 @@ static long basler_camera_priv_ioctl(struct v4l2_subdev *sd, unsigned int cmd, v
 
 	case BASLER_IOC_G_INTERFACE_VERSION:
 	{
-		USER_TO_KERNEL(__u32)
+		USER_TO_KERNEL(__u32);
 		*((__u32*)arg) = (((__u32)BASLER_INTERFACE_VERSION_MAJOR) << 16) | BASLER_INTERFACE_VERSION_MINOR;
-		KERNEL_TO_USER(__u32)
+		KERNEL_TO_USER(__u32);
 		ret = 0;
 		break;
 	}
 
 	case BASLER_IOC_READ_REGISTER:
 	{
-		USER_TO_KERNEL(struct register_access)
-		struct register_access *ra_p = (struct register_access *)arg;
+		struct register_access *ra_p;
+		USER_TO_KERNEL(struct register_access);
+		ra_p = (struct register_access *)arg;
 		ret = basler_read_register(client,
 					   ra_p->data,
 					   ra_p->data_size,
@@ -598,15 +586,16 @@ static long basler_camera_priv_ioctl(struct v4l2_subdev *sd, unsigned int cmd, v
 			ra_p->data_size = 0;
 		else
 			ra_p->data_size = ret;
-		KERNEL_TO_USER(struct register_access)
+		KERNEL_TO_USER(struct register_access);
 	}
 	break;
 
 	case BASLER_IOC_WRITE_REGISTER:
 	{
 		struct register_access ra;
-		USER_TO_KERNEL(struct register_access)
-		struct register_access * ra_p = (struct register_access *)arg;
+		struct register_access *ra_p;
+		USER_TO_KERNEL(struct register_access);
+		ra_p = (struct register_access *)arg;
 
 		memcpy (&ra, ra_p, sizeof(ra));
 		ra.address = cpu_to_be16(ra_p->address);
@@ -632,9 +621,9 @@ static long basler_camera_priv_ioctl(struct v4l2_subdev *sd, unsigned int cmd, v
 
 	case BASLER_IOC_G_CSI_INFORMATION:
 	{
-		USER_TO_KERNEL(struct basler_csi_information)
+		USER_TO_KERNEL(struct basler_csi_information);
 		ret = basler_retrieve_csi_information(sensor, (struct basler_csi_information*)arg);
-		KERNEL_TO_USER(struct basler_csi_information)
+		KERNEL_TO_USER(struct basler_csi_information);
 		break;
 	}
 
