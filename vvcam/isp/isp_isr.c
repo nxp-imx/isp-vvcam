@@ -67,9 +67,9 @@ static int config_dma_buf(struct isp_mi_data_path_context *path,
 
 	buf->addr_y = dma;
 	switch (path->out_mode) {
-	case (IC_MI_DATAMODE_YUV444):
-	case (IC_MI_DATAMODE_YUV422):
-	case (IC_MI_DATAMODE_YUV420):
+	case IC_MI_DATAMODE_YUV444:
+	case IC_MI_DATAMODE_YUV422:
+	case IC_MI_DATAMODE_YUV420:
 		if (path->data_layout == IC_MI_DATASTORAGE_PLANAR) {
 			buf->size_y = size + ISP_BUF_GAP;
 			buf->addr_cb = buf->addr_y + size;
@@ -89,6 +89,13 @@ static int config_dma_buf(struct isp_mi_data_path_context *path,
 			buf->size_y = (size << 1) + ISP_BUF_GAP;
 		} else
 			return -1;
+		break;
+	case IC_MI_DATAMODE_RAW8:
+		buf->size_y = size + ISP_BUF_GAP;
+		break;
+	case IC_MI_DATAMODE_RAW10:
+	case IC_MI_DATAMODE_RAW12:
+		buf->size_y = (size << 1) + ISP_BUF_GAP;
 		break;
 	default:
 		pr_err("unsupported out mode:%d\n", path->out_mode);
