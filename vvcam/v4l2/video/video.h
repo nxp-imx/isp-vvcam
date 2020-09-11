@@ -76,6 +76,12 @@ struct viv_custom_ctrls {
 	struct completion wait;
 };
 
+struct viv_video_fmt {
+	int fourcc;
+	int depth;
+	int bpp;
+};
+
 struct viv_video_device {
 	struct file *filep;
 	struct video_device *video;
@@ -83,6 +89,8 @@ struct viv_video_device {
 	struct viv_custom_ctrls ctrls;
 	struct vvcam_constant_modeinfo modeinfo[20];
 	int modeinfocount;
+	struct viv_video_fmt formats[20];
+	int formatscount;
 	int id;
 	struct viv_caps_mode_s caps_mode;
 	int event_result;

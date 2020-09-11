@@ -122,6 +122,8 @@ struct vvcam_constant_modeinfo {
 	unsigned w;
 	unsigned h;
 	unsigned fps;
+	unsigned brpat; /*bayer pattern*/
+	unsigned bitw; /*bit width*/
 };
 
 #define CALIBXML_FILE_NAME_SIZE 64

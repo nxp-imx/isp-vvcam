@@ -69,6 +69,7 @@
 #include "video.h"
 #include "vvctrl.h"
 #include "vvdefs.h"
+#include "vvsensor.h"
 
 #define DEF_PLANE_NO (0)
 #define VIDEO_NODE_NUM 2
@@ -86,34 +87,91 @@ struct ext_dma_buf {
 };
 #endif
 
-struct viv_video_fmt {
-	int fourcc;
-	int depth;
-};
-
 static struct viv_video_fmt formats[] = {
 	{
 	 .fourcc = V4L2_PIX_FMT_YUYV,
 	 .depth = 16,
+	 .bpp = 2,
 	 },
 	{
 	 .fourcc = V4L2_PIX_FMT_NV12,
 	 .depth = 12,
+	 .bpp = 1,
 	 },
 	{
 	 .fourcc = V4L2_PIX_FMT_NV16,
 	 .depth = 16,
+	 .bpp = 1,
 	 },
 };
 
-static struct viv_video_fmt *format_by_fourcc(unsigned int fourcc)
+static int bayer_pattern_to_format(unsigned int bayer_pattern,
+		unsigned int bit_width, struct viv_video_fmt *fmt)
 {
-	unsigned int i;
-
-	for (i = 0; i < ARRAY_SIZE(formats); i++)
-		if (formats[i].fourcc == fourcc)
-			return formats + i;
-	return NULL;
+	int ret = 0;
+	if (bayer_pattern == BAYER_BGGR)
+		if (bit_width == 8) {
+			fmt->fourcc = V4L2_PIX_FMT_SBGGR8;
+			fmt->depth = 8;
+			fmt->bpp = 1;
+		} else if (bit_width == 10) {
+			fmt->fourcc = V4L2_PIX_FMT_SBGGR10;
+			fmt->depth = 16;
+			fmt->bpp = 2;
+		} else if (bit_width == 12) {
+			fmt->fourcc = V4L2_PIX_FMT_SBGGR12;
+			fmt->depth = 16;
+			fmt->bpp = 2;
+		} else
+			ret = -EPERM;
+	else if (bayer_pattern == BAYER_GBRG)
+		if (bit_width == 8) {
+			fmt->fourcc = V4L2_PIX_FMT_SGBRG8;
+			fmt->depth = 8;
+			fmt->bpp = 1;
+		} else if (bit_width == 10) {
+			fmt->fourcc = V4L2_PIX_FMT_SGBRG10;
+			fmt->depth = 16;
+			fmt->bpp = 2;
+		} else if (bit_width == 12) {
+			fmt->fourcc = V4L2_PIX_FMT_SGBRG12;
+			fmt->depth = 16;
+			fmt->bpp = 2;
+		} else
+			ret = -EPERM;
+	else if (bayer_pattern == BAYER_GRBG)
+		if (bit_width == 8) {
+			fmt->fourcc = V4L2_PIX_FMT_SGRBG8;
+			fmt->depth = 8;
+			fmt->bpp = 1;
+		} else if (bit_width == 10) {
+			fmt->fourcc = V4L2_PIX_FMT_SGRBG10;
+			fmt->depth = 16;
+			fmt->bpp = 2;
+		} else if (bit_width == 12) {
+			fmt->fourcc = V4L2_PIX_FMT_SGRBG12;
+			fmt->depth = 16;
+			fmt->bpp = 2;
+		} else
+			ret = -EPERM;
+	else if (bayer_pattern == BAYER_RGGB)
+		if (bit_width == 8) {
+			fmt->fourcc = V4L2_PIX_FMT_SRGGB8;
+			fmt->depth = 8;
+			fmt->bpp = 1;
+		} else if (bit_width == 10) {
+			fmt->fourcc = V4L2_PIX_FMT_SRGGB10;
+			fmt->depth = 16;
+			fmt->bpp = 2;
+		} else if (bit_width == 12) {
+			fmt->fourcc = V4L2_PIX_FMT_SRGGB12;
+			fmt->depth = 16;
+			fmt->bpp = 2;
+		} else
+			ret = -EPERM;
+	else
+		ret = -EPERM;
+	return ret;
 }
 
 static int viv_post_event(struct v4l2_event *event, void *fh, bool sync)
@@ -745,6 +803,10 @@ static int query_session_caps(struct file *file)
 	struct v4l2_event event;
 	struct viv_video_event *v_event;
 
+	dev->modeinfocount = 0;
+	memcpy(dev->formats, formats, sizeof(formats));
+	dev->formatscount = sizeof(formats)/sizeof(formats[0]);
+
 	v_event = (struct viv_video_event *)&event.u.data[0];
 	v_event->stream_id = 0;
 	v_event->file = &handle->vfh;
@@ -1001,6 +1063,7 @@ static long private_ioctl(struct file *file, void *fh,
 	struct viv_control_event *control_event;
 	struct vvcam_constant_modeinfo* modeinfo;
 	struct viv_caps_supports *pcaps_supports;
+	struct viv_video_fmt fmt;
 	struct viv_video_device *dev = video_drvdata(file);
 	unsigned long flags;
 	int rc = 0, i;
@@ -1141,9 +1204,24 @@ static long private_ioctl(struct file *file, void *fh,
 			rc = -EINVAL;
 			break;
 		}
-		memcpy(&dev->modeinfo[dev->modeinfocount],
-				modeinfo, sizeof(*modeinfo));
-		dev->modeinfocount++;
+		if (dev->modeinfocount < ARRAY_SIZE(dev->modeinfo)) {
+			memcpy(&dev->modeinfo[dev->modeinfocount],
+					modeinfo, sizeof(*modeinfo));
+			dev->modeinfocount++;
+		}
+
+		if (!bayer_pattern_to_format(modeinfo->brpat,
+				modeinfo->bitw, &fmt) &&
+				dev->formatscount < ARRAY_SIZE(dev->formats)) {
+			for (i = 0; i < dev->formatscount; ++i)
+				if (dev->formats[i].fourcc == fmt.fourcc)
+					break;
+			if (i == dev->formatscount) {
+				memcpy(&dev->formats[dev->formatscount],
+						&fmt, sizeof(fmt));
+				dev->formatscount++;
+			}
+		}
 		break;
 
 	case VIV_VIDIOC_S_CAPS_MODE:
@@ -1198,10 +1276,19 @@ static int video_querycap(struct file *file, void *fh,
 static int vidioc_enum_fmt_vid_cap(struct file *file, void *priv,
 				   struct v4l2_fmtdesc *f)
 {
-	if (unlikely(f->index >= ARRAY_SIZE(formats)))
-		return -EINVAL;
-	f->pixelformat = formats[f->index].fourcc;
-	return 0;
+	struct viv_video_file *handle = priv_to_handle(file->private_data);
+	struct viv_video_device *dev = video_drvdata(file);
+
+	if (!handle->capsqueried) {
+		handle->capsqueried = true;
+		query_session_caps(file);
+	}
+
+	if (f->index < dev->formatscount) {
+		f->pixelformat = dev->formats[f->index].fourcc;
+		return 0;
+	}
+	return -EINVAL;
 }
 
 static int vidioc_g_fmt_vid_cap(struct file *file, void *priv,
@@ -1220,35 +1307,35 @@ static int vidioc_g_fmt_vid_cap(struct file *file, void *priv,
 static int vidioc_try_fmt_vid_cap(struct file *file, void *priv,
 				  struct v4l2_format *f)
 {
-	struct viv_video_fmt *format;
-	int sizeimage;
-	int bytesperline;
+	struct viv_video_file *handle = priv_to_handle(file->private_data);
+	struct viv_video_device *dev = video_drvdata(file);
+	struct viv_video_fmt *format = NULL;
+	int bytesperline, sizeimage;
+	int i;
 
 	pr_debug("enter %s\n", __func__);
 
 	if (f->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
 		return -EINVAL;
 
-	format = format_by_fourcc(f->fmt.pix.pixelformat);
-	if (format == NULL) {
-		return -EINVAL;
+	if (!handle->capsqueried) {
+		handle->capsqueried = true;
+		query_session_caps(file);
 	}
 
-	switch (f->fmt.pix.pixelformat) {
-	case V4L2_PIX_FMT_YUYV:
-		bytesperline = f->fmt.pix.width * 2;
-		break;
-	case V4L2_PIX_FMT_NV12:
-	case V4L2_PIX_FMT_NV16:
-		bytesperline = f->fmt.pix.width;
-		break;
-	default:
-		return -EINVAL;
+	for (i = 0; i < dev->formatscount; ++i) {
+		if (dev->formats[i].fourcc == f->fmt.pix.pixelformat) {
+			format = &dev->formats[i];
+			break;
+		}
 	}
+	if (format == NULL)
+		return -EINVAL;
 
 	f->fmt.pix.field = V4L2_FIELD_NONE;
 	v4l_bound_align_image(&f->fmt.pix.width, 48, 3840, 2,
 			      &f->fmt.pix.height, 32, 2160, 0, 0);
+	bytesperline = f->fmt.pix.width * format->bpp;
 	bytesperline = ALIGN_UP(bytesperline, 16);
 	if (f->fmt.pix.bytesperline < bytesperline)
 		f->fmt.pix.bytesperline = bytesperline;
@@ -1457,27 +1544,27 @@ static int vidioc_enum_framesizes(struct file *file, void *priv,
 {
 	struct viv_video_file *handle = priv_to_handle(file->private_data);
 	struct viv_video_device *dev = video_drvdata(file);
+	int i;
 
 	if (!handle->capsqueried) {
 		handle->capsqueried = true;
-		dev->modeinfocount = 0;
 		query_session_caps(file);
 	}
 
 	if (fsize->index >= dev->modeinfocount)
 		return -EINVAL;
 
-	switch (fsize->pixel_format) {
-	case V4L2_PIX_FMT_YUYV:
-	case V4L2_PIX_FMT_NV12:
-	case V4L2_PIX_FMT_NV16:
-		fsize->discrete.width = dev->modeinfo[fsize->index].w;
-		fsize->discrete.height = dev->modeinfo[fsize->index].h;
-		fsize->type = V4L2_FRMSIZE_TYPE_DISCRETE;
-		return 0;
-	default:
+	for (i = 0; i < dev->formatscount; ++i)
+		if (dev->formats[i].fourcc == fsize->pixel_format)
+			break;
+
+	if (i == dev->formatscount)
 		return -EINVAL;
-	}
+
+	fsize->discrete.width = dev->modeinfo[fsize->index].w;
+	fsize->discrete.height = dev->modeinfo[fsize->index].h;
+	fsize->type = V4L2_FRMSIZE_TYPE_DISCRETE;
+	return 0;
 }
 
 static inline void update_timeperframe(struct file *file)
@@ -1488,7 +1575,6 @@ static inline void update_timeperframe(struct file *file)
 
 	if (!handle->capsqueried) {
 		handle->capsqueried = true;
-		dev->modeinfocount = 0;
 		query_session_caps(file);
 	}
 
@@ -1551,34 +1637,33 @@ static int vidioc_enum_frameintervals(struct file *filp, void *priv,
 
 	if (!handle->capsqueried) {
 		handle->capsqueried = true;
-		dev->modeinfocount = 0;
 		query_session_caps(filp);
 	}
 
 	if (fival->index >= dev->modeinfocount)
 		return -EINVAL;
 
-	switch (fival->pixel_format) {
-	case V4L2_PIX_FMT_YUYV:
-	case V4L2_PIX_FMT_NV12:
-	case V4L2_PIX_FMT_NV16:
-		for (i = 0; i < dev->modeinfocount; ++i) {
-			if (fival->width != dev->modeinfo[i].w ||
-				fival->height != dev->modeinfo[i].h)
-				continue;
-			if (count > 0) {
-				count--;
-				continue;
-			}
-			fival->discrete.numerator = 1;
-			fival->discrete.denominator = dev->modeinfo[i].fps;
-			fival->type = V4L2_FRMIVAL_TYPE_DISCRETE;
-			return 0;
+	for (i = 0; i < dev->formatscount; ++i)
+		if (dev->formats[i].fourcc == fival->pixel_format)
+			break;
+
+	if (i == dev->formatscount)
+		return -EINVAL;
+
+	for (i = 0; i < dev->modeinfocount; ++i) {
+		if (fival->width != dev->modeinfo[i].w ||
+			fival->height != dev->modeinfo[i].h)
+			continue;
+		if (count > 0) {
+			count--;
+			continue;
 		}
-		return -EINVAL;
-	default:
-		return -EINVAL;
+		fival->discrete.numerator = 1;
+		fival->discrete.denominator = dev->modeinfo[i].fps;
+		fival->type = V4L2_FRMIVAL_TYPE_DISCRETE;
+		return 0;
 	}
+	return -EINVAL;
 }
 
 int viv_gen_g_ctrl(struct v4l2_ctrl *ctrl)
