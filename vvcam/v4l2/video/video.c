@@ -1936,12 +1936,12 @@ static int viv_video_probe(struct platform_device *pdev)
 		vdev->video->fops = &video_ops;
 		vdev->video->ioctl_ops = &video_ioctl_ops;
 		vdev->video->minor = -1;
-		vdev->video->vfl_type = VFL_TYPE_GRABBER;
+		vdev->video->vfl_type = VFL_TYPE_VIDEO;
 		vdev->video->ctrl_handler = &vdev->ctrls.handler;
 #if LINUX_VERSION_CODE > KERNEL_VERSION(5, 0, 0)
 		vdev->video->device_caps = V4L2_CAP_VIDEO_CAPTURE | V4L2_CAP_STREAMING;
 #endif
-		rc = video_register_device(vdev->video, VFL_TYPE_GRABBER, -1);
+		rc = video_register_device(vdev->video, VFL_TYPE_VIDEO, -1);
 		if (WARN_ON(rc < 0))
 			goto register_fail;
 		video_set_drvdata(vdev->video, vdev);
