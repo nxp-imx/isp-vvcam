@@ -54,6 +54,7 @@
 #define _ISP_DRIVER_H_
 
 #include <linux/videodev2.h>
+#include <linux/clk.h>
 #include "ic_dev.h"
 
 struct isp_device {
@@ -61,6 +62,9 @@ struct isp_device {
 	struct v4l2_subdev sd;
 	struct v4l2_device *vd;
 	struct isp_ic_dev ic_dev;
+	struct clk *clk_core;
+	struct clk *clk_axi;
+	struct clk *clk_ahb;
 #ifdef ENABLE_IRQ
 	int irq;
 #endif

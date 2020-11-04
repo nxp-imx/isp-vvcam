@@ -107,6 +107,39 @@ long dwe_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 }
 #endif /* CONFIG_COMPAT */
 
+static int dwe_enable_clocks(struct dwe_device *dwe_dev)
+{
+	int ret;
+
+	ret = clk_prepare_enable(dwe_dev->clk_core);
+	if (ret)
+		return ret;
+
+	ret = clk_prepare_enable(dwe_dev->clk_axi);
+	if (ret)
+		goto disable_clk_core;
+
+	ret = clk_prepare_enable(dwe_dev->clk_ahb);
+	if (ret)
+		goto disable_clk_axi;
+
+	return 0;
+
+disable_clk_axi:
+	clk_disable_unprepare(dwe_dev->clk_axi);
+disable_clk_core:
+	clk_disable_unprepare(dwe_dev->clk_core);
+
+	return ret;
+}
+
+static void dwe_disable_clocks(struct dwe_device *dwe_dev)
+{
+	clk_disable_unprepare(dwe_dev->clk_ahb);
+	clk_disable_unprepare(dwe_dev->clk_axi);
+	clk_disable_unprepare(dwe_dev->clk_core);
+}
+
 int dwe_set_stream(struct v4l2_subdev *sd, int enable)
 {
 	return 0;
@@ -129,6 +162,7 @@ static struct v4l2_subdev_ops dwe_v4l2_subdev_ops = {
 
 int dwe_hw_probe(struct platform_device *pdev)
 {
+	struct device *dev = &pdev->dev;
 	struct dwe_device *dwe_dev;
 	struct resource *mem_res;
 #ifdef ENABLE_IRQ
@@ -141,6 +175,27 @@ int dwe_hw_probe(struct platform_device *pdev)
 	if (!dwe_dev) {
 		rc = -ENOMEM;
 		goto end;
+	}
+
+	dwe_dev->clk_core = devm_clk_get(dev, "core");
+	if (IS_ERR(dwe_dev->clk_core)) {
+		rc = PTR_ERR(dwe_dev->clk_core);
+		dev_err(dev, "can't get core clock: %d\n", rc);
+		return rc;
+	}
+
+	dwe_dev->clk_axi = devm_clk_get(dev, "axi");
+	if (IS_ERR(dwe_dev->clk_axi)) {
+		rc = PTR_ERR(dwe_dev->clk_axi);
+		dev_err(dev, "can't get axi clock: %d\n", rc);
+		return rc;
+	}
+
+	dwe_dev->clk_ahb = devm_clk_get(dev, "ahb");
+	if (IS_ERR(dwe_dev->clk_ahb)) {
+		rc = PTR_ERR(dwe_dev->clk_ahb);
+		dev_err(dev, "can't get ahb clock: %d\n", rc);
+		return rc;
 	}
 
 	v4l2_subdev_init(&dwe_dev->sd, &dwe_v4l2_subdev_ops);
@@ -195,6 +250,9 @@ int dwe_hw_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, dwe_dev);
 	rc = v4l2_device_register_subdev_nodes(dwe_dev->vd);
+	dwe_enable_clocks(dwe_dev);
+	pm_runtime_enable(&pdev->dev);
+	pm_runtime_get_sync(&pdev->dev);
 	pr_info("vvcam dewarp driver probed\n");
 	return 0;
 end:
@@ -220,6 +278,8 @@ int dwe_hw_remove(struct platform_device *pdev)
 	iounmap(dwe->ic_dev.reset);
 #endif
 	kfree(dwe);
+	pm_runtime_put(&pdev->dev);
+	pm_runtime_disable(&pdev->dev);
 	pr_info("vvcam dewarp driver removed\n");
 	return 0;
 }
@@ -242,8 +302,27 @@ static int dwe_system_resume(struct device *dev)
 	return 0;
 }
 
+static int dwe_runtime_suspend(struct device *dev)
+{
+	struct dwe_device *dwe_dev = dev_get_drvdata(dev);
+
+	dwe_disable_clocks(dwe_dev);
+
+	return 0;
+}
+
+static int dwe_runtime_resume(struct device *dev)
+{
+	struct dwe_device *dwe_dev = dev_get_drvdata(dev);
+
+	dwe_enable_clocks(dwe_dev);
+
+	return 0;
+}
+
 static const struct dev_pm_ops dwe_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(dwe_system_suspend, dwe_system_resume)
+	SET_RUNTIME_PM_OPS(dwe_runtime_suspend, dwe_runtime_resume, NULL)
 };
 
 static const struct of_device_id dwe_of_match[] = {
