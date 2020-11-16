@@ -123,6 +123,9 @@ int isp_reset(struct isp_ic_dev *dev)
 {
 	isp_info("enter %s\n", __func__);
 	isp_write_reg(dev, REG_ADDR(vi_ircl), 0xFFFFFFFF);
+#ifdef __KERNEL__
+	mdelay(2);
+#endif
 	isp_write_reg(dev, REG_ADDR(vi_ircl), 0x0);
 	return 0;
 }
@@ -2041,10 +2044,22 @@ long isp_priv_ioctl(struct isp_ic_dev *dev, unsigned int cmd, void *args)
 	if (!dev) {
 		return ret;
 	}
+
 	switch (cmd) {
 	case ISPIOC_RESET:
+		if((ret = isp_mi_stop(dev)) != 0 )
+		{
+			pr_err("[%s:%d]stop mi error before resetting!\n", __func__, __LINE__);
+			break;
+		}
+		if((ret = isp_stop_stream(dev)) != 0)
+		{
+			pr_err("[%s:%d]stop isp stream before resetting!\n", __func__, __LINE__);
+			break;
+		}
 		ret = isp_reset(dev);
 		break;
+		
 	case ISPIOC_WRITE_REG:
 		ret = isp_ioc_write_reg(dev, args);
 		break;
@@ -2081,13 +2096,13 @@ long isp_priv_ioctl(struct isp_ic_dev *dev, unsigned int cmd, void *args)
 	case ISPIOC_DISABLE:
 		ret = isp_disable(dev);
 		break;
-    case ISPIOC_ISP_STATUS:{
-        bool enable = is_isp_enable(dev);
-        viv_check_retval(copy_to_user
-                 (args, &enable, sizeof(bool)));
-        ret = 0;
-        break;
-        }
+	case ISPIOC_ISP_STATUS:{
+		bool enable = is_isp_enable(dev);
+		viv_check_retval(copy_to_user
+				 (args, &enable, sizeof(bool)));
+		ret = 0;
+		break;
+		}
 	case ISPIOC_ENABLE_LSC:
 		ret = isp_enable_lsc(dev);
 		break;
@@ -2431,12 +2446,12 @@ long isp_priv_ioctl(struct isp_ic_dev *dev, unsigned int cmd, void *args)
 			break;
 		}
 
-        case ISPIOC_S_3DNR_CMP: {
-            viv_check_retval(
-                copy_from_user(&dev->dnr3.compress, args, sizeof(dev->dnr3.compress)));
-                    ret = isp_s_3dnr_cmp(dev);
-            break;
-        }
+		case ISPIOC_S_3DNR_CMP: {
+			viv_check_retval(
+				copy_from_user(&dev->dnr3.compress, args, sizeof(dev->dnr3.compress)));
+					ret = isp_s_3dnr_cmp(dev);
+			break;
+		}
 
 	case ISPIOC_G_AWBMEAN:{
 			struct isp_awb_mean mean;
