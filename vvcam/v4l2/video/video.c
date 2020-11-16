@@ -863,6 +863,22 @@ static int video_close(struct file *file)
 		v4l2_fh_del(&handle->vfh);
 		v4l2_fh_exit(&handle->vfh);
 
+#ifdef CONFIG_VIDEOBUF2_DMA_CONTIG
+		{
+			struct ext_dma_buf *edb = NULL;
+			while (!list_empty(&handle->extdmaqueue)) {
+				edb = list_first_entry(&handle->extdmaqueue, struct ext_dma_buf, entry);
+				if(edb) {
+					dma_free_attrs(handle->queue.dev, edb->size,
+							edb->vaddr, edb->addr,
+							DMA_ATTR_WRITE_COMBINE);
+					list_del(&edb->entry);
+					kfree(edb);
+				}
+			}
+		}
+#endif
+
 		while (!list_empty(&handle->queue.queued_list)) {
 			vb = list_first_entry(&handle->queue.queued_list,
 					      struct vb2_buffer, queued_entry);
