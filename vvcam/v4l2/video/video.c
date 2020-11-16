@@ -863,6 +863,7 @@ static int video_close(struct file *file)
 		v4l2_fh_del(&handle->vfh);
 		v4l2_fh_exit(&handle->vfh);
 
+#ifdef ENABLE_IRQ
 #ifdef CONFIG_VIDEOBUF2_DMA_CONTIG
 		{
 			struct ext_dma_buf *edb = NULL;
@@ -877,6 +878,7 @@ static int video_close(struct file *file)
 				}
 			}
 		}
+#endif
 #endif
 
 		while (!list_empty(&handle->queue.queued_list)) {
