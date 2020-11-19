@@ -1035,22 +1035,47 @@ int sensor_calc_gain(__u32 total_gain, __u32 *pagain, __u32 *pdgain, __u32 *phcg
 	return 0;
 }
 
-int ov2775_s_gain(struct ov2775 *sensor, __u32 new_gain)
+int ov2775_s_long_gain(struct ov2775 *sensor, __u32 new_gain)
 {
-	__u32 again = 0;
-	__u32 dgain, hcg;
+	int ret = 0;
 	__u8 reg_val;
-
-	__u32 hdr_radio = 8;
+	__u32 hcg;
 	__u32 hcg_gain;
-	__u32 lcg_gain;
-
 	__u32 hcg_again = 0;
 	__u32 hcg_dgain = 0;
+	
+
+	hcg_gain = new_gain/10;
+
+	sensor_calc_gain(hcg_gain, &hcg_again, &hcg_dgain, &hcg);
+		
+	ret = ov2775_read_reg(sensor, 0x30bb, &reg_val);
+	reg_val &= ~0x03;
+	reg_val |= hcg_again  & 0x03;
+
+	ret  = ov2775_write_reg(sensor, 0x3467, 0x00);
+	ret |= ov2775_write_reg(sensor, 0x3464, 0x04);
+
+	ret |= ov2775_write_reg(sensor, 0x315a, (hcg_dgain>>8) & 0xff);
+	ret |= ov2775_write_reg(sensor, 0x315b, hcg_dgain & 0xff);
+
+	ret |= ov2775_write_reg(sensor, 0x30bb, reg_val);
+	ret |= ov2775_write_reg(sensor, 0x3464, 0x14);
+	ret |= ov2775_write_reg(sensor, 0x3467, 0x01);
+	
+	return ret;
+}
+
+int ov2775_s_gain(struct ov2775 *sensor, __u32 new_gain)
+{
+	int ret = 0;
+	__u8 reg_val;
+	__u32 hcg = 0;
+	__u32 again, dgain;
+	
+	__u32 lcg_gain;
 	__u32 lcg_again = 0;
 	__u32 lcg_dgain = 0;
-
-	int ret = 0;
 
 
 
@@ -1072,21 +1097,15 @@ int ov2775_s_gain(struct ov2775 *sensor, __u32 new_gain)
 		ret |= ov2775_write_reg(sensor, 0x3464, 0x14);
 		ret |= ov2775_write_reg(sensor, 0x3467, 0x01);
 	}else {
-		hcg_gain = new_gain * hdr_radio / 11;
-		sensor_calc_gain(hcg_gain, &hcg_again, &hcg_dgain, &hcg);
 		lcg_gain = new_gain;
 		sensor_calc_gain(lcg_gain, &lcg_again, &lcg_dgain, &hcg);
 
 		ret = ov2775_read_reg(sensor, 0x30bb, &reg_val);
-		reg_val &= ~0x0f;
+		reg_val &= ~(0x03 << 2);
 		reg_val |= (lcg_again & 0x03) << 2;
-		reg_val |= hcg_again  & 0x03;
-
+		
 		ret  = ov2775_write_reg(sensor, 0x3467, 0x00);
 		ret |= ov2775_write_reg(sensor, 0x3464, 0x04);
-
-		ret |= ov2775_write_reg(sensor, 0x315a, (hcg_dgain>>8) & 0xff);
-		ret |= ov2775_write_reg(sensor, 0x315b, hcg_dgain & 0xff);
 
 		ret |= ov2775_write_reg(sensor, 0x315c, (lcg_dgain>>8) & 0xff);
 		ret |= ov2775_write_reg(sensor, 0x315d, lcg_dgain & 0xff);
@@ -1119,6 +1138,11 @@ int ov2775_s_vsgain(struct ov2775 *sensor, __u32 new_gain)
 
 	ov2775_write_reg(sensor, 0x3464, 0x14);
 	ov2775_write_reg(sensor, 0x3467, 0x01);
+	return 0;
+}
+
+int ov2775_s_long_exp(struct ov2775 *sensor, __u32 exp)
+{
 	return 0;
 }
 
@@ -1534,6 +1558,11 @@ long ov2775_priv_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg_user)
 		ret = ov2775_s_stream(sd, *(__u32 *)arg);
 		break;
 	}
+	case VVSENSORIOC_S_LONG_EXP: {
+		USER_TO_KERNEL(__u32);
+		ret = ov2775_s_long_exp(sensor, *(__u32 *)arg);
+		break;
+	}
 	case VVSENSORIOC_S_EXP: {
 		USER_TO_KERNEL(__u32);
 		ret = ov2775_s_exp(sensor, *(__u32 *)arg);
@@ -1542,6 +1571,11 @@ long ov2775_priv_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg_user)
 	case VVSENSORIOC_S_VSEXP: {
 		USER_TO_KERNEL(__u32);
 		ret = ov2775_s_vsexp(sensor, *(__u32 *)arg);
+		break;
+	}
+	case VVSENSORIOC_S_LONG_GAIN:{
+		USER_TO_KERNEL(__u32);
+		ret = ov2775_s_long_gain(sensor, *(__u32 *)arg);
 		break;
 	}
 	case VVSENSORIOC_S_GAIN: {
