@@ -98,19 +98,9 @@ enum {
 	VVSENSORIOC_G_AE_INFO,
 	VVSENSORIOC_QUERY,
 	VVSENSORIOC_G_SENSOR_MODE,
-	VVSENSORIOC_S_SHORT_WB,
 	VVSENSORIOC_S_WB,
-	VVSENSORIOC_S_LONG_WB,
+	VVSENSORIOC_S_BLC,
 	VVSENSORIOC_G_EXPAND_CURVE,
-
-#ifdef SENSOR_CROP
-/**************************************
-*Reserved for sensor crop 
-***************************************/
-	VVSENSORIOC_G_CROP_LIMITS,
-	VVSENSORIOC_S_CROP_REGIONS,
-#endif
-
 	VVSENSORIOC_MAX,
 };
 
@@ -237,7 +227,6 @@ typedef struct sensor_blc_s
 
 typedef struct sensor_white_balance_s
 {
-	sensor_blc_t blc;
 	uint32_t     r_gain;
 	uint32_t     gr_gain;
 	uint32_t     gb_gain;

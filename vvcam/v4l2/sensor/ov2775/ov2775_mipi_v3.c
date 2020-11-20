@@ -1369,17 +1369,12 @@ int ov2775_g_mode(struct ov2775 *sensor, struct vvcam_mode_info *pmode)
 	return 0;
 }
 
-int ov2775_s_short_wb(struct ov2775 *sensor, sensor_white_balance_t *wb)
-{
-	return 0;
-}
-
 int ov2775_s_wb(struct ov2775 *sensor, sensor_white_balance_t *wb)
 {
 	return 0;
 }
 
-int ov2775_s_long_wb(struct ov2775 *sensor, sensor_white_balance_t *wb)
+int ov2775_s_blc(struct ov2775 *sensor, sensor_blc_t *pblc)
 {
 	return 0;
 }
@@ -1423,84 +1418,6 @@ int ov2775_get_expand_curve(struct ov2775 *sensor, sensor_expand_curve_t* pexpan
 	}
 	return -1;
 }
-
-#ifdef SENSOR_CROP
-/**************************************
-*Reserved for sensor crop 
-***************************************/
-int ov2775_set_crop_regions(struct ov2775 *sensor, sensor_crop_regions_t* crop_region)
-{
-	int offs_h, offs_v, h_size, v_size;
-	uint8_t sensor_reg_val = 0;
-
-	int mode_start_v, mode_start_h;
-
-	offs_h = crop_region->offs_x;
-	offs_v = crop_region->offs_y;
-	h_size = crop_region->width;
-	v_size = crop_region->height;
-
-	if ((offs_h % 2 != 0) || (offs_v % 2 != 0) ||
-		(h_size > sensor->cur_mode.width) || (v_size > sensor->cur_mode.height))
-	{
-		return -1;
-	}
-
-	ov2775_read_reg(sensor, 0x30a8, &sensor_reg_val);
-	mode_start_h = sensor_reg_val<<8;
-	ov2775_read_reg(sensor, 0x30a9, &sensor_reg_val);
-	mode_start_h = sensor_reg_val<<8;
-
-	ov2775_read_reg(sensor, 0x30aa, &sensor_reg_val);
-	mode_start_v = sensor_reg_val<<8;
-	ov2775_read_reg(sensor, 0x30ab, &sensor_reg_val);
-	mode_start_v = sensor_reg_val<<8;
-
-	mode_start_h -= sensor->crop_regions.offs_x;
-	mode_start_v -= sensor->crop_regions.offs_y;
-
-	offs_h += mode_start_h;
-	offs_v += mode_start_v;
-	
-
-	ov2775_write_reg(sensor, 0x30a8, (offs_h >> 8) & 0xff);
-	ov2775_write_reg(sensor, 0x30a9, offs_h & 0xff);
-
-	ov2775_write_reg(sensor, 0x30aa, (offs_v >> 8) & 0xff);
-	ov2775_write_reg(sensor, 0x30ab, offs_v & 0xff);
-
-	ov2775_write_reg(sensor, 0x30ac, (h_size >> 8) & 0xff);
-	ov2775_write_reg(sensor, 0x30ad, h_size & 0xff);
-
-	ov2775_write_reg(sensor, 0x30ae, (v_size >> 8) & 0xff);
-	ov2775_write_reg(sensor, 0x30af, v_size & 0xff);
-
-	memcpy(&(sensor->crop_regions),crop_region,sizeof(sensor_crop_regions_t));
-
-	return 0;
-}
-
-int ov2775_get_crop_limits(struct ov2775 *sensor, sensor_crop_limits_t* crop_limits)
-{
-	int i;
-	for (i=0; i<ARRAY_SIZE(pov2775_mode_info); i++)
-	{
-		if (crop_limits->mode_index == pov2775_mode_info[i].index)
-		{
-			crop_limits->max_regions.offs_x = 0;
-			crop_limits->max_regions.offs_y = 0;
-			crop_limits->max_regions.width = pov2775_mode_info[i].width;
-			crop_limits->max_regions.height = pov2775_mode_info[i].height;
-			crop_limits->min_regions.offs_x = 0;
-			crop_limits->min_regions.offs_y = 0;
-			crop_limits->min_regions.width = 128;
-			crop_limits->min_regions.height = 128;
-			return 0;
-		}
-	}
-	return -1;
-}
-#endif
 
 /*
 Use USER_TO_KERNEL/KERNEL_TO_USER to fix "uaccess" exception on run time.
@@ -1621,14 +1538,12 @@ long ov2775_priv_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg_user)
 		KERNEL_TO_USER(__u32);
 		break;
 	}
-
 	case VVSENSORIOC_G_RESERVE_ID: {
 		__u32  correct_id = 0x2770;
 		ret = copy_to_user(arg_user, &correct_id, sizeof(__u32));
 		ret = ret ? -1 : 0;
 		break;
 	}
-
 	case VVSENSORIOC_S_HDR_MODE: {
 		USER_TO_KERNEL(int);
 		ret = ov2775_s_hdr(sensor, *(int *)arg);
@@ -1646,49 +1561,22 @@ long ov2775_priv_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg_user)
 		KERNEL_TO_USER(struct vvcam_mode_info);
 		break;
 	}
-	case VVSENSORIOC_S_SHORT_WB: {
-		USER_TO_KERNEL(sensor_white_balance_t);
-		ret = ov2775_s_short_wb(sensor,arg);
-		break;
-	}
 	case VVSENSORIOC_S_WB: {
 		USER_TO_KERNEL(sensor_white_balance_t);
 		ret = ov2775_s_wb(sensor,arg);
 		break;
 	}
-
-	case VVSENSORIOC_S_LONG_WB: {
-		USER_TO_KERNEL(sensor_white_balance_t);
-		ret = ov2775_s_long_wb(sensor,arg);
+	case VVSENSORIOC_S_BLC: {
+		USER_TO_KERNEL(sensor_blc_t);
+		ret = ov2775_s_blc(sensor,arg);
 		break;
 	}
-
 	case VVSENSORIOC_G_EXPAND_CURVE:{
 		USER_TO_KERNEL(sensor_expand_cure_t);
 		ret = ov2775_get_expand_curve(sensor, arg);
 		KERNEL_TO_USER(sensor_expand_cure_t);
 		break;
 	}
-
-#ifdef SENSOR_CROP
-/**************************************
-*Reserved for sensor crop 
-***************************************/
-	case VVSENSORIOC_S_CROP_REGIONS:{
-		USER_TO_KERNEL(sensor_crop_regions_t);
-		ret = ov2775_set_crop_regions(sensor, arg);
-		KERNEL_TO_USER(sensor_crop_regions_t);
-		break;
-	}
-
-	case VVSENSORIOC_G_CROP_LIMITS:{
-		USER_TO_KERNEL(sensor_crop_limits_t);
-		ret = ov2775_get_crop_limits(sensor, arg);
-		KERNEL_TO_USER(sensor_crop_limits_t);
-		break;
-	}
-#endif
-
 	default:
 		pr_err("unsupported ov2775 command %d.", cmd);
 		ret = -1;
