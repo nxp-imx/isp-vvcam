@@ -879,8 +879,8 @@ static int video_open(struct file *file)
 	INIT_LIST_HEAD(&handle->dmaqueuedone);
 	spin_lock_init(&handle->idle.lock);
 	spin_lock_init(&handle->done.lock);
-	INIT_LIST_HEAD(&handle->extdmaqueue);
 #endif
+	INIT_LIST_HEAD(&handle->extdmaqueue);
 
 	spin_lock_irqsave(&file_list_lock, flags);
 	list_add_tail(&handle->entry, &file_list_head);
@@ -925,7 +925,6 @@ static int video_close(struct file *file)
 		v4l2_fh_del(&handle->vfh);
 		v4l2_fh_exit(&handle->vfh);
 
-#ifdef ENABLE_IRQ
 #ifdef CONFIG_VIDEOBUF2_DMA_CONTIG
 		{
 			struct ext_dma_buf *edb = NULL;
@@ -940,7 +939,6 @@ static int video_close(struct file *file)
 				}
 			}
 		}
-#endif
 #endif
 
 		while (!list_empty(&handle->queue.queued_list)) {
