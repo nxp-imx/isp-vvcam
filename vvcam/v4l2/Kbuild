@@ -3,6 +3,7 @@ INCLUDE_DIR := /usr/src/linux-headers-$(shell uname -r)
 KERNEL_SRC := $(INCLUDE_DIR)
 endif
 
+PWD := $(ANDROID_BUILD_TOP)/vendor/nxp-opensource/verisilicon_sw_isp_vvcam/vvcam/v4l2
 SRC := $(shell pwd)
 
 EXTRA_CFLAGS += -I$(PWD)/../common/
@@ -16,7 +17,7 @@ ifeq ($(ENABLE_IRQ), yes)
   EXTRA_CFLAGS += -DENABLE_IRQ
 endif
 
-EXTRA_CFLAGS += -O2 -Werror
+#EXTRA_CFLAGS += -O2 -Werror
 
 obj-m += video/
 
@@ -60,16 +61,11 @@ obj-m += vvcam-dwe.o
 obj-m += csi/
 obj-m += sensor/
 
+V := 1
+
 all:
-	make -C $(KERNEL_SRC) M=$(SRC) ENABLE_IRQ=$(ENABLE_IRQ)
+	@$(MAKE) V=$(V) -C $(KERNEL_DIR) ARCH=$(ARCH_TYPE) M=$(SRC) ENABLE_IRQ=$(ENABLE_IRQ) modules
 
-modules_install:
-	make -C $(KERNEL_SRC) M=$(SRC) modules_install
-
- clean:
-	make -C $(KERNEL_SRC) M=$(SRC) clean
-	find . -name '*.o' -delete
-	find . -name '*.ko' -delete
-	find . -name 'modules.order' -delete
-	find . -name 'Module.symvers' -delete
-	find . -name '*.mod.c' -delete
+clean:
+	@rm -rf modules.order Module.symvers
+	@find ../ -name "*.o" | xargs rm -f

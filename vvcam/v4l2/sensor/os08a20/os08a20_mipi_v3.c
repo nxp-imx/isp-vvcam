@@ -1381,8 +1381,14 @@ int os08a20_ioc_qcap(struct os08a20 *sensor, void *args)
 
 int os08a20_ioc_query_mode(struct os08a20 *sensor, struct vvcam_mode_info_array *array)
 {
+	unsigned long copy_ret = 0;
 	array->count = ARRAY_SIZE(pos08a20_mode_info);
+#ifdef CONFIG_HARDENED_USERCOPY
+  pr_debug("sensor %p\n", sensor);
+	copy_ret = copy_to_user(&array->modes,pos08a20_mode_info,sizeof(pos08a20_mode_info));
+#else
 	memcpy(&array->modes,pos08a20_mode_info,sizeof(pos08a20_mode_info));
+#endif
 	return 0;
 }
 
@@ -1542,9 +1548,9 @@ long os08a20_priv_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg_user
 		break;
 	}
 	case VVSENSORIOC_QUERY: {
-		USER_TO_KERNEL(struct vvcam_mode_info_arry);
+//		USER_TO_KERNEL(struct vvcam_mode_info_array);
 		os08a20_ioc_query_mode(sensor, arg);
-		KERNEL_TO_USER(struct vvcam_mode_info_arry);
+	//	KERNEL_TO_USER(struct vvcam_mode_info_array);
 		break;
 	}
 	case VVSENSORIOC_G_SENSOR_MODE: {
