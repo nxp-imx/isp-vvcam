@@ -1392,10 +1392,10 @@ int ov2775_s_blc(struct ov2775 *sensor, sensor_blc_t *pblc)
 	if (b_gain < 0x100)
 		b_gain = 0x100;
 
-	r_offset  = (r_gain  - 0x100) * pblc->red  / 0x100;
-	gr_offset = (gr_gain - 0x100) * pblc->gr   / 0x100;
-	gb_offset = (gb_gain - 0X100) * pblc->gb   / 0x100;
-	b_offset  = (b_gain  - 0X100) * pblc->blue / 0x100;
+	r_offset  = (r_gain  - 0x100) * pblc->red;
+	gr_offset = (gr_gain - 0x100) * pblc->gr;
+	gb_offset = (gb_gain - 0X100) * pblc->gb;
+	b_offset  = (b_gain  - 0X100) * pblc->blue;
 
 	//R,Gr,Gb,B HCG Offset
 	ret |= ov2775_write_reg(sensor, 0x3378, (gr_offset >> 16) & 0xff);
