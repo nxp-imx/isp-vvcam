@@ -1398,55 +1398,55 @@ int ov2775_s_blc(struct ov2775 *sensor, sensor_blc_t *pblc)
 	b_offset  = (b_gain  - 0X100) * pblc->blue;
 
 	//R,Gr,Gb,B HCG Offset
-	ret |= ov2775_write_reg(sensor, 0x3378, (gr_offset >> 16) & 0xff);
-	ret |= ov2775_write_reg(sensor, 0x3379, (gr_offset >> 8)  & 0xff);
-	ret |= ov2775_write_reg(sensor, 0x337a,  gr_offset        & 0xff);
+	ret |= ov2775_write_reg(sensor, 0x3378, (r_offset >> 16) & 0xff);
+	ret |= ov2775_write_reg(sensor, 0x3379, (r_offset >> 8)  & 0xff);
+	ret |= ov2775_write_reg(sensor, 0x337a,  r_offset        & 0xff);
 
-	ret |= ov2775_write_reg(sensor, 0x337b, (r_offset >> 16) & 0xff);
-	ret |= ov2775_write_reg(sensor, 0x337c, (r_offset >> 8)  & 0xff);
-	ret |= ov2775_write_reg(sensor, 0x337d,  r_offset        & 0xff);
+	ret |= ov2775_write_reg(sensor, 0x337b, (gr_offset >> 16) & 0xff);
+	ret |= ov2775_write_reg(sensor, 0x337c, (gr_offset >> 8)  & 0xff);
+	ret |= ov2775_write_reg(sensor, 0x337d,  gr_offset        & 0xff);
 
-	ret |= ov2775_write_reg(sensor, 0x337e, (b_offset >> 16) & 0xff);
-	ret |= ov2775_write_reg(sensor, 0x337f, (b_offset >> 8)  & 0xff);
-	ret |= ov2775_write_reg(sensor, 0x3380,  b_offset        & 0xff);
+	ret |= ov2775_write_reg(sensor, 0x337e, (gb_offset >> 16) & 0xff);
+	ret |= ov2775_write_reg(sensor, 0x337f, (gb_offset >> 8)  & 0xff);
+	ret |= ov2775_write_reg(sensor, 0x3380,  gb_offset        & 0xff);
 
-	ret |= ov2775_write_reg(sensor, 0x3381, (gb_offset >> 16) & 0xff);
-	ret |= ov2775_write_reg(sensor, 0x3382, (gb_offset >> 8)  & 0xff);
-	ret |= ov2775_write_reg(sensor, 0x3383,  gb_offset        & 0xff);
+	ret |= ov2775_write_reg(sensor, 0x3381, (b_offset >> 16) & 0xff);
+	ret |= ov2775_write_reg(sensor, 0x3382, (b_offset >> 8)  & 0xff);
+	ret |= ov2775_write_reg(sensor, 0x3383,  b_offset        & 0xff);
 	
 	//R,Gr,Gb,B LCG Offset
-	ret |= ov2775_write_reg(sensor, 0x3384, (gr_offset >> 16) & 0xff);
-	ret |= ov2775_write_reg(sensor, 0x3385, (gr_offset >> 8)  & 0xff);
-	ret |= ov2775_write_reg(sensor, 0x3386,  gr_offset        & 0xff);
+	ret |= ov2775_write_reg(sensor, 0x3384, (r_offset >> 16) & 0xff);
+	ret |= ov2775_write_reg(sensor, 0x3385, (r_offset >> 8)  & 0xff);
+	ret |= ov2775_write_reg(sensor, 0x3386,  r_offset        & 0xff);
 
-	ret |= ov2775_write_reg(sensor, 0x3387, (r_offset >> 16) & 0xff);
-	ret |= ov2775_write_reg(sensor, 0x3388, (r_offset >> 8)  & 0xff);
-	ret |= ov2775_write_reg(sensor, 0x3389,  r_offset        & 0xff);
+	ret |= ov2775_write_reg(sensor, 0x3387, (gr_offset >> 16) & 0xff);
+	ret |= ov2775_write_reg(sensor, 0x3388, (gr_offset >> 8)  & 0xff);
+	ret |= ov2775_write_reg(sensor, 0x3389,  gr_offset        & 0xff);
 
-	ret |= ov2775_write_reg(sensor, 0x338a, (b_offset >> 16) & 0xff);
-	ret |= ov2775_write_reg(sensor, 0x338b, (b_offset >> 8)  & 0xff);
-	ret |= ov2775_write_reg(sensor, 0x338c,  b_offset        & 0xff);
+	ret |= ov2775_write_reg(sensor, 0x338a, (gb_offset >> 16) & 0xff);
+	ret |= ov2775_write_reg(sensor, 0x338b, (gb_offset >> 8)  & 0xff);
+	ret |= ov2775_write_reg(sensor, 0x338c,  gb_offset        & 0xff);
 
-	ret |= ov2775_write_reg(sensor, 0x338d, (gb_offset >> 16) & 0xff);
-	ret |= ov2775_write_reg(sensor, 0x338e, (gb_offset >> 8)  & 0xff);
-	ret |= ov2775_write_reg(sensor, 0x338f,  gb_offset        & 0xff);
+	ret |= ov2775_write_reg(sensor, 0x338d, (b_offset >> 16) & 0xff);
+	ret |= ov2775_write_reg(sensor, 0x338e, (b_offset >> 8)  & 0xff);
+	ret |= ov2775_write_reg(sensor, 0x338f,  b_offset        & 0xff);
 	
 	//R,Gr,Gb,B VS Offset
-	ret |= ov2775_write_reg(sensor, 0x3390, (gr_offset >> 16) & 0xff);
-	ret |= ov2775_write_reg(sensor, 0x3391, (gr_offset >> 8)  & 0xff);
-	ret |= ov2775_write_reg(sensor, 0x3392,  gr_offset        & 0xff);
+	ret |= ov2775_write_reg(sensor, 0x3390, (r_offset >> 16) & 0xff);
+	ret |= ov2775_write_reg(sensor, 0x3391, (r_offset >> 8)  & 0xff);
+	ret |= ov2775_write_reg(sensor, 0x3392,  r_offset        & 0xff);
 
-	ret |= ov2775_write_reg(sensor, 0x3393, (r_offset >> 16) & 0xff);
-	ret |= ov2775_write_reg(sensor, 0x3394, (r_offset >> 8)  & 0xff);
-	ret |= ov2775_write_reg(sensor, 0x3395,  r_offset        & 0xff);
+	ret |= ov2775_write_reg(sensor, 0x3393, (gr_offset >> 16) & 0xff);
+	ret |= ov2775_write_reg(sensor, 0x3394, (gr_offset >> 8)  & 0xff);
+	ret |= ov2775_write_reg(sensor, 0x3395,  gr_offset        & 0xff);
 
-	ret |= ov2775_write_reg(sensor, 0x3396, (b_offset >> 16) & 0xff);
-	ret |= ov2775_write_reg(sensor, 0x3397, (b_offset >> 8)  & 0xff);
-	ret |= ov2775_write_reg(sensor, 0x3398,  b_offset        & 0xff);
+	ret |= ov2775_write_reg(sensor, 0x3396, (gb_offset >> 16) & 0xff);
+	ret |= ov2775_write_reg(sensor, 0x3397, (gb_offset >> 8)  & 0xff);
+	ret |= ov2775_write_reg(sensor, 0x3398,  gb_offset        & 0xff);
 
-	ret |= ov2775_write_reg(sensor, 0x3399, (gb_offset >> 16) & 0xff);
-	ret |= ov2775_write_reg(sensor, 0x339a, (gb_offset >> 8)  & 0xff);
-	ret |= ov2775_write_reg(sensor, 0x339b,  gb_offset        & 0xff);
+	ret |= ov2775_write_reg(sensor, 0x3399, (b_offset >> 16) & 0xff);
+	ret |= ov2775_write_reg(sensor, 0x339a, (b_offset >> 8)  & 0xff);
+	ret |= ov2775_write_reg(sensor, 0x339b,  b_offset        & 0xff);
 
 	memcpy(&sensor->blc,pblc,sizeof(sensor_blc_t));
 
@@ -1465,69 +1465,69 @@ int ov2775_s_wb(struct ov2775 *sensor, sensor_white_balance_t *wb)
 	b_gain  = wb->b_gain; // wb->b_gain  =256 means gain 1.0
 
 	//Red,Gr,Gb,Blue HCG Channel
-	if(sensor->wb.gr_gain != wb->gr_gain){
-		
-		ret = ov2775_write_reg(sensor, 0x3360, (gr_gain >> 8) & 0xff);
-		ret |= ov2775_write_reg(sensor, 0x3361,  gr_gain & 0xff);
-	}
 	if(sensor->wb.r_gain != wb->r_gain){
 		
-		ret = ov2775_write_reg(sensor, 0x3362, (r_gain >> 8) & 0xff);
-		ret |= ov2775_write_reg(sensor, 0x3363,  r_gain & 0xff);
+		ret  = ov2775_write_reg(sensor, 0x3360, (r_gain >> 8) & 0xff);
+		ret |= ov2775_write_reg(sensor, 0x3361,  r_gain & 0xff);
 	}
-	if(sensor->wb.b_gain != wb->b_gain){
+	if(sensor->wb.gr_gain != wb->gr_gain){
 		
-		ret = ov2775_write_reg(sensor, 0x3364, (b_gain >> 8) & 0xff);
-		ret |= ov2775_write_reg(sensor, 0x3365,  b_gain & 0xff);
+		ret  = ov2775_write_reg(sensor, 0x3362, (gr_gain >> 8) & 0xff);
+		ret |= ov2775_write_reg(sensor, 0x3363,  gr_gain & 0xff);
 	}
 	if(sensor->wb.gb_gain != wb->gb_gain){
 		
-		ret = ov2775_write_reg(sensor, 0x3366, (gb_gain >> 8) & 0xff);
-		ret |= ov2775_write_reg(sensor, 0x3367,  gb_gain & 0xff);	
+		ret  = ov2775_write_reg(sensor, 0x3364, (gb_gain >> 8) & 0xff);
+		ret |= ov2775_write_reg(sensor, 0x3365,  gb_gain & 0xff);
+	}
+	if(sensor->wb.b_gain != wb->b_gain){
+		
+		ret  = ov2775_write_reg(sensor, 0x3366, (b_gain >> 8) & 0xff);
+		ret |= ov2775_write_reg(sensor, 0x3367,  b_gain & 0xff);	
 	}
 
 	//Red,Gr,Gb,Blue LCG Channel
-	if(sensor->wb.gr_gain != wb->gr_gain){
-		
-		ret = ov2775_write_reg(sensor, 0x3368, (gr_gain >> 8) & 0xff);
-		ret |= ov2775_write_reg(sensor, 0x3369,  gr_gain & 0xff);
-	}
 	if(sensor->wb.r_gain != wb->r_gain){
 		
-		ret = ov2775_write_reg(sensor, 0x336a, (r_gain >> 8) & 0xff);
-		ret |= ov2775_write_reg(sensor, 0x336b,  r_gain & 0xff);
+		ret  = ov2775_write_reg(sensor, 0x3368, (r_gain >> 8) & 0xff);
+		ret |= ov2775_write_reg(sensor, 0x3369,  r_gain & 0xff);
 	}
-	if(sensor->wb.b_gain != wb->b_gain){
-
-		ret = ov2775_write_reg(sensor, 0x336c, (b_gain >> 8) & 0xff);
-		ret |= ov2775_write_reg(sensor, 0x336d,  b_gain & 0xff);
+	if(sensor->wb.gr_gain != wb->gr_gain){
+		
+		ret  = ov2775_write_reg(sensor, 0x336a, (gr_gain >> 8) & 0xff);
+		ret |= ov2775_write_reg(sensor, 0x336b,  gr_gain & 0xff);
 	}
 	if(sensor->wb.gb_gain != wb->gb_gain){
 
-		ret = ov2775_write_reg(sensor, 0x336e, (gb_gain >> 8) & 0xff);
-		ret |= ov2775_write_reg(sensor, 0x336f,  gb_gain & 0xff);
+		ret  = ov2775_write_reg(sensor, 0x336c, (gb_gain >> 8) & 0xff);
+		ret |= ov2775_write_reg(sensor, 0x336d,  gb_gain & 0xff);
+	}
+	if(sensor->wb.b_gain != wb->b_gain){
+
+		ret  = ov2775_write_reg(sensor, 0x336e, (b_gain >> 8) & 0xff);
+		ret |= ov2775_write_reg(sensor, 0x336f,  b_gain & 0xff);
 	}
 
 	//Red,Gr,Gb,Blue VS Channel
-	if(sensor->wb.gr_gain != wb->gr_gain){
-				
-		ret = ov2775_write_reg(sensor, 0x3370, (gr_gain >> 8) & 0xff);
-		ret |= ov2775_write_reg(sensor, 0x3371,  gr_gain & 0xff);
-	}
 	if(sensor->wb.r_gain != wb->r_gain){
-
-		ret = ov2775_write_reg(sensor, 0x3372, (r_gain >> 8) & 0xff);
-		ret |= ov2775_write_reg(sensor, 0x3373,  r_gain & 0xff);
+				
+		ret  = ov2775_write_reg(sensor, 0x3370, (r_gain >> 8) & 0xff);
+		ret |= ov2775_write_reg(sensor, 0x3371,  r_gain & 0xff);
 	}
-	if(sensor->wb.b_gain != wb->b_gain){
+	if(sensor->wb.gr_gain != wb->gr_gain){
 
-		ret = ov2775_write_reg(sensor, 0x3374, (b_gain >> 8) & 0xff);
-		ret |= ov2775_write_reg(sensor, 0x3375,  b_gain & 0xff);
+		ret  = ov2775_write_reg(sensor, 0x3372, (gr_gain >> 8) & 0xff);
+		ret |= ov2775_write_reg(sensor, 0x3373,  gr_gain & 0xff);
 	}
 	if(sensor->wb.gb_gain != wb->gb_gain){
 
-		ret = ov2775_write_reg(sensor, 0x3376, (gb_gain >> 8) & 0xff);
-		ret |= ov2775_write_reg(sensor, 0x3377,  gb_gain & 0xff);
+		ret  = ov2775_write_reg(sensor, 0x3374, (gb_gain >> 8) & 0xff);
+		ret |= ov2775_write_reg(sensor, 0x3375,  gb_gain & 0xff);
+	}
+	if(sensor->wb.b_gain != wb->b_gain){
+
+		ret  = ov2775_write_reg(sensor, 0x3376, (b_gain >> 8) & 0xff);
+		ret |= ov2775_write_reg(sensor, 0x3377,  b_gain & 0xff);
 	}
 
 	if((sensor->wb.gr_gain != wb->gr_gain)	||
