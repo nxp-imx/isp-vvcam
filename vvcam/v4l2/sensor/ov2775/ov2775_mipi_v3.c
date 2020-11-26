@@ -1464,39 +1464,81 @@ int ov2775_s_wb(struct ov2775 *sensor, sensor_white_balance_t *wb)
 	gb_gain = wb->gb_gain;// wb->gb_gain =256 means gain 1.0
 	b_gain  = wb->b_gain; // wb->b_gain  =256 means gain 1.0
 
-	//R,Gr,Gb,B HCG Channel
-	ret = ov2775_write_reg(sensor,  0x3360, (gr_gain >> 8) & 0xff);
-	ret |= ov2775_write_reg(sensor, 0x3361,  gr_gain & 0xff);
-	ret |= ov2775_write_reg(sensor, 0x3362, (r_gain >> 8) & 0xff);
-	ret |= ov2775_write_reg(sensor, 0x3363,  r_gain & 0xff);
-	ret |= ov2775_write_reg(sensor, 0x3364, (b_gain >> 8) & 0xff);
-	ret |= ov2775_write_reg(sensor, 0x3365,  b_gain & 0xff);
-	ret |= ov2775_write_reg(sensor, 0x3366, (gb_gain >> 8) & 0xff);
-	ret |= ov2775_write_reg(sensor, 0x3367,  gb_gain & 0xff);
-	
-	//R,Gr,Gb,B LCG Channel
-	ret |= ov2775_write_reg(sensor, 0x3368, (gr_gain >> 8) & 0xff);
-	ret |= ov2775_write_reg(sensor, 0x3369,  gr_gain & 0xff);
-	ret |= ov2775_write_reg(sensor, 0x336a, (r_gain >> 8) & 0xff);
-	ret |= ov2775_write_reg(sensor, 0x336b,  r_gain & 0xff);
-	ret |= ov2775_write_reg(sensor, 0x336c, (b_gain >> 8) & 0xff);
-	ret |= ov2775_write_reg(sensor, 0x336d,  b_gain & 0xff);
-	ret |= ov2775_write_reg(sensor, 0x336e, (gb_gain >> 8) & 0xff);
-	ret |= ov2775_write_reg(sensor, 0x336f,  gb_gain & 0xff);
-	
-	//R,Gr,Gb,B VS Channel
-	ret |= ov2775_write_reg(sensor, 0x3370, (gr_gain >> 8) & 0xff);
-	ret |= ov2775_write_reg(sensor, 0x3371,  gr_gain & 0xff);
-	ret |= ov2775_write_reg(sensor, 0x3372, (r_gain >> 8) & 0xff);
-	ret |= ov2775_write_reg(sensor, 0x3373,  r_gain & 0xff);
-	ret |= ov2775_write_reg(sensor, 0x3374, (b_gain >> 8) & 0xff);
-	ret |= ov2775_write_reg(sensor, 0x3375,  b_gain & 0xff);
-	ret |= ov2775_write_reg(sensor, 0x3376, (gb_gain >> 8) & 0xff);
-	ret |= ov2775_write_reg(sensor, 0x3377,  gb_gain & 0xff);
+	//Red,Gr,Gb,Blue HCG Channel
+	if(sensor->wb.gr_gain != wb->gr_gain){
+		
+		ret = ov2775_write_reg(sensor, 0x3360, (gr_gain >> 8) & 0xff);
+		ret |= ov2775_write_reg(sensor, 0x3361,  gr_gain & 0xff);
+	}
+	if(sensor->wb.r_gain != wb->r_gain){
+		
+		ret = ov2775_write_reg(sensor, 0x3362, (r_gain >> 8) & 0xff);
+		ret |= ov2775_write_reg(sensor, 0x3363,  r_gain & 0xff);
+	}
+	if(sensor->wb.b_gain != wb->b_gain){
+		
+		ret = ov2775_write_reg(sensor, 0x3364, (b_gain >> 8) & 0xff);
+		ret |= ov2775_write_reg(sensor, 0x3365,  b_gain & 0xff);
+	}
+	if(sensor->wb.gb_gain != wb->gb_gain){
+		
+		ret = ov2775_write_reg(sensor, 0x3366, (gb_gain >> 8) & 0xff);
+		ret |= ov2775_write_reg(sensor, 0x3367,  gb_gain & 0xff);	
+	}
+
+	//Red,Gr,Gb,Blue LCG Channel
+	if(sensor->wb.gr_gain != wb->gr_gain){
+		
+		ret = ov2775_write_reg(sensor, 0x3368, (gr_gain >> 8) & 0xff);
+		ret |= ov2775_write_reg(sensor, 0x3369,  gr_gain & 0xff);
+	}
+	if(sensor->wb.r_gain != wb->r_gain){
+		
+		ret = ov2775_write_reg(sensor, 0x336a, (r_gain >> 8) & 0xff);
+		ret |= ov2775_write_reg(sensor, 0x336b,  r_gain & 0xff);
+	}
+	if(sensor->wb.b_gain != wb->b_gain){
+
+		ret = ov2775_write_reg(sensor, 0x336c, (b_gain >> 8) & 0xff);
+		ret |= ov2775_write_reg(sensor, 0x336d,  b_gain & 0xff);
+	}
+	if(sensor->wb.gb_gain != wb->gb_gain){
+
+		ret = ov2775_write_reg(sensor, 0x336e, (gb_gain >> 8) & 0xff);
+		ret |= ov2775_write_reg(sensor, 0x336f,  gb_gain & 0xff);
+	}
+
+	//Red,Gr,Gb,Blue VS Channel
+	if(sensor->wb.gr_gain != wb->gr_gain){
+				
+		ret = ov2775_write_reg(sensor, 0x3370, (gr_gain >> 8) & 0xff);
+		ret |= ov2775_write_reg(sensor, 0x3371,  gr_gain & 0xff);
+	}
+	if(sensor->wb.r_gain != wb->r_gain){
+
+		ret = ov2775_write_reg(sensor, 0x3372, (r_gain >> 8) & 0xff);
+		ret |= ov2775_write_reg(sensor, 0x3373,  r_gain & 0xff);
+	}
+	if(sensor->wb.b_gain != wb->b_gain){
+
+		ret = ov2775_write_reg(sensor, 0x3374, (b_gain >> 8) & 0xff);
+		ret |= ov2775_write_reg(sensor, 0x3375,  b_gain & 0xff);
+	}
+	if(sensor->wb.gb_gain != wb->gb_gain){
+
+		ret = ov2775_write_reg(sensor, 0x3376, (gb_gain >> 8) & 0xff);
+		ret |= ov2775_write_reg(sensor, 0x3377,  gb_gain & 0xff);
+	}
+
+	if((sensor->wb.gr_gain != wb->gr_gain)	||
+	   (sensor->wb.r_gain  != wb->r_gain)	||
+	   (sensor->wb.b_gain  != wb->b_gain)	||
+	   (sensor->wb.gb_gain != wb->gb_gain)){
+
+		ov2775_s_blc(sensor,&sensor->blc);
+	}
 
 	memcpy(&sensor->wb,wb,sizeof(sensor_white_balance_t));
-
-	ov2775_s_blc(sensor,&sensor->blc);
 
 	return ret;
 }
