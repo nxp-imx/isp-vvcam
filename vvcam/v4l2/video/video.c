@@ -850,7 +850,7 @@ static int video_open(struct file *file)
 		pr_err("can't init vb queue\n");
 		v4l2_fh_del(&handle->vfh);
 		v4l2_fh_exit(&handle->vfh);
-		kzfree(handle);
+		kfree(handle);
 		return rc;
 	}
 	mutex_init(&handle->event_mutex);
@@ -951,7 +951,7 @@ static int video_close(struct file *file)
 		vb2_queue_release(&handle->queue);
 		mutex_destroy(&handle->event_mutex);
 		mutex_destroy(&handle->buffer_mutex);
-		kzfree(handle);
+		kfree(handle);
 	}
 	return 0;
 }
@@ -1974,7 +1974,7 @@ static int viv_video_remove(struct platform_device *pdev)
 		v4l2_ctrl_handler_free(&vdev->ctrls.handler);
 		v4l2_device_disconnect(vdev->video->v4l2_dev);
 		v4l2_device_put(vdev->video->v4l2_dev);
-		kzfree(vvdev[i]);
+		kfree(vvdev[i]);
 		vvdev[i] = NULL;
 	}
 	return 0;

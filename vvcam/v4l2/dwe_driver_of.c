@@ -219,7 +219,7 @@ int dwe_hw_remove(struct platform_device *pdev)
 #ifdef DWE_REG_RESET
 	iounmap(dwe->ic_dev.reset);
 #endif
-	kzfree(dwe);
+	kfree(dwe);
 	pr_info("vvcam dewarp driver removed\n");
 	return 0;
 }

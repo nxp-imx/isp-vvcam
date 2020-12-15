@@ -257,7 +257,7 @@ int isp_hw_remove(struct platform_device *pdev)
 		v4l2_device_put(isp->vd);
 	}
 
-	kzfree(isp);
+	kfree(isp);
 	pm_runtime_put(&pdev->dev);
 	pm_runtime_disable(&pdev->dev);
 	return 0;
