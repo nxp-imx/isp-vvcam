@@ -1,0 +1,1 @@
+cmd_/home/chao/work/rc5_env/vvcam/v4l2/csi/samsung/vvcam-csis.mod := { echo  /home/chao/work/rc5_env/vvcam/v4l2/csi/samsung/mxc-mipi-csi2-sam.o; echo; } > /home/chao/work/rc5_env/vvcam/v4l2/csi/samsung/vvcam-csis.mod

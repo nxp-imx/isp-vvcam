@@ -1,0 +1,1 @@
+cmd_/home/qiuyue/1228/nxp_release_201225_rc2/vvcam/v4l2/sensor/ov2775/ov2775.mod := { echo  /home/qiuyue/1228/nxp_release_201225_rc2/vvcam/v4l2/sensor/ov2775/ov2775_mipi_v3.o; echo; } > /home/qiuyue/1228/nxp_release_201225_rc2/vvcam/v4l2/sensor/ov2775/ov2775.mod

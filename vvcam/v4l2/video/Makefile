@@ -1,0 +1,15 @@
+MODULE_NAME = vvcam-video
+
+obj-m := $(MODULE_NAME).o
+$(MODULE_NAME)-objs := \
+	video.o \
+	vvbuf.o
+
+EXTRA_CFLAGS += -I$(PWD)/../common/
+EXTRA_CFLAGS += -DRESERVED_MEM_BASE=0xB0000000
+EXTRA_CFLAGS += -DRESERVED_MEM_SIZE=0x10000000
+
+ifeq ($(ENABLE_IRQ), yes)
+  EXTRA_CFLAGS += -DENABLE_IRQ
+endif
+EXTRA_CFLAGS += -O2 -Werror

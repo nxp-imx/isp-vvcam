@@ -1,0 +1,1 @@
+cmd_/home/qiuyue/1228/nxp_release_201225_rc2/vvcam/v4l2/built-in.a := rm -f /home/qiuyue/1228/nxp_release_201225_rc2/vvcam/v4l2/built-in.a; aarch64-poky-linux-ar cDPrST /home/qiuyue/1228/nxp_release_201225_rc2/vvcam/v4l2/built-in.a 
