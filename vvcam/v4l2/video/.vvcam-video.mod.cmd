@@ -1,1 +1,0 @@
-cmd_/home/qiuyue/1228/nxp_release_201225_rc2/vvcam/v4l2/video/vvcam-video.mod := { echo  /home/qiuyue/1228/nxp_release_201225_rc2/vvcam/v4l2/video/video.o /home/qiuyue/1228/nxp_release_201225_rc2/vvcam/v4l2/video/vvbuf.o; echo; } > /home/qiuyue/1228/nxp_release_201225_rc2/vvcam/v4l2/video/vvcam-video.mod

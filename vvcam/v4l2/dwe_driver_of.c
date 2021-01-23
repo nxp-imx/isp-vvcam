@@ -56,6 +56,10 @@
 #include "dwe_driver.h"
 #include "dwe_ioctl.h"
 
+#define DEWARP_NODE_NUM  (2)
+
+static struct dwe_device *pdwe_dev[DEWARP_NODE_NUM] = {NULL};
+
 int dwe_subscribe_event(struct v4l2_subdev *sd, struct v4l2_fh *fh,
 			struct v4l2_event_subscription *sub)
 {
@@ -209,98 +213,154 @@ static const struct vvbuf_ops dwe_dst_buf_ops = {
 	.notify = dwe_dst_buf_notify,
 };
 
+static void fake_pdev_release(struct device *dev)
+{
+	pr_info("enter %s\n", __func__);
+}
+
+static struct platform_device fake_pdev = {
+	.name = "fsl,fake-imx8mp-dwe",
+	.id   = 1,
+	.dev.release = fake_pdev_release,
+};
+
+static int dwe_fake_pdev_creat(void)
+{
+	return  platform_device_register(&fake_pdev);
+}
+
+static void dwe_fake_pdev_destory(void)
+{
+	platform_device_unregister(&fake_pdev);
+}
+
 int dwe_hw_probe(struct platform_device *pdev)
 {
 	struct dwe_device *dwe_dev;
 	struct resource *mem_res;
-	int i, irq;
-	int rc;
+	int irq;
+	int rc, i, index;
+	int dev_id;
 
 	pr_info("enter %s\n", __func__);
-	dwe_dev = kzalloc(sizeof(struct dwe_device), GFP_KERNEL);
-	if (!dwe_dev)
-		return -ENOMEM;
-
-	rc = fwnode_property_read_u32(of_fwnode_handle(pdev->dev.of_node),
-			"id", &dwe_dev->id);
-	if (rc) {
-		pr_info("dwe device id not found, use the default.\n");
-		dwe_dev->id = 0;
-	}
-
-	v4l2_subdev_init(&dwe_dev->sd, &dwe_v4l2_subdev_ops);
-	snprintf(dwe_dev->sd.name, sizeof(dwe_dev->sd.name),
-			"%s.%d", DWE_DEVICE_NAME, dwe_dev->id);
-	dwe_dev->sd.flags |= V4L2_SUBDEV_FL_HAS_DEVNODE;
-	dwe_dev->sd.flags |= V4L2_SUBDEV_FL_HAS_EVENTS;
-	dwe_dev->sd.owner = THIS_MODULE;
-	v4l2_set_subdevdata(&dwe_dev->sd, dwe_dev);
-	dwe_dev->sd.dev = &pdev->dev;
 
 	mem_res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-
-	for (i = 0; i < DWE_PADS_NUM; ++i)
-		vvbuf_ctx_init(&dwe_dev->bctx[i]);
-	dwe_dev->bctx[DWE_PAD_SINK].ops = &dwe_src_buf_ops;
-	dwe_dev->bctx[DWE_PAD_SOURCE].ops = &dwe_dst_buf_ops;
+	if (!mem_res) {
+		pr_err("can't fetch device resource info\n");
+		return -ENODEV;
+	}
 
 	irq = platform_get_irq(pdev, 0);
 	if (irq < 0) {
 		pr_err("failed to get irq number.\n");
-		goto end;
+		return -ENODEV;
 	}
-	dwe_dev->irq = irq;
 
-	platform_set_drvdata(pdev, dwe_dev);
+	rc = dwe_fake_pdev_creat();
+	if (rc < 0) {
+		pr_err("failed to creat fake pdev for dwe1.\n");
+		goto dewarp_destory_fake_pdev;
+	}
 
-	dwe_dev->sd.entity.name = dwe_dev->sd.name;
-	dwe_dev->sd.entity.obj_type = MEDIA_ENTITY_TYPE_V4L2_SUBDEV;
-	dwe_dev->sd.entity.function = MEDIA_ENT_F_IO_V4L;
-	dwe_dev->sd.entity.ops = &dwe_media_ops;
-	dwe_dev->pads[DWE_PAD_SINK].flags =
-			MEDIA_PAD_FL_SINK | MEDIA_PAD_FL_MUST_CONNECT;
-	dwe_dev->pads[DWE_PAD_SOURCE].flags =
-			MEDIA_PAD_FL_SOURCE | MEDIA_PAD_FL_MUST_CONNECT;
-	rc = media_entity_pads_init(&dwe_dev->sd.entity,
-			DWE_PADS_NUM, dwe_dev->pads);
-	if (rc)
-		goto end;
+	for (dev_id = 0; dev_id < DEWARP_NODE_NUM; dev_id++) {
+		pdwe_dev[dev_id] =
+			kzalloc(sizeof(struct dwe_device), GFP_KERNEL);
+			if (!pdwe_dev[dev_id]) {
+				if (dev_id == 0)
+					goto dewarp_destory_fake_pdev;
+				else {
+					dev_id = dev_id - 1;
+					goto dewarp_entity_pads_deinit;
+				}
 
-	dwe_dev->core = dwe_devcore_init(dwe_dev, mem_res);
+		}
 
-	dwe_dev->sd.fwnode = of_fwnode_handle(pdev->dev.of_node);
-	rc = v4l2_async_register_subdev(&dwe_dev->sd);
-	if (rc)
-		goto end;
+		dwe_dev = pdwe_dev[dev_id];
+		dwe_dev->id = dev_id;
+		v4l2_subdev_init(&dwe_dev->sd, &dwe_v4l2_subdev_ops);
+		snprintf(dwe_dev->sd.name, sizeof(dwe_dev->sd.name),
+				"%s.%d", DWE_DEVICE_NAME, dwe_dev->id);
+		dwe_dev->sd.flags |= V4L2_SUBDEV_FL_HAS_DEVNODE;
+		dwe_dev->sd.flags |= V4L2_SUBDEV_FL_HAS_EVENTS;
+		dwe_dev->sd.owner = THIS_MODULE;
 
+		v4l2_set_subdevdata(&dwe_dev->sd, dwe_dev);
+
+		if (dev_id == 0)
+			dwe_dev->sd.dev = &pdev->dev;
+		else
+			dwe_dev->sd.dev = &fake_pdev.dev;
+		dwe_dev->sd.entity.name = dwe_dev->sd.name;
+		dwe_dev->sd.entity.obj_type = MEDIA_ENTITY_TYPE_V4L2_SUBDEV;
+		dwe_dev->sd.entity.function = MEDIA_ENT_F_IO_V4L;
+		dwe_dev->sd.entity.ops = &dwe_media_ops;
+		dwe_dev->pads[DWE_PAD_SINK].flags =
+				MEDIA_PAD_FL_SINK | MEDIA_PAD_FL_MUST_CONNECT;
+		dwe_dev->pads[DWE_PAD_SOURCE].flags =
+				MEDIA_PAD_FL_SOURCE | MEDIA_PAD_FL_MUST_CONNECT;
+		rc = media_entity_pads_init(&dwe_dev->sd.entity,
+				DWE_PADS_NUM, dwe_dev->pads);
+		if (rc < 0)
+			goto dewarp_entity_pads_deinit;
+	}
+
+	for (dev_id = 0; dev_id < DEWARP_NODE_NUM; dev_id++) {
+		dwe_dev = pdwe_dev[dev_id];
+		for (i = 0; i < DWE_PADS_NUM; ++i)
+			vvbuf_ctx_init(&dwe_dev->bctx[i]);
+
+		dwe_dev->bctx[DWE_PAD_SINK].ops = &dwe_src_buf_ops;
+		dwe_dev->bctx[DWE_PAD_SOURCE].ops = &dwe_dst_buf_ops;
+		dwe_dev->irq = irq;
+
+		dwe_dev->core = dwe_devcore_init(dwe_dev, mem_res);
+		dwe_dev->sd.fwnode = of_fwnode_handle(pdev->dev.of_node);
+
+		rc = v4l2_async_register_subdev(&dwe_dev->sd);
+		if (rc < 0)
+			goto dewarp_core_deinit;
+	}
 	pr_info("vvcam dewarp driver probed\n");
 	return 0;
-end:
-	if (dwe_dev->core)
-		dwe_devcore_deinit(dwe_dev);
-	for (i = 0; i < DWE_PADS_NUM; ++i)
-		vvbuf_ctx_deinit(&dwe_dev->bctx[i]);
-	kfree(dwe_dev);
+
+dewarp_core_deinit:
+	dwe_devcore_deinit(pdwe_dev[0]);
+	for (index = 0; index <= dev_id; index++) {
+		dwe_dev = pdwe_dev[index];
+		for (i = 0; i < DWE_PADS_NUM; i++)
+			vvbuf_ctx_deinit(&dwe_dev->bctx[i]);
+	}
+	dev_id = DEWARP_NODE_NUM - 1;
+
+dewarp_entity_pads_deinit:
+	for (index = 0; index <= dev_id; index++) {
+		dwe_dev = pdwe_dev[index];
+		media_entity_cleanup(&dwe_dev->sd.entity);
+		kfree(dwe_dev);
+	}
+dewarp_destory_fake_pdev:
+	dwe_fake_pdev_destory();
 	return rc;
 }
 
 int dwe_hw_remove(struct platform_device *pdev)
 {
-	struct dwe_device *dwe = platform_get_drvdata(pdev);
+	struct dwe_device *dwe_dev;
+	int dev_id;
 	int i;
 
 	pr_info("enter %s\n", __func__);
+	dwe_devcore_deinit(pdwe_dev[0]);
 
-	if (!dwe)
-		return -1;
-
-	for (i = 0; i < DWE_PADS_NUM; ++i)
-		vvbuf_ctx_deinit(&dwe->bctx[i]);
-	dwe_devcore_deinit(dwe);
-	media_entity_cleanup(&dwe->sd.entity);
-	v4l2_async_unregister_subdev(&dwe->sd);
-
-	kfree(dwe);
+	for (dev_id = 0; dev_id < DEWARP_NODE_NUM; dev_id++) {
+		dwe_dev = pdwe_dev[dev_id];
+		for (i = 0; i < DWE_PADS_NUM; i++)
+			vvbuf_ctx_deinit(&dwe_dev->bctx[i]);
+		media_entity_cleanup(&dwe_dev->sd.entity);
+		v4l2_async_unregister_subdev(&dwe_dev->sd);
+		kfree(dwe_dev);
+	}
+	dwe_fake_pdev_destory();
 	pr_info("vvcam dewarp driver removed\n");
 	return 0;
 }

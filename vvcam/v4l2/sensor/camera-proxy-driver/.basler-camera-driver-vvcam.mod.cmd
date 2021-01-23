@@ -1,1 +1,0 @@
-cmd_/home/qiuyue/1228/nxp_release_201225_rc2/vvcam/v4l2/sensor/camera-proxy-driver/basler-camera-driver-vvcam.mod := { echo  /home/qiuyue/1228/nxp_release_201225_rc2/vvcam/v4l2/sensor/camera-proxy-driver/basler-camera-driver-vvcam/basler-camera-driver-vvcam.o; echo; } > /home/qiuyue/1228/nxp_release_201225_rc2/vvcam/v4l2/sensor/camera-proxy-driver/basler-camera-driver-vvcam.mod

@@ -107,6 +107,7 @@ struct viv_video_device {
 	struct completion subscribed_wait;
 	int subscribed_cnt;
 	int active;
+	void *rmem;
 };
 
 struct viv_video_file {

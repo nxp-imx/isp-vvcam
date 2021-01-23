@@ -78,8 +78,8 @@ long dwe_devcore_ioctl(struct dwe_device *dwe, unsigned int cmd, void *args)
 			ret = dwe_priv_ioctl(&dwe->core->ic_dev,
 					DWEIOC_RESET, NULL);
 			ret |= dwe_priv_ioctl(&dwe->core->ic_dev, cmd, args);
-		} else
-			dwe->core->state++;
+		}
+		dwe->core->state++;
 		mutex_unlock(&dwe->core->mutex);
 		dwe->state |= STATE_DRIVER_STARTED;
 		break;
@@ -88,9 +88,8 @@ long dwe_devcore_ioctl(struct dwe_device *dwe, unsigned int cmd, void *args)
 			break;
 		dwe->state &= ~STATE_DRIVER_STARTED;
 		mutex_lock(&dwe->core->mutex);
-		if (dwe->core->state > 0)
-			dwe->core->state--;
-		else
+		dwe->core->state--;
+		if (dwe->core->state == 0)
 			ret = dwe_priv_ioctl(&dwe->core->ic_dev, cmd, args);
 		mutex_unlock(&dwe->core->mutex);
 		break;

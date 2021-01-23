@@ -710,16 +710,32 @@ struct isp_irq_data {
 	uint32_t nop[14];
 };
 
+typedef struct isp_wdr_context
+{
+	bool	enabled;
+	bool	changed;	//the wdr ctrl && reb shift does not have shandow 
+						//register,need to change after frame end irq.
+	u16 	LumOffset;
+	u16 	RgbOffset;
+	u16 	Ym[33];
+	u8		dY[33];
+} isp_wdr_context_t;
+
 struct isp_ic_dev {
 	void __iomem *base;
 	void __iomem *reset;
+	void *rmem;
 	int id;
+#ifdef ISP8000NANO_V1802
+	struct regmap *mix_gpr;
+#endif 
 #if defined(__KERNEL__) && defined(ENABLE_IRQ)
 	struct vvbuf_ctx *bctx;
 	struct vb2_dc_buf *mi_buf[MI_PATH_NUM];
 	struct vb2_dc_buf *mi_buf_shd[MI_PATH_NUM];
 	int (*alloc)(struct isp_ic_dev *dev, struct isp_buffer_context *buf);
 	int (*free)(struct isp_ic_dev *dev, struct vb2_dc_buf *buf);
+	int *state;
 #endif
 	void (*post_event)(struct isp_ic_dev *dev, void *data, size_t size);
 
@@ -764,8 +780,7 @@ struct isp_ic_dev {
 	struct isp_ge_context ge;
 	struct isp_ca_context ca;
 	struct isp_dummy_hblank_cxt hblank;
-#define ISP_FLT_UPDATE    (1 << 0)
-	u32    isp_update_flag;
+	struct isp_wdr_context wdr;
 };
 
 struct isp_extmem_info {

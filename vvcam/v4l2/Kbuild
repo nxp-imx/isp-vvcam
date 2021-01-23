@@ -50,8 +50,6 @@ vvcam-isp-objs += video/vvbuf.o
 obj-m += vvcam-isp.o
 
 EXTRA_CFLAGS += -I$(PWD)/../dwe/
-EXTRA_CFLAGS += -DDWE_REG_BASE=0x32E30000
-EXTRA_CFLAGS += -DDWE_REG_SIZE=0x00010000
 vvcam-dwe-objs += ../dwe/dwe_ioctl.o
 vvcam-dwe-objs += ../dwe/dwe_isr.o
 ifeq ($(ENABLE_IRQ), yes)

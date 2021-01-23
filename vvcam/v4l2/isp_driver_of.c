@@ -52,6 +52,9 @@
  *****************************************************************************/
 #include <linux/pm_runtime.h>
 #include <media/v4l2-event.h>
+#include <linux/mfd/syscon.h>
+#include <linux/regmap.h>
+#include <linux/of_reserved_mem.h>
 
 #include "isp_driver.h"
 #include "isp_ioctl.h"
@@ -90,8 +93,8 @@ int isp_set_stream(struct v4l2_subdev *sd, int enable)
 	struct vvbuf_ctx *ctx = &isp_dev->bctx;
 	struct vb2_dc_buf *buf;
 
-	isp_dev->state = enable;
 	if (!enable) {
+		isp_dev->state &= ~STATE_STREAM_STARTED;
 		buf = vvbuf_try_dqbuf(ctx);
 		if (!buf)
 			return 0;
@@ -101,7 +104,8 @@ int isp_set_stream(struct v4l2_subdev *sd, int enable)
 			if (buf->flags)
 				kfree(buf);
 		} while ((buf = vvbuf_try_dqbuf(ctx)));
-	}
+	} else
+		isp_dev->state |= STATE_STREAM_STARTED;
 	return 0;
 }
 
@@ -191,7 +195,7 @@ static void isp_buf_notify(struct vvbuf_ctx *ctx, struct vb2_dc_buf *buf)
 
 	sd = media_entity_to_v4l2_subdev(buf->pad->entity);
 	isp = container_of(sd, struct isp_device, sd);
-	if (isp->state == 0) {
+	if (!(isp->state & STATE_STREAM_STARTED)) {
 		if (buf->flags) {
 			kfree(buf);
 			return;
@@ -247,8 +251,26 @@ static int isp_buf_alloc(struct isp_ic_dev *dev, struct isp_buffer_context *buf)
 
 static int isp_buf_free(struct isp_ic_dev *dev, struct vb2_dc_buf *buf)
 {
+	struct isp_device *isp_dev;
+	struct vvbuf_ctx *ctx;
+
 	if (buf && buf->flags)
 		kfree(buf);
+
+	if (!dev)
+		return -EINVAL;
+
+	isp_dev = container_of(dev, struct isp_device, ic_dev);
+	ctx = &isp_dev->bctx;
+
+	buf = vvbuf_try_dqbuf(ctx);
+	if (!buf || !buf->flags)
+		return 0;
+
+	do {
+		vvbuf_try_dqbuf_done(ctx, buf);
+		kfree(buf);
+	} while ((buf = vvbuf_try_dqbuf(ctx)));
 	return 0;
 }
 
@@ -258,6 +280,8 @@ int isp_hw_probe(struct platform_device *pdev)
 	struct resource *mem_res;
 	int irq;
 	int rc;
+	unsigned int isp_dewarp_control_val;
+	struct device_node *mem_node;
 
 	pr_info("enter %s\n", __func__);
 	isp_dev = kzalloc(sizeof(struct isp_device), GFP_KERNEL);
@@ -271,6 +295,34 @@ int isp_hw_probe(struct platform_device *pdev)
 		isp_dev->id = 0;
 	}
 	isp_dev->ic_dev.id = isp_dev->id;
+
+#ifdef ISP8000NANO_V1802
+	isp_dev->ic_dev.mix_gpr = syscon_regmap_lookup_by_phandle(
+		pdev->dev.of_node, "gpr");
+	if (IS_ERR(isp_dev->ic_dev.mix_gpr)) {
+		pr_warn("failed to get mix gpr\n");
+		isp_dev->ic_dev.mix_gpr = NULL;
+		return -ENOMEM;
+	}
+	regmap_read(isp_dev->ic_dev.mix_gpr, 0x138,
+				&isp_dewarp_control_val);
+	if (isp_dewarp_control_val == 0) {
+		isp_dewarp_control_val = 0x8d8360;
+		regmap_write(isp_dev->ic_dev.mix_gpr, 0x138,
+					isp_dewarp_control_val);
+	}
+#endif
+	mem_node = of_parse_phandle(pdev->dev.of_node, "memory-region", 0);
+	if (!mem_node) {
+		pr_err("No memory-region found\n");
+		return -ENODEV;
+	}
+
+	isp_dev->ic_dev.rmem = of_reserved_mem_lookup(mem_node);
+	if (!isp_dev->ic_dev.rmem) {
+		pr_err("of_reserved_mem_lookup() returned NULL\n");
+		return -ENODEV;
+	}
 
 	v4l2_subdev_init(&isp_dev->sd, &isp_v4l2_subdev_ops);
 	snprintf(isp_dev->sd.name, sizeof(isp_dev->sd.name),
@@ -294,6 +346,7 @@ int isp_hw_probe(struct platform_device *pdev)
 	isp_dev->ic_dev.reset = ioremap(ISP_REG_RESET, 4);
 #endif
 	pr_debug("ioremap addr: %p", isp_dev->ic_dev.base);
+	isp_dev->ic_dev.state = &isp_dev->state;
 
 	vvbuf_ctx_init(&isp_dev->bctx);
 	isp_dev->bctx.ops = &isp_buf_ops;

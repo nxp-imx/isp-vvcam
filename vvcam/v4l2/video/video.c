@@ -62,6 +62,7 @@
 #include <media/v4l2-fh.h>
 #include <media/v4l2-ioctl.h>
 #include <media/videobuf2-dma-contig.h>
+#include <linux/of_reserved_mem.h>
 
 #include "video.h"
 #include "vvctrl.h"
@@ -732,8 +733,7 @@ static inline void init_v4l2_fmt(struct v4l2_format *f, unsigned int bpp,
 	v4l_bound_align_image(&f->fmt.pix.width, 48, 3840, 2,
 			&f->fmt.pix.height, 32, 2160, 0, 0);
 	*bytesperline = ALIGN_UP(f->fmt.pix.width * bpp, 16);
-	*sizeimage = ALIGN_UP(f->fmt.pix.height *
-			ALIGN_UP(f->fmt.pix.width * depth / 8, 16), 4096);
+	*sizeimage = f->fmt.pix.height * ALIGN_UP(f->fmt.pix.width * depth / 8, 16);
 }
 
 static int viv_set_modeinfo(struct viv_video_file *handle,
@@ -741,6 +741,7 @@ static int viv_set_modeinfo(struct viv_video_file *handle,
 {
 	struct viv_video_device *vdev = handle->vdev;
 	struct viv_video_fmt fmt;
+	struct viv_video_fmt *pfmt = NULL;
 	int i;
 
 	if (modeinfo->w == 0 || modeinfo->h == 0 || modeinfo->fps == 0) {
@@ -748,8 +749,8 @@ static int viv_set_modeinfo(struct viv_video_file *handle,
 		memset(vdev->modeinfo, 0, sizeof(vdev->modeinfo));
 		vdev->fmt.fmt.pix.width = 0;
 		vdev->fmt.fmt.pix.height = 0;
-		memset(&vdev->crop,0,sizeof(struct v4l2_rect));
-		memset(&vdev->compose,0,sizeof(struct v4l2_rect));
+		memset(&vdev->crop, 0, sizeof(struct v4l2_rect));
+		memset(&vdev->compose, 0, sizeof(struct v4l2_rect));
 		return -EINVAL;
 	}
 
@@ -785,11 +786,21 @@ static int viv_set_modeinfo(struct viv_video_file *handle,
 			vdev->modeinfo[0].fps == 0)
 			pr_err("invalid default format!\n");
 
-		vdev->fmt.fmt.pix.pixelformat = vdev->formats[0].fourcc;
+		if (vdev->fmt.fmt.pix.pixelformat == 0) {
+			vdev->fmt.fmt.pix.pixelformat = vdev->formats[0].fourcc;
+		}
+		for (i = 0; i < vdev->formatscount; ++i) {
+			if (vdev->fmt.fmt.pix.pixelformat == vdev->formats[i].fourcc) {
+				pfmt = &vdev->formats[i];
+				break;
+			}
+		}
+		if (pfmt == NULL)
+			pfmt = &vdev->formats[0];
+
 		vdev->fmt.fmt.pix.width = vdev->modeinfo[0].w;
 		vdev->fmt.fmt.pix.height = vdev->modeinfo[0].h;
-		init_v4l2_fmt(&vdev->fmt, vdev->formats[0].bpp,
-				vdev->formats[0].depth,
+		init_v4l2_fmt(&vdev->fmt, pfmt->bpp, pfmt->depth,
 				&vdev->fmt.fmt.pix.bytesperline,
 				&vdev->fmt.fmt.pix.sizeimage);
 
@@ -821,6 +832,7 @@ static long private_ioctl(struct file *file, void *fh,
 	struct viv_video_device *dev = video_drvdata(file);
 	unsigned long flags;
 	int rc = 0;
+	struct reserved_mem *rmem;
 
 	if (!file || !fh)
 		return -EINVAL;
@@ -941,8 +953,14 @@ static long private_ioctl(struct file *file, void *fh,
 	case VIV_VIDIOC_QUERY_EXTMEM:
 		pr_debug("priv ioctl VIV_VIDIOC_QUERY_EXTMEM\n");
 		ext_buf = (struct ext_buf_info *)arg;
-		ext_buf->addr = RESERVED_MEM_BASE;
-		ext_buf->size = RESERVED_MEM_SIZE;
+		rmem = (struct reserved_mem *)dev->rmem;
+		if (!rmem) {
+			ext_buf->addr = 0;
+			ext_buf->size = 0;
+		} else {
+			ext_buf->addr = rmem->base;
+			ext_buf->size = rmem->size;
+		}
 		break;
 	case VIV_VIDIOC_S_MODEINFO:
 		rc = viv_set_modeinfo(handle, arg);
@@ -1416,16 +1434,15 @@ static int vidioc_s_selection(struct file *file, void *fh,
 	if (s->r.top < 0 || s->r.left < 0)
 		return -EINVAL;
 
-	if (s->r.width == 0 || s->r.height == 0 || s->r.width > 3840 || s->r.height > 2160)
+	if (s->r.width == 0 || s->r.height == 0 ||
+	    s->r.width > 3840 || s->r.height > 2160)
 		return -EINVAL;
 
-	if (s->target == V4L2_SEL_TGT_CROP)
-	{
+	if (s->target == V4L2_SEL_TGT_CROP) {
 		if (s->r.left + s->r.width > vdev->fmt.fmt.pix.width ||
-			s->r.top + s->r.height > vdev->fmt.fmt.pix.height)
-		return -EINVAL;
+		    s->r.top + s->r.height > vdev->fmt.fmt.pix.height)
+			return -EINVAL;
 	}
-	
 
 	if (!rect)
 		return -ENOMEM;
@@ -1593,10 +1610,20 @@ int vidioc_mmap(struct file *file, struct vm_area_struct *vma)
 	int rc;
 	struct viv_video_file *handle = priv_to_handle(file->private_data);
 
+#ifndef ENABLE_IRQ
+	struct viv_video_device *dev = video_drvdata(file);
+	struct reserved_mem *rmem = (struct reserved_mem *)dev->rmem;
+	unsigned long reserved_base_addr = 0;
+	if (!rmem)
+		reserved_base_addr = 0;
+	else
+		reserved_base_addr = rmem->base;
+#endif
+
 #ifdef ENABLE_IRQ
 	if (handle->streamid < 0)
 #else
-	if (vma->vm_pgoff >= ((unsigned long)RESERVED_MEM_BASE) >> PAGE_SHIFT)
+	if (vma->vm_pgoff >= (reserved_base_addr >> PAGE_SHIFT))
 #endif
 		rc = viv_private_mmap(file, vma);
 	else
@@ -1708,11 +1735,21 @@ static int viv_notifier_bound(struct v4l2_async_notifier *notifier,
 		return 0;
 
 	for (i = 0; i < dev->asdcount; ++i) {
-		if (sd->dev && dev->asd[i]->match.fwnode ==
+		if (dev->asd[i]->match_type == V4L2_ASYNC_MATCH_FWNODE) {
+			if (sd->dev && dev->asd[i]->match.fwnode ==
 				of_fwnode_handle(sd->dev->of_node)) {
-			dev->subdevs[dev->sdcount] = sd;
-			dev->sdcount++;
-			break;
+				dev->subdevs[dev->sdcount] = sd;
+				dev->sdcount++;
+				break;
+			}
+		} else if (dev->asd[i]->match_type ==
+					V4L2_ASYNC_MATCH_DEVNAME) {
+			if (sd->dev && !strcmp(dev->asd[i]->match.device_name,
+							dev_name(sd->dev))) {
+				dev->subdevs[dev->sdcount] = sd;
+				dev->sdcount++;
+				break;
+			}
 		}
 	}
 	return 0;
@@ -1778,7 +1815,7 @@ static void viv_buf_notify(struct vvbuf_ctx *ctx, struct vb2_dc_buf *buf)
 	struct viv_video_device *vdev;
 	u64 cur_ts, interval;
 	u32 fps;
-    static u32 loop_cnt = 0;
+	static u32 loop_cnt = 0;
 
 	if (!buf || buf->vb.vb2_buf.state != VB2_BUF_STATE_ACTIVE)
 		return;
@@ -1822,15 +1859,19 @@ static const struct vvbuf_ops viv_buf_ops = {
 #endif
 
 struct dev_node {
+	enum v4l2_async_match_type match_type;
 	struct device_node *node;
 	int id;
+	const char *name;
 };
+static const char * const dwe_dev_compat_name[] = {
+	"32e30000.dwe", "fsl,fake-imx8mp-dwe.1"};
 
 #ifdef ENABLE_IRQ
 static inline int viv_find_compatible_nodes(struct dev_node *nodes, int size)
 {
 	static const char * const compat_name[] = {
-			ISP_COMPAT_NAME, DWE_COMPAT_NAME};
+			ISP_COMPAT_NAME};
 	struct device_node *node, *avail;
 	int i, rc, id, cnt = 0;
 
@@ -1854,6 +1895,12 @@ static inline int viv_find_compatible_nodes(struct dev_node *nodes, int size)
 			if (avail) {
 				nodes[cnt].node = avail;
 				nodes[cnt].id = id;
+				nodes[cnt].match_type = V4L2_ASYNC_MATCH_FWNODE;
+				cnt++;
+
+				nodes[cnt].id = id;
+				nodes[cnt].match_type = V4L2_ASYNC_MATCH_DEVNAME;
+				nodes[cnt].name = dwe_dev_compat_name[id];
 				cnt++;
 			}
 		}
@@ -1861,6 +1908,42 @@ static inline int viv_find_compatible_nodes(struct dev_node *nodes, int size)
 	return cnt;
 }
 #endif
+
+static struct reserved_mem * viv_find_isp_reserve_mem(int dev_id)
+{
+	int i,rc;
+	int id=0;
+	struct device_node *node = NULL;
+	struct device_node *mem_node;
+
+	for (i=0; i<VIDEO_NODE_NUM; i++)
+	{
+		node = of_find_compatible_node(node,
+					NULL, ISP_COMPAT_NAME);
+		if (!node)
+			break;
+		rc = fwnode_property_read_u32(
+					of_fwnode_handle(node), "id", &id);
+		if (rc) {
+			pr_err("%s:get fwnode id failed \n",__func__);
+			break;
+		}
+
+		if (id == dev_id) {
+			of_node_put(node);
+			mem_node = of_parse_phandle(node, "memory-region", 0);
+			if (!mem_node) {
+				pr_err("No memory-region found\n");
+				return NULL;
+			}
+			return of_reserved_mem_lookup(mem_node);
+		}
+	}
+	if (node)
+		of_node_put(node);
+
+	return NULL;
+}
 
 static int viv_video_probe(struct platform_device *pdev)
 {
@@ -1884,8 +1967,8 @@ static int viv_video_probe(struct platform_device *pdev)
 			goto probe_end;
 		}
 		vdev = vvdev[i];
-
 		vdev->id = i;
+		vdev->rmem = viv_find_isp_reserve_mem(vdev->id);
 		vdev->v4l2_dev = kzalloc(sizeof(*vdev->v4l2_dev), GFP_KERNEL);
 		if (WARN_ON(!vdev->v4l2_dev)) {
 			rc = -ENOMEM;
@@ -1949,10 +2032,23 @@ static int viv_video_probe(struct platform_device *pdev)
 #ifdef ENABLE_IRQ
 		for (j = 0; j < nodecount; ++j) {
 			if (nodes[j].id == i) {
-				asd = v4l2_async_notifier_add_fwnode_subdev(
-					    &vdev->subdev_notifier,
-					    of_fwnode_handle(nodes[j].node),
-					    sizeof(struct v4l2_async_subdev));
+				switch (nodes[j].match_type) {
+				case V4L2_ASYNC_MATCH_FWNODE:
+					asd = v4l2_async_notifier_add_fwnode_subdev(
+						&vdev->subdev_notifier,
+						of_fwnode_handle(nodes[j].node),
+						sizeof(struct v4l2_async_subdev));
+					break;
+				case V4L2_ASYNC_MATCH_DEVNAME:
+					asd = v4l2_async_notifier_add_devname_subdev(
+						&vdev->subdev_notifier,
+						nodes[j].name,
+						sizeof(struct v4l2_async_subdev));
+					break;
+				default:
+					asd = NULL;
+					break;
+				}
 				if (asd) {
 					vdev->asd[vdev->asdcount] = asd;
 					vdev->asdcount++;

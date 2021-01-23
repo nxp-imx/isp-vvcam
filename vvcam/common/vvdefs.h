@@ -102,6 +102,12 @@ typedef uint64_t u64;
 #include <linux/delay.h>
 #include <media/v4l2-subdev.h>
 #include <linux/platform_device.h>
+
+enum STATE_CODE {
+	STATE_STOPPED = 0,
+	STATE_STREAM_STARTED = 1 << 1,
+	STATE_DRIVER_STARTED = 1 << 2,
+};
 #endif
 
 #ifndef MIN

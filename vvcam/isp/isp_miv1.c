@@ -508,7 +508,8 @@ int isp_mi_start(struct isp_ic_dev *dev)
 		dev->mi_buf[i] = NULL;
 		dev->mi_buf_shd[i] = NULL;
 	}
-	update_dma_buffer(dev);
+	if (dev->state)
+		*dev->state |= STATE_DRIVER_STARTED;
 #endif
 
 #ifndef ENABLE_IRQ
@@ -534,6 +535,8 @@ int isp_mi_stop(struct isp_ic_dev *dev)
 	pr_info("enter %s\n", __func__);
 	isp_write_reg(dev, REG_ADDR(mi_imsc), 0);
 #if defined(__KERNEL__) && defined(ENABLE_IRQ)
+	if (dev->state)
+		*dev->state &= ~STATE_DRIVER_STARTED;
 	clean_dma_buffer(dev);
 #endif
 	return 0;

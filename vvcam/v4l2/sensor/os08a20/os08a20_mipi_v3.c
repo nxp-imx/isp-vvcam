@@ -147,6 +147,9 @@ struct os08a20_hs_info {
 };
 
 struct os08a20 {
+	struct regulator *io_regulator;
+	struct regulator *core_regulator;
+	struct regulator *analog_regulator;
 	struct v4l2_subdev subdev;
 	struct v4l2_device *v4l2_dev;
 	struct i2c_client *i2c_client;
@@ -177,6 +180,7 @@ struct os08a20 {
 	int fps;
 
 	vvcam_mode_info_t cur_mode;
+	struct mutex lock;
 };
 
 #define client_to_os08a20(client)\
@@ -196,8 +200,8 @@ static struct vvcam_mode_info pos08a20_mode_info[] = {
         .ae_info = {
 			.DefaultFrameLengthLines = 0x492,
 			.one_line_exp_time_ns = 14250,
-			.max_interrgation_time = 0x492 - 8,
-			.min_interrgation_time = 8,
+			.max_integration_time = 0x492 - 8,
+			.min_integration_time = 8,
 			.gain_accuracy = 1024,
 			.max_gain = 62 * 1024,
 			.min_gain = 1 * 1024,
@@ -217,8 +221,8 @@ static struct vvcam_mode_info pos08a20_mode_info[] = {
         .ae_info = {
 			.DefaultFrameLengthLines = 0x492,
 			.one_line_exp_time_ns = 14250,
-			.max_interrgation_time = 0x492 - 8,
-			.min_interrgation_time = 8,
+			.max_integration_time = 0x492 - 8,
+			.min_integration_time = 8,
 			.gain_accuracy = 1024,
 			.max_gain = 62 * 1024,
 			.min_gain = 1 * 1024,
@@ -237,8 +241,8 @@ static struct vvcam_mode_info pos08a20_mode_info[] = {
         .ae_info = {
 			.DefaultFrameLengthLines = 0x924,
 			.one_line_exp_time_ns = 14250,
-			.max_interrgation_time = 0x924 - 64 - 4,
-			.min_interrgation_time = 8,
+			.max_integration_time = 0x924 - 64 - 4,
+			.min_integration_time = 8,
 			.gain_accuracy = 1024,
 			.max_gain = 62 * 1024,
 			.min_gain = 1 * 1024,
@@ -258,8 +262,8 @@ static struct vvcam_mode_info pos08a20_mode_info[] = {
         .ae_info = {
 			.DefaultFrameLengthLines = 0x924,
 			.one_line_exp_time_ns = 14250,
-			.max_interrgation_time = 0x924 - 64 - 4,//T_long + Tshort < VTS - 4
-			.min_interrgation_time = 8,
+			.max_integration_time = 0x924 - 64 - 4,//T_long + Tshort < VTS - 4
+			.min_integration_time = 8,
 			.gain_accuracy = 1024,
 			.max_gain = 62 * 1024,
 			.min_gain = 1 * 1024,
@@ -276,10 +280,6 @@ static struct os08a20_hs_info hs_setting[] = {
 	{3840, 2160, 30, 0x0B},
 	{3840, 2160, 20, 0x10},
 };
-
-static struct regulator *io_regulator;
-static struct regulator *core_regulator;
-static struct regulator *analog_regulator;
 
 static int os08a20_probe(struct i2c_client *adapter,
 			const struct i2c_device_id *device_id);
@@ -380,88 +380,117 @@ static const struct os08a20_datafmt
 	return NULL;
 }
 
-static inline void os08a20_power_down(struct os08a20 *sensor, int enable)
+static inline void os08a20_power_up(struct os08a20 *sensor)
 {
 	pr_debug("enter %s\n", __func__);
 	if (gpio_is_valid(sensor->pwn_gpio)) {
-		gpio_set_value_cansleep(sensor->pwn_gpio, enable);
-		udelay(2000);
+		gpio_set_value_cansleep(sensor->pwn_gpio, 1);
+	}
+}
+
+static inline void os08a20_power_down(struct os08a20 *sensor)
+{
+	pr_debug("enter %s\n", __func__);
+	if (gpio_is_valid(sensor->pwn_gpio)) {
+		gpio_set_value_cansleep(sensor->pwn_gpio, 0);
 	}
 }
 
 static inline void os08a20_reset(struct os08a20 *sensor)
 {
 	pr_debug("enter %s\n", __func__);
-	if (!gpio_is_valid(sensor->pwn_gpio) || !gpio_is_valid(sensor->rst_gpio))
+	if (!gpio_is_valid(sensor->rst_gpio))
 		return;
 
-	gpio_set_value_cansleep(sensor->pwn_gpio, 1);
 	gpio_set_value_cansleep(sensor->rst_gpio, 0);
-	udelay(5000);
-
-	gpio_set_value_cansleep(sensor->pwn_gpio, 0);
-	udelay(1000);
+	msleep(20);
 
 	gpio_set_value_cansleep(sensor->rst_gpio, 1);
 	msleep(20);
 }
 
-static int os08a20_regulator_enable(struct device *dev)
+static int os08a20_regulator_enable(struct os08a20 *sensor)
 {
 	int ret = 0;
+	struct device *dev = &(sensor->i2c_client->dev);
 
 	pr_debug("enter %s\n", __func__);
-	io_regulator = devm_regulator_get(dev, "DOVDD");
-	if (!IS_ERR(io_regulator)) {
-		regulator_set_voltage(io_regulator,
+	if (sensor->io_regulator)
+	{
+		regulator_set_voltage(sensor->io_regulator,
 				      OS08a20_VOLTAGE_DIGITAL_IO,
 				      OS08a20_VOLTAGE_DIGITAL_IO);
-		ret = regulator_enable(io_regulator);
-		if (ret) {
+		ret = regulator_enable(sensor->io_regulator);
+		if (ret) 
+		{
 			dev_err(dev, "set io voltage failed\n");
 			return ret;
-		} else {
-			dev_dbg(dev, "set io voltage ok\n");
-		}
-	} else {
-		io_regulator = NULL;
-		dev_warn(dev, "cannot get io voltage\n");
-	}
+		} 
+	} 
 
-	core_regulator = devm_regulator_get(dev, "DVDD");
-	if (!IS_ERR(core_regulator)) {
-		regulator_set_voltage(core_regulator,
-				      OS08a20_VOLTAGE_DIGITAL_CORE,
-				      OS08a20_VOLTAGE_DIGITAL_CORE);
-		ret = regulator_enable(core_regulator);
-		if (ret) {
-			dev_err(dev, "set core voltage failed\n");
-			return ret;
-		} else {
-			dev_dbg(dev, "set core voltage ok\n");
-		}
-	} else {
-		core_regulator = NULL;
-		dev_warn(dev, "cannot get core voltage\n");
-	}
-
-	analog_regulator = devm_regulator_get(dev, "AVDD");
-	if (!IS_ERR(analog_regulator)) {
-		regulator_set_voltage(analog_regulator,
+	if (sensor->analog_regulator)
+	{
+		regulator_set_voltage(sensor->analog_regulator,
 				      OS08a20_VOLTAGE_ANALOG,
 				      OS08a20_VOLTAGE_ANALOG);
-		ret = regulator_enable(analog_regulator);
+		ret = regulator_enable(sensor->analog_regulator);
 		if (ret)
+		{
 			dev_err(dev, "set analog voltage failed\n");
-		else
-			dev_dbg(dev, "set analog voltage ok\n");
-	} else {
-		analog_regulator = NULL;
-		dev_warn(dev, "cannot get analog voltage\n");
+			goto err_disable_io;
+		}
+			
 	}
 
+	if (sensor->core_regulator)
+	{
+		regulator_set_voltage(sensor->core_regulator,
+				      OS08a20_VOLTAGE_DIGITAL_CORE,
+				      OS08a20_VOLTAGE_DIGITAL_CORE);
+		ret = regulator_enable(sensor->core_regulator);
+		if (ret) {
+			dev_err(dev, "set core voltage failed\n");
+			goto err_disable_analog;
+		}
+	}
+	
+	return 0;
+
+err_disable_analog:
+	regulator_disable(sensor->analog_regulator);
+err_disable_io:
+	regulator_disable(sensor->io_regulator);
 	return ret;
 }
+
+static void os08a20_regulator_disable(struct os08a20 *sensor)
+{
+	int ret = 0;
+	struct device *dev = &(sensor->i2c_client->dev);
+
+	if (sensor->core_regulator)
+	{
+		ret = regulator_disable(sensor->core_regulator);
+		if (ret < 0)
+			dev_err(dev, "core regulator disable failed\n");
+	}
+
+	if (sensor->analog_regulator)
+	{
+		ret = regulator_disable(sensor->analog_regulator);
+		if (ret < 0)
+			dev_err(dev, "analog regulator disable failed\n");
+	}
+
+	if (sensor->io_regulator)
+	{
+		ret = regulator_disable(sensor->io_regulator);
+		if (ret < 0)
+			dev_err(dev, "io regulator disable failed\n");
+	}
+	return ;
+}
+
 
 s32 os08a20_write_reg(struct os08a20 *sensor, u16 reg, u8 val)
 {
@@ -1019,8 +1048,8 @@ static int os08a20_probe(struct i2c_client *client,
 	struct device *dev = &client->dev;
 	struct v4l2_subdev *sd;
 	int retval;
-
-	/*u8 chip_id_high, chip_id_low;*/
+	u8  reg_val = 0;
+	u16 chip_id = 0;
 	struct os08a20 *sensor;
 
 	pr_debug("enter %s\n", __func__);
@@ -1029,6 +1058,7 @@ static int os08a20_probe(struct i2c_client *client,
 		return -ENOMEM;
 	/* Set initial values for the sensor struct. */
 	memset(sensor, 0, sizeof(*sensor));
+	sensor->i2c_client = client;
 
 	/* os08a20 pinctrl */
 	pinctrl = devm_pinctrl_get_select_default(dev);
@@ -1093,11 +1123,31 @@ static int os08a20_probe(struct i2c_client *client,
 		dev_err(dev, "csi id missing or invalid\n");
 		return retval;
 	}
-	mdelay(2);
+	sensor->io_regulator = devm_regulator_get(dev, "DOVDD");
+	if (IS_ERR(sensor->io_regulator))
+	{
+		dev_err(dev, "cannot get io regulator\n");
+		return PTR_ERR(sensor->io_regulator);
+	}
 
-	if (gpio_is_valid(sensor->rst_gpio)) {
-		gpio_set_value_cansleep(sensor->rst_gpio, 0);
-		mdelay(2);
+	sensor->core_regulator = devm_regulator_get(dev, "DVDD");
+	if (IS_ERR(sensor->core_regulator))
+	{
+		dev_err(dev, "cannot get core regulator\n");
+		return PTR_ERR(sensor->core_regulator);
+	}
+
+	sensor->analog_regulator = devm_regulator_get(dev, "AVDD");
+	if (IS_ERR(sensor->analog_regulator))
+	{
+		dev_err(dev, "cannot get analog  regulator\n");
+		return PTR_ERR(sensor->analog_regulator);
+	}
+
+	retval = os08a20_regulator_enable(sensor);
+	if (retval) {
+		dev_err(dev, "regulator enable failed\n");
+		return retval;
 	}
 
 	/* Set mclk rate before clk on */
@@ -1106,17 +1156,12 @@ static int os08a20_probe(struct i2c_client *client,
 	retval = clk_prepare_enable(sensor->sensor_clk);
 	if (retval < 0) {
 		dev_err(dev, "%s: enable sensor clk fail\n", __func__);
-		return -EINVAL;
+		goto probe_err_regulator_disable;
 	}
-	mdelay(2);
-
-	if (gpio_is_valid(sensor->rst_gpio)) {
-		gpio_set_value_cansleep(sensor->rst_gpio, 1);
-		msleep(20);
-	}
+	os08a20_power_up(sensor);
+	os08a20_reset(sensor);
 
 	sensor->io_init = os08a20_reset;
-	sensor->i2c_client = client;
 
 	sensor->pix.pixelformat = V4L2_PIX_FMT_UYVY;
 	sensor->pix.width =pos08a20_mode_info[0].width;
@@ -1127,25 +1172,16 @@ static int os08a20_probe(struct i2c_client *client,
 	sensor->streamcap.timeperframe.denominator = pos08a20_mode_info[0].fps;
 	sensor->streamcap.timeperframe.numerator = 1;
 
-	os08a20_regulator_enable(&client->dev);
-
-	os08a20_power_down(sensor, 1);
-#if 0
-	retval = os08a20_read_reg(sensor, OS08a20_CHIP_ID_HIGH_BYTE,
-				 &chip_id_high);
-
-	if (retval < 0 || chip_id_high != 0x53) {
-		clk_disable_unprepare(sensor->sensor_clk);
+	chip_id = 0;
+	os08a20_read_reg(sensor, OS08a20_CHIP_ID_HIGH_BYTE,&reg_val);
+	chip_id |= reg_val << 8;
+	os08a20_read_reg(sensor, OS08a20_CHIP_ID_LOW_BYTE, &reg_val);
+	chip_id |= reg_val;
+	if (chip_id != 0x5308) {
 		pr_warn("camera os08a20 is not found\n");
-		return -ENODEV;
+		goto probe_err_power_down;
 	}
-	retval = os08a20_read_reg(sensor, OS08a20_CHIP_ID_LOW_BYTE, &chip_id_low);
-	if (retval < 0 || chip_id_low != 0x08) {
-		clk_disable_unprepare(sensor->sensor_clk);
-		pr_warn("camera os08a20 is not found\n");
-		return -ENODEV;
-	}
-#endif
+
 	sd = &sensor->subdev;
 	v4l2_i2c_subdev_init(sd, client, &os08a20_subdev_ops);
 	sd->flags |= V4L2_SUBDEV_FL_HAS_DEVNODE;
@@ -1156,17 +1192,25 @@ static int os08a20_probe(struct i2c_client *client,
 					sensor->pads);
 	sd->entity.ops = &os08a20_sd_media_ops;
 	if (retval < 0)
-		return retval;
+		goto probe_err_power_down;
 
 	retval = v4l2_async_register_subdev_sensor_common(sd);
 	if (retval < 0) {
-		dev_err(&client->dev,
-			"%s--Async register failed, ret=%d\n", __func__,
-			retval);
-		media_entity_cleanup(&sd->entity);
+		dev_err(&client->dev,"%s--Async register failed, ret=%d\n", __func__,retval);
+		goto probe_err_entity_cleanup;
 	}
+	mutex_init(&sensor->lock);
 
 	pr_info("%s camera mipi os08a20, is found\n", __func__);
+	return 0;
+
+probe_err_entity_cleanup:
+	media_entity_cleanup(&sd->entity);
+probe_err_power_down:
+	os08a20_power_down(sensor);
+	clk_disable_unprepare(sensor->sensor_clk);
+probe_err_regulator_disable:
+	os08a20_regulator_disable(sensor);
 	return retval;
 }
 
@@ -1184,17 +1228,11 @@ static int os08a20_remove(struct i2c_client *client)
 	pr_info("enter %s\n", __func__);
 
 	v4l2_async_unregister_subdev(sd);
-
-	/* clk_unprepare(sensor->sensor_clk); */
-	os08a20_power_down(sensor, 1);
-	if (analog_regulator)
-		regulator_disable(analog_regulator);
-
-	if (core_regulator)
-		regulator_disable(core_regulator);
-
-	if (io_regulator)
-		regulator_disable(io_regulator);
+	media_entity_cleanup(&sd->entity);
+	os08a20_power_down(sensor);
+	clk_disable_unprepare(sensor->sensor_clk);
+	os08a20_regulator_disable(sensor);
+	mutex_destroy(&sensor->lock);
 
 	return 0;
 }
@@ -1338,12 +1376,12 @@ int os08a20_s_fps(struct os08a20 *sensor, __u32 fps)
 	{
 		sensor->cur_mode.ae_info.cur_fps = sensor->fps;
 		sensor->cur_mode.ae_info.CurFrameLengthLines = vts;
-		sensor->cur_mode.ae_info.max_interrgation_time = vts - 64 - 4;
+		sensor->cur_mode.ae_info.max_integration_time = vts - 64 - 4;
 	}else
 	{
 		sensor->cur_mode.ae_info.cur_fps = sensor->fps;
 		sensor->cur_mode.ae_info.CurFrameLengthLines = vts;
-		sensor->cur_mode.ae_info.max_interrgation_time = vts - 8;
+		sensor->cur_mode.ae_info.max_integration_time = vts - 8;
 	}
 	
 	return 0;
@@ -1459,6 +1497,7 @@ long os08a20_priv_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg_user
 	void *arg = arg_user;
 
 	/* pr_info("enter %s\n", __func__); */
+	mutex_lock(&sensor->lock);
 	switch (cmd) {
 	case VVSENSORIOC_WRITE_REG: {
 		USER_TO_KERNEL(struct vvcam_sccb_data);
@@ -1563,6 +1602,7 @@ long os08a20_priv_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg_user
 		/* pr_err("unsupported os08a20 command %d.", cmd); */
 		break;
 	}
+	mutex_unlock(&sensor->lock);
 
 	return ret;
 }

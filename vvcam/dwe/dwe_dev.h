@@ -93,12 +93,6 @@ enum BUF_ERR_TYPE {
 	BUF_ERR_WRONGSTATE = 1 << 4,
 };
 
-enum STATE_CODE {
-	STATE_STOPPED = 0,
-	STATE_STREAM_STARTED = 1 << 1,
-	STATE_DRIVER_STARTED = 1 << 2,
-};
-
 struct dwe_ic_dev {
 	struct dwe_hw_info info[MAX_DWE_NUM][MAX_CFG_NUM];
 	int which[MAX_DWE_NUM];

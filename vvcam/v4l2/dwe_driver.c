@@ -67,6 +67,7 @@
 #include <media/v4l2-event.h>
 #include <media/media-entity.h>
 #include <uapi/linux/media-bus-format.h>
+#include <linux/pm_runtime.h>
 #include "dwe_driver.h"
 #include "dwe_ioctl.h"
 #define DEVICE_NAME "vvcam-dwe"
@@ -128,6 +129,7 @@ static struct v4l2_subdev_ops dwe_v4l2_subdev_ops = {
 int dwe_hw_probe(struct platform_device *pdev)
 {
 	struct dwe_device *dwe_dev;
+	struct resource *mem_res;
 	int rc = 0;
 
 	pr_info("enter %s\n", __func__);
@@ -159,12 +161,16 @@ int dwe_hw_probe(struct platform_device *pdev)
 		goto end;
 	}
 
-	dwe_dev->ic_dev.base = ioremap(DWE_REG_BASE, DWE_REG_SIZE);
+	mem_res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	dwe_dev->ic_dev.base = devm_ioremap_resource(&pdev->dev, mem_res);
+	if (IS_ERR(dwe_dev->ic_dev.base)) {
+		pr_err("failed to get ioremap resource.\n");
+		goto end;
+	}
+
 #ifdef DWE_REG_RESET
 	dwe_dev->ic_dev.reset = ioremap(DWE_REG_RESET, 4);
 #endif
-	pr_info("dwe ioremap addr: 0x%08x 0x%08x %p", DWE_REG_BASE,
-		DWE_REG_SIZE, dwe_dev->ic_dev.base);
 	platform_set_drvdata(pdev, dwe_dev);
 	rc = v4l2_device_register_subdev_nodes(dwe_dev->vd);
 	pr_info("vvcam dewarp driver probed\n");
@@ -185,7 +191,6 @@ int dwe_hw_remove(struct platform_device *pdev)
 	v4l2_device_disconnect(dwe->vd);
 	v4l2_device_put(dwe->vd);
 
-	iounmap(dwe->ic_dev.base);
 #ifdef DWE_REG_RESET
 	iounmap(dwe->ic_dev.reset);
 #endif
@@ -194,23 +199,44 @@ int dwe_hw_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static int dwe_system_suspend(struct device *dev)
+{
+	return pm_runtime_force_suspend(dev);
+}
+
+static int dwe_system_resume(struct device *dev)
+{
+	int ret;
+
+	ret = pm_runtime_force_resume(dev);
+	if (ret < 0) {
+		dev_err(dev, "force resume %s failed!\n", dev_name(dev));
+		return ret;
+	}
+
+	return 0;
+}
+
+static const struct dev_pm_ops dwe_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(dwe_system_suspend, dwe_system_resume)
+};
+
+static const struct of_device_id dwe_of_match[] = {
+	{.compatible = DWE_COMPAT_NAME,},
+	{ /* sentinel */ },
+};
+
+MODULE_DEVICE_TABLE(of, dwe_of_match);
+
 static struct platform_driver viv_dwe_driver = {
 	.probe = dwe_hw_probe,
 	.remove = dwe_hw_remove,
 	.driver = {
-		   .name = DEVICE_NAME,
+		   .name = DWE_DEVICE_NAME,
 		   .owner = THIS_MODULE,
-		   }
-};
-
-static void dwe_pdev_release(struct device *dev)
-{
-	pr_info("enter %s\n", __func__);
-}
-
-static struct platform_device viv_dwe_pdev = {
-	.name = DEVICE_NAME,
-	.dev.release = dwe_pdev_release,
+		   .of_match_table = dwe_of_match,
+		   .pm = &dwe_pm_ops,
+	}
 };
 
 static int __init viv_dwe_init_module(void)
@@ -218,18 +244,10 @@ static int __init viv_dwe_init_module(void)
 	int ret = 0;
 
 	pr_info("enter %s\n", __func__);
-	ret = platform_device_register(&viv_dwe_pdev);
-	if (ret) {
-		pr_err("register platform device failed.\n");
-		return ret;
-	}
-
 	ret = platform_driver_register(&viv_dwe_driver);
-	if (ret) {
+	if (ret)
 		pr_err("register platform driver failed.\n");
-		platform_device_unregister(&viv_dwe_pdev);
-		return ret;
-	}
+
 	return ret;
 }
 
@@ -237,7 +255,6 @@ static void __exit viv_dwe_exit_module(void)
 {
 	pr_info("enter %s\n", __func__);
 	platform_driver_unregister(&viv_dwe_driver);
-	platform_device_unregister(&viv_dwe_pdev);
 }
 
 module_init(viv_dwe_init_module);

@@ -110,7 +110,7 @@ static int config_dma_buf(struct isp_mi_data_path_context *path,
 }
 #endif
 
-int update_dma_buffer(struct isp_ic_dev *dev)
+static int update_dma_buffer(struct isp_ic_dev *dev)
 {
 #ifdef CONFIG_VIDEOBUF2_DMA_CONTIG
 	struct isp_mi_context *mi = &dev->mi;
@@ -126,6 +126,8 @@ int update_dma_buffer(struct isp_ic_dev *dev)
 					dev->mi_buf[i]);
 			dev->mi_buf[i] = NULL;
 		}
+		if (dev->state && !(*dev->state & STATE_DRIVER_STARTED))
+			continue;
 		dequeued = 1;
 		buf = vvbuf_try_dqbuf(dev->bctx);
 		if (!buf) {
@@ -159,6 +161,8 @@ int clean_dma_buffer(struct isp_ic_dev *dev)
 
 	if (!dev->free)
 		return 0;
+
+	dev->free(dev, NULL);
 
 	for (i = 0; i < MI_PATH_NUM; ++i) {
 		if (dev->mi_buf[i]) {
@@ -235,9 +239,16 @@ irqreturn_t isp_hw_isr(int irq, void *data)
 
 	if (isp_mis) {
 		if (isp_mis & MRV_ISP_MIS_FRAME_MASK) {
-			if (dev->isp_update_flag & ISP_FLT_UPDATE) {
+			if (dev->flt.changed) {
 				isp_s_flt(dev);
-				dev->isp_update_flag &= (~ISP_FLT_UPDATE);
+			}
+
+			if (dev->wdr.changed) {
+				isp_s_wdr(dev);
+			}
+
+			if (dev->cproc.changed) {
+				isp_s_cproc(dev);
 			}
 		}
 

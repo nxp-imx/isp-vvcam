@@ -55,6 +55,10 @@
 #include "mrv_all_bits.h"
 #include "isp_ioctl.h"
 #include "isp_types.h"
+#ifdef __KERNEL__
+#include <linux/regmap.h>
+#include <linux/of_reserved_mem.h>
+#endif
 
 #ifdef CONFIG_VSI_ISP_DEBUG
 #define isp_info(fmt, ...)  pr_info(fmt, ##__VA_ARGS__)
@@ -275,6 +279,45 @@ int isp_disable_lsc(struct isp_ic_dev *dev)
 	return 0;
 }
 
+#if defined(__KERNEL__) && defined(ISP8000NANO_V1802)
+static int isp_gpr_input_control(struct isp_ic_dev *dev)
+{
+	struct isp_context isp_ctx = *(&dev->ctx);
+	unsigned int fmt_offset = 3;
+	unsigned int isp_dewarp_control_val;
+
+	if (dev->mix_gpr == NULL)
+		return -ENOMEM;
+
+	if (dev->id == 0)
+		fmt_offset = 3;
+	else
+		fmt_offset = 13;
+
+	regmap_read(dev->mix_gpr, 0x138, &isp_dewarp_control_val);
+	switch (isp_ctx.input_selection) {
+	case MRV_ISP_INPUT_SELECTION_12EXT:
+		isp_dewarp_control_val &= ~(0x3f << fmt_offset);
+		isp_dewarp_control_val |= (0x2c << fmt_offset);
+		break;
+	case MRV_ISP_INPUT_SELECTION_10ZERO:
+	case MRV_ISP_INPUT_SELECTION_10MSB:
+		isp_dewarp_control_val &= ~(0x3f << fmt_offset);
+		isp_dewarp_control_val |= (0x2b << fmt_offset);
+		break;
+	case MRV_ISP_INPUT_SELECTION_8ZERO:
+	case MRV_ISP_INPUT_SELECTION_8MSB:
+		isp_dewarp_control_val &= ~(0x3f << fmt_offset);
+		isp_dewarp_control_val |= (0x2a << fmt_offset);
+		break;
+	default:
+		return 0;
+	}
+	regmap_write(dev->mix_gpr, 0x138, isp_dewarp_control_val);
+	return 0;
+}
+#endif
+
 int isp_s_input(struct isp_ic_dev *dev)
 {
 	struct isp_context isp_ctx = *(&dev->ctx);
@@ -338,6 +381,10 @@ int isp_s_input(struct isp_ic_dev *dev)
 	REG_SET_SLICE(isp_stitching_ctrl, STITCHING_BAYER_PATTERN, isp_ctx.bayer_pattern);
 	isp_write_reg(dev, REG_ADDR(isp_stitching_ctrl), isp_stitching_ctrl);
 	isp_write_reg(dev, REG_ADDR(isp_ctrl), isp_ctrl);
+
+#if defined(__KERNEL__) && defined(ISP8000NANO_V1802)
+	isp_gpr_input_control(dev);
+#endif
 	return 0;
 }
 
@@ -1344,16 +1391,14 @@ int isp_s_flt(struct isp_ic_dev *dev)
 		{0x30, 0x3F, 0x28, 0x24, 0x20},
 	};
 
-	//	isp_info("enter %s\n", __func__);
-
-	if(dev->isp_update_flag & ISP_FLT_UPDATE)
+	struct isp_flt_context *flt = &dev->flt;
+	if(flt->changed || !is_isp_enable(dev))
 	{
-		struct isp_flt_context *flt = &dev->flt;
 		u32 isp_flt_mode = isp_read_reg(dev, REG_ADDR(isp_filt_mode));
-
 		if (!flt->enable) {
 			REG_SET_SLICE(isp_flt_mode, MRV_FILT_FILT_ENABLE, 0);
 			isp_write_reg(dev, REG_ADDR(isp_filt_mode), isp_flt_mode);
+			dev->flt.changed = false;
 			return 0;
 		}
 
@@ -1393,6 +1438,9 @@ int isp_s_flt(struct isp_ic_dev *dev)
 		REG_SET_SLICE(isp_flt_mode, MRV_FILT_FILT_ENABLE, 1);
 		isp_write_reg(dev, REG_ADDR(isp_filt_mode), isp_flt_mode);
 		isp_write_reg(dev, REG_ADDR(isp_filt_lum_weight), 0x00032040);
+		flt->changed = false;
+	} else {
+		flt->changed = true;
 	}
 	return 0;
 }
@@ -1863,33 +1911,48 @@ int isp_s_cproc(struct isp_ic_dev *dev)
 	u32 vi_iccl = isp_read_reg(dev, REG_ADDR(vi_iccl));
 	u32 cproc_ctrl = isp_read_reg(dev, REG_ADDR(cproc_ctrl));
 
-	isp_info("enter %s %d\n", __func__, cproc->enable);
-	//REG_SET_SLICE(vi_ircl, MRV_VI_CP_SOFT_RST, 1);
-	//isp_write_reg(dev, REG_ADDR(vi_ircl), vi_ircl);
+	//if there is no shd register. should update cporc register in isp frame end irq.
+#ifndef ISP_CPROC_SHD
+	if(dev->cproc.changed || !is_isp_enable(dev))
+	{
+#endif
+		//isp_info("enter %s %d\n", __func__, cproc->enable);
+		//REG_SET_SLICE(vi_ircl, MRV_VI_CP_SOFT_RST, 1);
+		//isp_write_reg(dev, REG_ADDR(vi_ircl), vi_ircl);
 
-	if (!cproc->enable) {
-		REG_SET_SLICE(cproc_ctrl, MRV_CPROC_CPROC_ENABLE, 0);
-		/*      REG_SET_SLICE(vi_iccl, MRV_VI_CP_CLK_ENABLE, 0); */
-		/*      isp_write_reg(dev, REG_ADDR(vi_iccl), vi_iccl); */
+		if (!cproc->enable) {
+			REG_SET_SLICE(cproc_ctrl, MRV_CPROC_CPROC_ENABLE, 0);
+			/*		REG_SET_SLICE(vi_iccl, MRV_VI_CP_CLK_ENABLE, 0); */
+			/*		isp_write_reg(dev, REG_ADDR(vi_iccl), vi_iccl); */
+			isp_write_reg(dev, REG_ADDR(cproc_ctrl), cproc_ctrl);
+#ifndef ISP_CPROC_SHD
+			dev->cproc.changed = false;
+#endif
+			return 0;
+		}
+
+		//REG_SET_SLICE(vi_ircl, MRV_VI_CP_SOFT_RST, 0);
+		//isp_write_reg(dev, REG_ADDR(vi_ircl), vi_ircl);
+		isp_write_reg(dev, REG_ADDR(cproc_contrast), cproc->contrast);
+		isp_write_reg(dev, REG_ADDR(cproc_brightness), cproc->brightness);
+		isp_write_reg(dev, REG_ADDR(cproc_saturation), cproc->saturation);
+		isp_write_reg(dev, REG_ADDR(cproc_hue), cproc->hue);
+		REG_SET_SLICE(cproc_ctrl, MRV_CPROC_CPROC_ENABLE, 1);
+		REG_SET_SLICE(cproc_ctrl, MRV_CPROC_CPROC_C_OUT_RANGE,
+				  cproc->c_out_full);
+		REG_SET_SLICE(cproc_ctrl, MRV_CPROC_CPROC_Y_OUT_RANGE,
+				  cproc->y_out_full);
+		REG_SET_SLICE(cproc_ctrl, MRV_CPROC_CPROC_Y_IN_RANGE, cproc->y_in_full);
+		REG_SET_SLICE(vi_iccl, MRV_VI_CP_CLK_ENABLE, 1);
+		isp_write_reg(dev, REG_ADDR(vi_iccl), vi_iccl);
 		isp_write_reg(dev, REG_ADDR(cproc_ctrl), cproc_ctrl);
-		return 0;
-	}
 
-	//REG_SET_SLICE(vi_ircl, MRV_VI_CP_SOFT_RST, 0);
-	//isp_write_reg(dev, REG_ADDR(vi_ircl), vi_ircl);
-	isp_write_reg(dev, REG_ADDR(cproc_contrast), cproc->contrast);
-	isp_write_reg(dev, REG_ADDR(cproc_brightness), cproc->brightness);
-	isp_write_reg(dev, REG_ADDR(cproc_saturation), cproc->saturation);
-	isp_write_reg(dev, REG_ADDR(cproc_hue), cproc->hue);
-	REG_SET_SLICE(cproc_ctrl, MRV_CPROC_CPROC_ENABLE, 1);
-	REG_SET_SLICE(cproc_ctrl, MRV_CPROC_CPROC_C_OUT_RANGE,
-		      cproc->c_out_full);
-	REG_SET_SLICE(cproc_ctrl, MRV_CPROC_CPROC_Y_OUT_RANGE,
-		      cproc->y_out_full);
-	REG_SET_SLICE(cproc_ctrl, MRV_CPROC_CPROC_Y_IN_RANGE, cproc->y_in_full);
-	REG_SET_SLICE(vi_iccl, MRV_VI_CP_CLK_ENABLE, 1);
-	isp_write_reg(dev, REG_ADDR(vi_iccl), vi_iccl);
-	isp_write_reg(dev, REG_ADDR(cproc_ctrl), cproc_ctrl);
+#ifndef ISP_CPROC_SHD
+		dev->cproc.changed = false;
+	} else {
+		dev->cproc.changed = true;
+	}
+#endif
 
 	return 0;
 }
@@ -2029,14 +2092,90 @@ static long isp_get_extmem(struct isp_ic_dev *dev, void *args)
 
 #ifdef __KERNEL__
 	struct isp_extmem_info ext_mem;
-	ext_mem.addr = RESERVED_MEM_BASE;
-	ext_mem.size = RESERVED_MEM_SIZE;
-
+	struct reserved_mem *rmem = (struct reserved_mem *)dev->rmem;
+	if (rmem) {
+		ext_mem.addr = rmem->base;
+		ext_mem.size = rmem->size;
+	} else {
+		ext_mem.addr = 0;
+		ext_mem.size = 0;
+		pr_err("%s:isp cannot get reserve mem\n",__func__);
+	}
 	ret = copy_to_user(args, &ext_mem, sizeof(struct isp_extmem_info));
 #endif
 
 	return ret;
 }
+
+int isp_s_wdr(struct isp_ic_dev *dev)
+{
+	isp_wdr_context_t* wdr = &dev->wdr;
+
+	/*update wdr configuration	after frame end when isp enable*/
+	if (!is_isp_enable(dev) || wdr->changed) {
+		uint32_t isp_wdr_offset, isp_wdr_ctrl;
+
+		isp_wdr_offset = isp_read_reg(dev, REG_ADDR(isp_wdr_offset));
+		REG_SET_SLICE( isp_wdr_offset, MRV_WDR_LUM_OFFSET, wdr->LumOffset );
+		REG_SET_SLICE( isp_wdr_offset, MRV_WDR_RGB_OFFSET, wdr->RgbOffset );
+		isp_write_reg(dev, REG_ADDR(isp_wdr_offset), isp_wdr_offset);
+
+		isp_wdr_ctrl = isp_read_reg(dev, REG_ADDR(isp_wdr_ctrl));
+		REG_SET_SLICE(isp_wdr_ctrl, MRV_WDR_ENABLE, wdr->enabled);
+		isp_write_reg(dev, REG_ADDR(isp_wdr_ctrl), isp_wdr_ctrl);
+		wdr->changed = false;
+	} else {
+		wdr->changed = true;
+	}
+
+	return 0;
+}
+
+static int isp_s_wdr_curve(struct isp_ic_dev *dev)
+{
+	isp_wdr_context_t* wdr = &dev->wdr;
+
+	int i, j;
+	uint32_t dYi = 0U;
+	for ( i=0; i<4; i++ )
+	{
+		for ( j=8; j>0; j-- )
+		{
+			dYi <<= 4;
+			dYi += wdr->dY[ (i*8 + j) ];
+		}
+
+		switch(i)
+		{
+		case 0:
+			isp_write_reg(dev, REG_ADDR(isp_wdr_tonecurve_1), dYi);
+			break;
+		case 1:
+			isp_write_reg(dev, REG_ADDR(isp_wdr_tonecurve_2), dYi);
+			break;
+		case 2:
+			isp_write_reg(dev, REG_ADDR(isp_wdr_tonecurve_3), dYi);
+			break;
+		default:
+			isp_write_reg(dev, REG_ADDR(isp_wdr_tonecurve_4), dYi);
+			break;
+		}
+	}
+
+	for ( i=0; i<33; i++ )
+	{
+		isp_write_reg(dev, REG_ADDR(wdr_tone_mapping_curve_y_block_arr[i]), wdr->Ym[i]);
+	}
+
+	dYi = 0x00000000;
+
+	isp_write_reg(dev, REG_ADDR(isp_wdr_offset), dYi);
+	isp_write_reg(dev, REG_ADDR(isp_wdr_deltamin), 0x00100000);
+
+	return 0;
+
+}
+
 
 long isp_priv_ioctl(struct isp_ic_dev *dev, unsigned int cmd, void *args)
 {
@@ -2251,24 +2390,9 @@ long isp_priv_ioctl(struct isp_ic_dev *dev, unsigned int cmd, void *args)
 		break;
 	case ISPIOC_S_FLT:
 	{
-		struct isp_flt_context flt_tmp;
 		viv_check_retval(copy_from_user
-				 (&flt_tmp, args, sizeof(dev->flt)));
-		ret = 0;
-		if(flt_tmp.changed == true)
-		{
-			dev->flt = flt_tmp;
-			dev->isp_update_flag |= ISP_FLT_UPDATE;
-			ret = isp_s_flt(dev);
-			dev->isp_update_flag &= (~ISP_FLT_UPDATE);
-		}
-		else if(flt_tmp.enable != dev->flt.enable ||
-			flt_tmp.denoise != dev->flt.denoise ||
-			flt_tmp.sharpen != dev->flt.sharpen)
-		{
-			dev->flt = flt_tmp;
-			dev->isp_update_flag |= ISP_FLT_UPDATE;//update in ISR
-		}
+				 (&dev->flt, args, sizeof(dev->flt)));
+		ret = isp_s_flt(dev);
 		break;
 	}
 	case ISPIOC_S_CAC:
@@ -2497,6 +2621,16 @@ long isp_priv_ioctl(struct isp_ic_dev *dev, unsigned int cmd, void *args)
 		break;
 	case ISPIOC_G_FEATURE_VERSION:
 		ret = isp_ioc_g_feature_veresion(dev, args);
+		break;
+	case ISPIOC_WDR_CONFIG:
+		viv_check_retval(copy_from_user
+				 (&dev->wdr, args, sizeof(dev->wdr)));
+		ret = isp_s_wdr(dev);
+		break;
+	case ISPIOC_S_WDR_CURVE:
+		viv_check_retval(copy_from_user
+				 (&dev->wdr, args, sizeof(dev->wdr)));
+		ret = isp_s_wdr_curve(dev);
 		break;
 	case ISPIOC_ENABLE_GCMONO:
 		viv_check_retval(copy_from_user

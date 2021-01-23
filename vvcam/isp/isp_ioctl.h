@@ -152,6 +152,9 @@ enum {
 	ISPIOC_S_COLOR_ADJUST		= 0x15E,
 	ISPIOC_S_DIGITAL_GAIN		= 0x15F,
 	ISPIOC_G_QUERY_EXTMEM		= 0x160,
+
+	ISPIOC_WDR_CONFIG			= 0x16C,
+	ISPIOC_S_WDR_CURVE			= 0x16D,
 };
 
 long isp_priv_ioctl(struct isp_ic_dev *dev, unsigned int cmd, void *args);
@@ -255,9 +258,9 @@ int isp_s_dmsc(struct isp_ic_dev *dev);
 int isp_s_ge(struct isp_ic_dev *dev);
 int isp_s_color_adjust(struct isp_ic_dev *dev);
 int isp_config_dummy_hblank(struct isp_ic_dev *dev);
+int isp_s_wdr(struct isp_ic_dev *dev);
 
 #ifdef __KERNEL__
-int update_dma_buffer(struct isp_ic_dev *dev);
 int clean_dma_buffer(struct isp_ic_dev *dev);
 irqreturn_t isp_hw_isr(int irq, void *data);
 #endif

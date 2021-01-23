@@ -71,6 +71,9 @@
 #include <media/v4l2-event.h>
 #include <media/media-entity.h>
 #include <uapi/linux/media-bus-format.h>
+#include <linux/mfd/syscon.h>
+#include <linux/regmap.h>
+#include <linux/of_reserved_mem.h>
 
 #include "isp_driver.h"
 #include "isp_ioctl.h"
@@ -173,19 +176,25 @@ irqreturn_t isp_hw_isr_reg_update(int irq, void *data)
 
 	struct isp_irq_data irq_data;
 	struct isp_ic_dev *dev = (struct isp_ic_dev *)data;
-	
+
 	if (!dev)
 		return IRQ_HANDLED;
 
 	isp_mis = isp_read_reg(dev, REG_ADDR(isp_mis));
 	isp_write_reg(dev, REG_ADDR(isp_icr), isp_mis);
 
-
 	if (isp_mis) {
 		if (isp_mis & MRV_ISP_MIS_FRAME_MASK) {
-			if (dev->isp_update_flag & ISP_FLT_UPDATE) {
+			if (dev->flt.changed) {
 				isp_s_flt(dev);
-				dev->isp_update_flag &= (~ISP_FLT_UPDATE);
+			}
+
+			if (dev->wdr.changed) {
+				isp_s_wdr(dev);
+			}
+
+			if (dev->cproc.changed) {
+				isp_s_cproc(dev);
 			}
 		}
 
@@ -208,6 +217,8 @@ int isp_hw_probe(struct platform_device *pdev)
 	struct resource *mem_res;
 	int irq;
 	int rc;
+	unsigned int isp_dewarp_control_val;
+	struct device_node *mem_node;
 
 	pr_info("enter %s\n", __func__);
 	isp_dev = kzalloc(sizeof(struct isp_device), GFP_KERNEL);
@@ -222,6 +233,34 @@ int isp_hw_probe(struct platform_device *pdev)
 		isp_dev->id = 0;
 	}
 	isp_dev->ic_dev.id = isp_dev->id;
+
+#ifdef ISP8000NANO_V1802
+	isp_dev->ic_dev.mix_gpr = syscon_regmap_lookup_by_phandle(
+		pdev->dev.of_node, "gpr");
+	if (IS_ERR(isp_dev->ic_dev.mix_gpr)) {
+		pr_warn("failed to get mix gpr\n");
+		isp_dev->ic_dev.mix_gpr = NULL;
+		return -ENOMEM;
+	}
+	regmap_read(isp_dev->ic_dev.mix_gpr, 0x138,
+				&isp_dewarp_control_val);
+	if (isp_dewarp_control_val == 0) {
+		isp_dewarp_control_val = 0x8d8360;
+		regmap_write(isp_dev->ic_dev.mix_gpr, 0x138,
+					isp_dewarp_control_val);
+	}
+#endif
+	mem_node = of_parse_phandle(pdev->dev.of_node, "memory-region", 0);
+	if (!mem_node) {
+		pr_err("No memory-region found\n");
+		return -ENODEV;
+	}
+
+	isp_dev->ic_dev.rmem = of_reserved_mem_lookup(mem_node);
+	if (!isp_dev->ic_dev.rmem) {
+		pr_err("of_reserved_mem_lookup() returned NULL\n");
+		return -ENODEV;
+	}
 
 	v4l2_subdev_init(&isp_dev->sd, &isp_v4l2_subdev_ops);
 	snprintf(isp_dev->sd.name, sizeof(isp_dev->sd.name), 

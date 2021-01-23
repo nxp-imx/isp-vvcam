@@ -140,9 +140,9 @@ typedef struct vvcam_ae_info_s {
 	uint32_t DefaultFrameLengthLines;
 	uint32_t CurFrameLengthLines;
 	uint32_t one_line_exp_time_ns;
-	uint32_t max_interrgation_time;
-	uint32_t min_interrgation_time;
-	uint32_t interrgation_accuracy;
+	uint32_t max_integration_time;
+	uint32_t min_integration_time;
+	uint32_t integration_accuracy;
 	uint32_t max_gain;
 	uint32_t min_gain;
 	uint32_t gain_accuracy;
