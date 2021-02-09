@@ -50,6 +50,7 @@
  * version of this file.
  *
  *****************************************************************************/
+#include <linux/module.h>
 #include <linux/pm_runtime.h>
 #include <media/v4l2-event.h>
 #include <linux/mfd/syscon.h>
@@ -86,6 +87,39 @@ long isp_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 	return isp_priv_ioctl(&isp_dev->ic_dev, cmd, arg);
 }
 #endif /* CONFIG_COMPAT */
+
+static int isp_enable_clocks(struct isp_device *isp_dev)
+{
+	int ret;
+
+	ret = clk_prepare_enable(isp_dev->clk_core);
+	if (ret)
+		return ret;
+
+	ret = clk_prepare_enable(isp_dev->clk_axi);
+	if (ret)
+		goto disable_clk_core;
+
+	ret = clk_prepare_enable(isp_dev->clk_ahb);
+	if (ret)
+		goto disable_clk_axi;
+
+	return 0;
+
+disable_clk_axi:
+	clk_disable_unprepare(isp_dev->clk_axi);
+disable_clk_core:
+	clk_disable_unprepare(isp_dev->clk_core);
+
+	return ret;
+}
+
+static void isp_disable_clocks(struct isp_device *isp_dev)
+{
+	clk_disable_unprepare(isp_dev->clk_ahb);
+	clk_disable_unprepare(isp_dev->clk_axi);
+	clk_disable_unprepare(isp_dev->clk_core);
+}
 
 int isp_set_stream(struct v4l2_subdev *sd, int enable)
 {
@@ -274,13 +308,59 @@ static int isp_buf_free(struct isp_ic_dev *dev, struct vb2_dc_buf *buf)
 	return 0;
 }
 
+static int isp_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
+{
+	struct isp_device *isp_dev = v4l2_get_subdevdata(sd);
+	pm_runtime_get_sync(sd->dev);
+
+	isp_dev->refcnt++;
+	if (isp_dev->refcnt == 1) {
+		msleep(1);
+		isp_clear_interrupts(&isp_dev->ic_dev);
+		if (devm_request_irq(sd->dev, isp_dev->irq, isp_hw_isr, IRQF_SHARED,
+			dev_name(sd->dev), &isp_dev->ic_dev) != 0) {
+			pr_err("failed to request irq.\n");
+			isp_dev->refcnt = 0;
+			pm_runtime_put_sync(sd->dev);
+			return -1;
+		}
+	}
+	return 0;
+}
+
+static int isp_close(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
+{
+	struct isp_device *isp_dev = v4l2_get_subdevdata(sd);
+
+	isp_dev->refcnt--;
+	if (isp_dev->refcnt < 0) {
+		isp_dev->refcnt = 0;
+		return 0;
+	}
+
+	if (isp_dev->refcnt == 0){
+		devm_free_irq(sd->dev, isp_dev->irq, &isp_dev->ic_dev);
+		isp_priv_ioctl(&isp_dev->ic_dev, ISPIOC_RESET, NULL);
+		isp_clear_interrupts(&isp_dev->ic_dev);
+		msleep(5);
+	}
+
+	pm_runtime_put(sd->dev);
+	return 0;
+}
+
+static struct v4l2_subdev_internal_ops isp_internal_ops = {
+	.open = isp_open,
+	.close = isp_close,
+};
+
 int isp_hw_probe(struct platform_device *pdev)
 {
+	struct device *dev = &pdev->dev;
 	struct isp_device *isp_dev;
 	struct resource *mem_res;
 	int irq;
 	int rc;
-	unsigned int isp_dewarp_control_val;
 	struct device_node *mem_node;
 
 	pr_info("enter %s\n", __func__);
@@ -296,6 +376,29 @@ int isp_hw_probe(struct platform_device *pdev)
 	}
 	isp_dev->ic_dev.id = isp_dev->id;
 
+	isp_dev->clk_core = devm_clk_get(dev, "core");
+	if (IS_ERR(isp_dev->clk_core)) {
+		rc = PTR_ERR(isp_dev->clk_core);
+		dev_err(dev, "can't get core clock: %d\n", rc);
+		return rc;
+	}
+
+	isp_dev->clk_axi = devm_clk_get(dev, "axi");
+	if (IS_ERR(isp_dev->clk_axi)) {
+		rc = PTR_ERR(isp_dev->clk_axi);
+		dev_err(dev, "can't get axi clock: %d\n", rc);
+		return rc;
+	}
+
+	isp_dev->clk_ahb = devm_clk_get(dev, "ahb");
+	if (IS_ERR(isp_dev->clk_ahb)) {
+		rc = PTR_ERR(isp_dev->clk_ahb);
+		dev_err(dev, "can't get ahb clock: %d\n", rc);
+		return rc;
+	}
+
+	isp_dev->sd.internal_ops = &isp_internal_ops;
+
 #ifdef ISP8000NANO_V1802
 	isp_dev->ic_dev.mix_gpr = syscon_regmap_lookup_by_phandle(
 		pdev->dev.of_node, "gpr");
@@ -303,13 +406,6 @@ int isp_hw_probe(struct platform_device *pdev)
 		pr_warn("failed to get mix gpr\n");
 		isp_dev->ic_dev.mix_gpr = NULL;
 		return -ENOMEM;
-	}
-	regmap_read(isp_dev->ic_dev.mix_gpr, 0x138,
-				&isp_dewarp_control_val);
-	if (isp_dewarp_control_val == 0) {
-		isp_dewarp_control_val = 0x8d8360;
-		regmap_write(isp_dev->ic_dev.mix_gpr, 0x138,
-					isp_dewarp_control_val);
 	}
 #endif
 	mem_node = of_parse_phandle(pdev->dev.of_node, "memory-region", 0);
@@ -332,8 +428,6 @@ int isp_hw_probe(struct platform_device *pdev)
 	isp_dev->sd.owner = THIS_MODULE;
 	v4l2_set_subdevdata(&isp_dev->sd, isp_dev);
 	isp_dev->sd.dev = &pdev->dev;
-	pm_runtime_enable(&pdev->dev);
-	pm_runtime_get_sync(&pdev->dev);
 
 	mem_res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	isp_dev->ic_dev.base = devm_ioremap_resource(&pdev->dev, mem_res);
@@ -361,13 +455,6 @@ int isp_hw_probe(struct platform_device *pdev)
 		goto end;
 	}
 
-	rc = devm_request_irq(&pdev->dev, irq, isp_hw_isr, IRQF_SHARED,
-			dev_name(&pdev->dev), &isp_dev->ic_dev);
-	if (rc) {
-		pr_err("failed to request irq.\n");
-		irq = -1;
-		goto end;
-	}
 	isp_dev->irq = irq;
 	pr_debug("request_irq num:%d, rc:%d", irq, rc);
 
@@ -389,11 +476,11 @@ int isp_hw_probe(struct platform_device *pdev)
 	if (rc)
 		goto end;
 
+	pm_runtime_enable(&pdev->dev);
+
 	pr_info("vvcam isp driver registered\n");
 	return 0;
 end:
-	if (irq >= 0)
-		devm_free_irq(&pdev->dev, irq, &isp_dev->ic_dev);
 	vvbuf_ctx_deinit(&isp_dev->bctx);
 	kfree(isp_dev);
 	pm_runtime_put(&pdev->dev);
@@ -408,13 +495,13 @@ int isp_hw_remove(struct platform_device *pdev)
 	pr_info("enter %s\n", __func__);
 	if (!isp)
 		return -1;
-	devm_free_irq(&pdev->dev, isp->irq, &isp->ic_dev);
+
+
 	vvbuf_ctx_deinit(&isp->bctx);
 	media_entity_cleanup(&isp->sd.entity);
 	v4l2_async_unregister_subdev(&isp->sd);
 
 	kfree(isp);
-	pm_runtime_put(&pdev->dev);
 	pm_runtime_disable(&pdev->dev);
 	pr_info("vvcam isp driver removed\n");
 	return 0;
@@ -422,24 +509,66 @@ int isp_hw_remove(struct platform_device *pdev)
 
 static int isp_system_suspend(struct device *dev)
 {
+	struct platform_device *pdev;
+	struct isp_device *isp = NULL;
+	pdev = container_of(dev, struct platform_device, dev);
+	isp = platform_get_drvdata(pdev);
+	if(!isp){
+		dev_err(dev, "isp suspend failed!\n");
+		return -1;
+	}
+
+	if(isp->ic_dev.streaming == true) {
+		isp_stop_stream(&isp->ic_dev);
+	}
+
 	return pm_runtime_force_suspend(dev);
 }
 
 static int isp_system_resume(struct device *dev)
 {
 	int ret;
-
+	struct platform_device *pdev;
+	struct isp_device *isp = NULL;
 	ret = pm_runtime_force_resume(dev);
 	if (ret < 0) {
 		dev_err(dev, "force resume %s failed!\n", dev_name(dev));
 		return ret;
 	}
+	pdev = container_of(dev, struct platform_device, dev);
+	isp = platform_get_drvdata(pdev);
+	if(!isp){
+		dev_err(dev, "isp resume failed!\n");
+		return -1;
+	}
+
+	if(isp->ic_dev.streaming == true) {
+		isp_start_stream(&isp->ic_dev, 1);
+	}
+	return 0;
+}
+
+static int isp_runtime_suspend(struct device *dev)
+{
+	struct isp_device *isp_dev = dev_get_drvdata(dev);
+
+	isp_disable_clocks(isp_dev);
+
+	return 0;
+}
+
+static int isp_runtime_resume(struct device *dev)
+{
+	struct isp_device *isp_dev = dev_get_drvdata(dev);
+
+	isp_enable_clocks(isp_dev);
 
 	return 0;
 }
 
 static const struct dev_pm_ops isp_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(isp_system_suspend, isp_system_resume)
+	SET_RUNTIME_PM_OPS(isp_runtime_suspend, isp_runtime_resume, NULL)
 };
 
 static const struct of_device_id isp_of_match[] = {

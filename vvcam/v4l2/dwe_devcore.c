@@ -180,13 +180,6 @@ struct dwe_devcore *dwe_devcore_init(struct dwe_device *dwe,
 
 	vvbuf_ctx_init(&core->bctx[DWE_PAD_SINK]);
 	core->ic_dev.sink_bctx = &core->bctx[DWE_PAD_SINK];
-
-	rc = devm_request_irq(dwe->sd.dev, dwe->irq, dwe_hw_isr, IRQF_SHARED,
-			dev_name(dwe->sd.dev), &core->ic_dev);
-	if (rc) {
-		pr_err("failed to request irq.\n");
-		goto end;
-	}
 	core->irq = dwe->irq;
 	pr_debug("request_irq num:%d, rc:%d\n", dwe->irq, rc);
 
@@ -223,7 +216,6 @@ void dwe_devcore_deinit(struct dwe_device *dwe)
 		spin_lock_irqsave(&devcore_list_lock, flags);
 		list_del(&core->entry);
 		spin_unlock_irqrestore(&devcore_list_lock, flags);
-		devm_free_irq(dwe->sd.dev, core->irq, &core->ic_dev);
 		vvbuf_ctx_deinit(&core->bctx[DWE_PAD_SINK]);
 
 #ifdef DWE_REG_RESET

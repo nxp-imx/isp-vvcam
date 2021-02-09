@@ -335,6 +335,7 @@ int isp_mi_start(struct isp_ic_dev *dev)
 	u32 mi_init, mi_ctrl, mi_imsc;
 	u32 out_stride;
 	int i;
+	u8 retry = 3;
 
 	pr_info("enter %s\n", __func__);
 
@@ -422,6 +423,18 @@ int isp_mi_start(struct isp_ic_dev *dev)
 			      mi.path[0].out_height);
 		isp_write_reg(dev, REG_ADDR(mi_mp_y_pic_size),
 			      out_stride * mi.path[0].out_height);
+
+		/* workaround to resolve the problem that the mi_mp_y_pic_width can't be written */
+		for(i = 0; i < retry; i++) {
+			if(isp_read_reg(dev, REG_ADDR(mi_mp_y_pic_width)) != out_stride) {
+				isp_write_reg(dev, REG_ADDR(mi_mp_y_pic_width), out_stride);
+			} else {
+				break;
+			}
+		}
+		if(retry == i) {
+			pr_info("%s: update mi_mp_y_pic_width error!\n", __func__);
+		}
 
 		/* enable frame end irq for  main path */
 		mi_imsc |=
@@ -532,8 +545,23 @@ int isp_mi_start(struct isp_ic_dev *dev)
 
 int isp_mi_stop(struct isp_ic_dev *dev)
 {
+	u32 mi_ctrl = 0, mi_init = 0;
 	pr_info("enter %s\n", __func__);
+
 	isp_write_reg(dev, REG_ADDR(mi_imsc), 0);
+
+	/* disable mi path */
+	mi_ctrl = isp_read_reg(dev, REG_ADDR(mi_ctrl));
+	REG_SET_SLICE(mi_ctrl, MRV_MI_MP_ENABLE, 0);
+	REG_SET_SLICE(mi_ctrl, MRV_MI_SP_ENABLE, 0);
+	REG_SET_SLICE(mi_ctrl, MRV_MI_JPEG_ENABLE, 0);
+	REG_SET_SLICE(mi_ctrl, MRV_MI_RAW_ENABLE, 0);
+	isp_write_reg(dev, REG_ADDR(mi_ctrl), mi_ctrl);
+
+	mi_init = isp_read_reg(dev, REG_ADDR(mi_init));
+	REG_SET_SLICE(mi_init, MRV_MI_MI_CFG_UPD, 1);
+	isp_write_reg(dev, REG_ADDR(mi_init), mi_init);
+
 #if defined(__KERNEL__) && defined(ENABLE_IRQ)
 	if (dev->state)
 		*dev->state &= ~STATE_DRIVER_STARTED;

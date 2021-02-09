@@ -263,5 +263,6 @@ int isp_s_wdr(struct isp_ic_dev *dev);
 #ifdef __KERNEL__
 int clean_dma_buffer(struct isp_ic_dev *dev);
 irqreturn_t isp_hw_isr(int irq, void *data);
+void isp_clear_interrupts(struct isp_ic_dev *dev);
 #endif
 #endif /* _ISP_IOC_H_ */

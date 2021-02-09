@@ -89,5 +89,6 @@ int dwe_set_lut(struct dwe_ic_dev *dev, u64 addr);
 #ifdef __KERNEL__
 int dwe_on_buf_update(struct dwe_ic_dev *dev);
 irqreturn_t dwe_hw_isr(int irq, void *data);
+void dwe_clear_interrupts(struct dwe_ic_dev *dev);
 #endif
 #endif /* _DWE_IOC_H_ */

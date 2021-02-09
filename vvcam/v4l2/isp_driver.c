@@ -106,6 +106,39 @@ long isp_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 }
 #endif /* CONFIG_COMPAT */
 
+static int isp_enable_clocks(struct isp_device *isp_dev)
+{
+	int ret;
+
+	ret = clk_prepare_enable(isp_dev->clk_core);
+	if (ret)
+		return ret;
+
+	ret = clk_prepare_enable(isp_dev->clk_axi);
+	if (ret)
+		goto disable_clk_core;
+
+	ret = clk_prepare_enable(isp_dev->clk_ahb);
+	if (ret)
+		goto disable_clk_axi;
+
+	return 0;
+
+disable_clk_axi:
+	clk_disable_unprepare(isp_dev->clk_axi);
+disable_clk_core:
+	clk_disable_unprepare(isp_dev->clk_core);
+
+	return ret;
+}
+
+static void isp_disable_clocks(struct isp_device *isp_dev)
+{
+	clk_disable_unprepare(isp_dev->clk_ahb);
+	clk_disable_unprepare(isp_dev->clk_axi);
+	clk_disable_unprepare(isp_dev->clk_core);
+}
+
 int isp_set_stream(struct v4l2_subdev *sd, int enable)
 {
 	return 0;
@@ -172,7 +205,7 @@ static struct v4l2_subdev_video_ops isp_v4l2_subdev_video_ops = {
 
 irqreturn_t isp_hw_isr_reg_update(int irq, void *data)
 {
-	u32 isp_mis;
+	u32 isp_mis, isp_ctrl;
 
 	struct isp_irq_data irq_data;
 	struct isp_ic_dev *dev = (struct isp_ic_dev *)data;
@@ -196,6 +229,19 @@ irqreturn_t isp_hw_isr_reg_update(int irq, void *data)
 			if (dev->cproc.changed) {
 				isp_s_cproc(dev);
 			}
+
+			if (dev->gamma_out.changed) {
+				isp_s_gamma_out(dev);
+			}
+
+			if(dev->update_gamma_en) {
+				isp_ctrl = isp_read_reg(dev, REG_ADDR(isp_ctrl));
+				REG_SET_SLICE(isp_ctrl, MRV_ISP_ISP_GAMMA_OUT_ENABLE,
+								dev->gamma_out.enableGamma);
+				isp_write_reg(dev, REG_ADDR(isp_ctrl), isp_ctrl);
+				dev->update_gamma_en = false;
+			}
+
 		}
 
 		memset(&irq_data, 0, sizeof(irq_data));
@@ -211,13 +257,30 @@ struct v4l2_subdev_ops isp_v4l2_subdev_ops = {
 	.video = &isp_v4l2_subdev_video_ops,
 };
 
+static int isp_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
+{
+	pm_runtime_get_sync(sd->dev);
+	return 0;
+}
+
+static int isp_close(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
+{
+	pm_runtime_put_sync(sd->dev);
+	return 0;
+}
+
+static struct v4l2_subdev_internal_ops isp_internal_ops = {
+	.open = isp_open,
+	.close = isp_close,
+};
+
 int isp_hw_probe(struct platform_device *pdev)
 {
+	struct device *dev = &pdev->dev;
 	struct isp_device *isp_dev;
 	struct resource *mem_res;
 	int irq;
 	int rc;
-	unsigned int isp_dewarp_control_val;
 	struct device_node *mem_node;
 
 	pr_info("enter %s\n", __func__);
@@ -234,6 +297,29 @@ int isp_hw_probe(struct platform_device *pdev)
 	}
 	isp_dev->ic_dev.id = isp_dev->id;
 
+	isp_dev->clk_core = devm_clk_get(dev, "core");
+	if (IS_ERR(isp_dev->clk_core)) {
+		rc = PTR_ERR(isp_dev->clk_core);
+		dev_err(dev, "can't get core clock: %d\n", rc);
+		return rc;
+	}
+
+	isp_dev->clk_axi = devm_clk_get(dev, "axi");
+	if (IS_ERR(isp_dev->clk_axi)) {
+		rc = PTR_ERR(isp_dev->clk_axi);
+		dev_err(dev, "can't get axi clock: %d\n", rc);
+		return rc;
+	}
+
+	isp_dev->clk_ahb = devm_clk_get(dev, "ahb");
+	if (IS_ERR(isp_dev->clk_ahb)) {
+		rc = PTR_ERR(isp_dev->clk_ahb);
+		dev_err(dev, "can't get ahb clock: %d\n", rc);
+		return rc;
+	}
+
+	isp_dev->sd.internal_ops = &isp_internal_ops;
+
 #ifdef ISP8000NANO_V1802
 	isp_dev->ic_dev.mix_gpr = syscon_regmap_lookup_by_phandle(
 		pdev->dev.of_node, "gpr");
@@ -241,13 +327,6 @@ int isp_hw_probe(struct platform_device *pdev)
 		pr_warn("failed to get mix gpr\n");
 		isp_dev->ic_dev.mix_gpr = NULL;
 		return -ENOMEM;
-	}
-	regmap_read(isp_dev->ic_dev.mix_gpr, 0x138,
-				&isp_dewarp_control_val);
-	if (isp_dewarp_control_val == 0) {
-		isp_dewarp_control_val = 0x8d8360;
-		regmap_write(isp_dev->ic_dev.mix_gpr, 0x138,
-					isp_dewarp_control_val);
 	}
 #endif
 	mem_node = of_parse_phandle(pdev->dev.of_node, "memory-region", 0);
@@ -268,9 +347,8 @@ int isp_hw_probe(struct platform_device *pdev)
 	isp_dev->sd.flags |= V4L2_SUBDEV_FL_HAS_DEVNODE;
 	isp_dev->sd.flags |= V4L2_SUBDEV_FL_HAS_EVENTS;
 	isp_dev->sd.owner = THIS_MODULE;
+	isp_dev->sd.dev = &pdev->dev;
 	v4l2_set_subdevdata(&isp_dev->sd, isp_dev);
-	pm_runtime_enable(&pdev->dev);
-	pm_runtime_get_sync(&pdev->dev);
 	isp_dev->vd = kzalloc(sizeof(*isp_dev->vd), GFP_KERNEL);
 	if (WARN_ON(!isp_dev->vd)) {
 		rc = -ENOMEM;
@@ -317,6 +395,8 @@ int isp_hw_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, isp_dev);
 	rc = v4l2_device_register_subdev_nodes(isp_dev->vd);
+
+	pm_runtime_enable(&pdev->dev);
 	pr_info("vvcam isp driver registered\n");
 	return 0;
 end:
@@ -341,31 +421,72 @@ int isp_hw_remove(struct platform_device *pdev)
 	}
 
 	kfree(isp);
-	pm_runtime_put(&pdev->dev);
 	pm_runtime_disable(&pdev->dev);
 	return 0;
 }
 
 static int isp_system_suspend(struct device *dev)
 {
-	return pm_runtime_force_suspend(dev);;
+	struct platform_device *pdev;
+	struct isp_device *isp = NULL;
+	pdev = container_of(dev, struct platform_device, dev);
+	isp = platform_get_drvdata(pdev);
+	if(!isp){
+		dev_err(dev, "isp suspend failed!\n");
+		return -1;
+	}
+
+	if(isp->ic_dev.streaming == true) {
+		isp_stop_stream(&isp->ic_dev);
+	}
+
+	return pm_runtime_force_suspend(dev);
 }
 
 static int isp_system_resume(struct device *dev)
 {
 	int ret;
-
+	struct platform_device *pdev;
+	struct isp_device *isp = NULL;
 	ret = pm_runtime_force_resume(dev);
 	if (ret < 0) {
 		dev_err(dev, "force resume %s failed!\n", dev_name(dev));
 		return ret;
 	}
+	pdev = container_of(dev, struct platform_device, dev);
+	isp = platform_get_drvdata(pdev);
+	if(!isp){
+		dev_err(dev, "isp resume failed!\n");
+		return -1;
+	}
+
+	if(isp->ic_dev.streaming == true) {
+		isp_start_stream(&isp->ic_dev, 1);
+	}
+	return 0;
+}
+
+static int isp_runtime_suspend(struct device *dev)
+{
+	struct isp_device *isp_dev = dev_get_drvdata(dev);
+
+	isp_disable_clocks(isp_dev);
+
+	return 0;
+}
+
+static int isp_runtime_resume(struct device *dev)
+{
+	struct isp_device *isp_dev = dev_get_drvdata(dev);
+
+	isp_enable_clocks(isp_dev);
 
 	return 0;
 }
 
 static const struct dev_pm_ops isp_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(isp_system_suspend, isp_system_resume)
+	SET_RUNTIME_PM_OPS(isp_runtime_suspend, isp_runtime_resume, NULL)
 };
 
 static const struct of_device_id isp_of_match[] = {

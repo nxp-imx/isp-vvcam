@@ -70,11 +70,13 @@
 #include "vvsensor.h"
 
 #define DEF_PLANE_NO    (0)
-#define VIDEO_NODE_NUM  (2)
 
 static struct viv_video_device *vvdev[VIDEO_NODE_NUM];
 static struct list_head file_list_head[VIDEO_NODE_NUM];
 static spinlock_t file_list_lock[VIDEO_NODE_NUM];
+#ifdef ENABLE_IRQ
+static struct media_device mdev;
+#endif
 
 #ifdef CONFIG_VIDEOBUF2_DMA_CONTIG
 struct ext_dma_buf {
@@ -632,6 +634,7 @@ static int get_caps_suppots_event(struct file *file)
 	return viv_post_event(&event, &handle->vfh, true);
 }
 
+#ifdef ENABLE_IRQ
 static struct media_entity *viv_find_entity(struct viv_video_device *dev,
 				const char *name)
 {
@@ -725,6 +728,7 @@ static int viv_config_dwe(struct viv_video_file *handle, bool enable)
 end:
 	return rc;
 }
+#endif
 
 static inline void init_v4l2_fmt(struct v4l2_format *f, unsigned int bpp,
 		    unsigned int depth, unsigned int *bytesperline,
@@ -747,8 +751,6 @@ static int viv_set_modeinfo(struct viv_video_file *handle,
 	if (modeinfo->w == 0 || modeinfo->h == 0 || modeinfo->fps == 0) {
 		vdev->modeinfocount = 0;
 		memset(vdev->modeinfo, 0, sizeof(vdev->modeinfo));
-		vdev->fmt.fmt.pix.width = 0;
-		vdev->fmt.fmt.pix.height = 0;
 		memset(&vdev->crop, 0, sizeof(struct v4l2_rect));
 		memset(&vdev->compose, 0, sizeof(struct v4l2_rect));
 		return -EINVAL;
@@ -798,8 +800,6 @@ static int viv_set_modeinfo(struct viv_video_file *handle,
 		if (pfmt == NULL)
 			pfmt = &vdev->formats[0];
 
-		vdev->fmt.fmt.pix.width = vdev->modeinfo[0].w;
-		vdev->fmt.fmt.pix.height = vdev->modeinfo[0].h;
 		init_v4l2_fmt(&vdev->fmt, pfmt->bpp, pfmt->depth,
 				&vdev->fmt.fmt.pix.bytesperline,
 				&vdev->fmt.fmt.pix.sizeimage);
@@ -809,13 +809,13 @@ static int viv_set_modeinfo(struct viv_video_file *handle,
 	}
 
 	if (vdev->crop.width == 0 || vdev->crop.height == 0) {
-		vdev->crop.width = vdev->fmt.fmt.pix.width;
-		vdev->crop.height = vdev->fmt.fmt.pix.height;
+		vdev->crop.width = vdev->modeinfo[0].w;
+		vdev->crop.height = vdev->modeinfo[0].h;
 	}
 
 	if (vdev->compose.width == 0 || vdev->compose.height == 0) {
-		vdev->compose.width = vdev->fmt.fmt.pix.width;
-		vdev->compose.height = vdev->fmt.fmt.pix.height;
+		vdev->compose.width = vdev->modeinfo[0].w;
+		vdev->compose.height = vdev->modeinfo[0].h;
 	}
 	return 0;
 }
@@ -891,12 +891,14 @@ static long private_ioctl(struct file *file, void *fh,
 		pr_debug("priv ioctl VIV_VIDIOC_S_STREAMID\n");
 		handle->streamid = *((int *)arg);
 		break;
+#ifdef ENABLE_IRQ
 	case VIV_VIDIOC_S_DWECFG:
 		viv_config_dwe(handle, !!*((int *)arg));
 		break;
 	case VIV_VIDIOC_G_DWECFG:
 		*((int *)arg) = handle->vdev->dweEnabled ? 1 : 0;
 		break;
+#endif
 	case VIV_VIDIOC_BUFFER_ALLOC: {
 		struct ext_buf_info *ext_buf = (struct ext_buf_info *)arg;
 #ifdef CONFIG_VIDEOBUF2_DMA_CONTIG
@@ -1254,7 +1256,13 @@ static int vidioc_enum_framesizes(struct file *file, void *priv,
 			    struct v4l2_frmsizeenum *fsize)
 {
 	struct viv_video_device *dev = video_drvdata(file);
+	struct viv_video_file *handle = priv_to_handle(file->private_data);
 	int i;
+
+	if (dev->modeinfocount == 0) {
+		viv_post_simple_event(VIV_VIDEO_EVENT_CREATE_PIPELINE,
+			handle->streamid, &handle->vfh, true);
+	}
 
 	if (fsize->index >= dev->modeinfocount)
 		return -EINVAL;
@@ -1265,10 +1273,20 @@ static int vidioc_enum_framesizes(struct file *file, void *priv,
 
 	if (i == dev->formatscount)
 		return -EINVAL;
+#if 0
+	fsize->stepwise.min_width = 320;
+	fsize->stepwise.max_width = dev->modeinfo[fsize->index].w;
+	fsize->stepwise.step_width = 2;
+	fsize->stepwise.min_height = 240;
+	fsize->stepwise.max_height = dev->modeinfo[fsize->index].h;
+	fsize->stepwise.step_height = 2;
 
+	fsize->type = V4L2_FRMSIZE_TYPE_STEPWISE;
+#else
 	fsize->discrete.width = dev->modeinfo[fsize->index].w;
 	fsize->discrete.height = dev->modeinfo[fsize->index].h;
 	fsize->type = V4L2_FRMSIZE_TYPE_DISCRETE;
+#endif
 	return 0;
 }
 
@@ -1332,7 +1350,13 @@ static int vidioc_enum_frameintervals(struct file *filp, void *priv,
 			    struct v4l2_frmivalenum *fival)
 {
 	struct viv_video_device *dev = video_drvdata(filp);
+	struct viv_video_file *handle = priv_to_handle(filp->private_data);
 	int i, count = fival->index;
+
+	if (dev->modeinfocount == 0) {
+		viv_post_simple_event(VIV_VIDEO_EVENT_CREATE_PIPELINE,
+			handle->streamid, &handle->vfh, true);
+	}
 
 	if (fival->index >= dev->modeinfocount)
 		return -EINVAL;
@@ -1352,9 +1376,13 @@ static int vidioc_enum_frameintervals(struct file *filp, void *priv,
 			count--;
 			continue;
 		}
-		fival->discrete.numerator = 1;
-		fival->discrete.denominator = dev->modeinfo[i].fps;
-		fival->type = V4L2_FRMIVAL_TYPE_DISCRETE;
+		fival->stepwise.min.numerator = 1;
+		fival->stepwise.min.denominator = dev->modeinfo[i].fps;
+		fival->stepwise.max.numerator = 1;
+		fival->stepwise.max.denominator = 1;
+		fival->stepwise.step.numerator = 1;
+		fival->stepwise.step.denominator = dev->modeinfo[i].fps;
+		fival->type = V4L2_FRMSIZE_TYPE_STEPWISE;
 		return 0;
 	}
 	return -EINVAL;
@@ -1378,13 +1406,18 @@ static int vidioc_g_selection(struct file *file, void *fh,
 	if (s->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
 		return -EINVAL;
 
+	if (vdev->modeinfocount == 0) {
+		viv_post_simple_event(VIV_VIDEO_EVENT_CREATE_PIPELINE,
+			handle->streamid, &handle->vfh, true);
+	}
+
 	switch (s->target) {
 	case V4L2_SEL_TGT_CROP_DEFAULT:
 	case V4L2_SEL_TGT_CROP_BOUNDS:
 		s->r.left = 0;
 		s->r.top = 0;
-		s->r.width = vdev->fmt.fmt.pix.width;
-		s->r.height = vdev->fmt.fmt.pix.height;
+		s->r.width = vdev->modeinfo[0].w;
+		s->r.height =  vdev->modeinfo[0].h;
 		break;
 	case V4L2_SEL_TGT_CROP:
 		s->r = vdev->crop;
@@ -1394,8 +1427,8 @@ static int vidioc_g_selection(struct file *file, void *fh,
 	case V4L2_SEL_TGT_COMPOSE_BOUNDS:
 		s->r.left = 0;
 		s->r.top = 0;
-		s->r.width = vdev->fmt.fmt.pix.width;
-		s->r.height = vdev->fmt.fmt.pix.height;
+		s->r.width = vdev->modeinfo[0].w;
+		s->r.height = vdev->modeinfo[0].h;
 		break;
 	case V4L2_SEL_TGT_COMPOSE:
 		s->r = vdev->compose;
@@ -1420,6 +1453,11 @@ static int vidioc_s_selection(struct file *file, void *fh,
 	if (s->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
 		return -EINVAL;
 
+	if (vdev->modeinfocount == 0) {
+		viv_post_simple_event(VIV_VIDEO_EVENT_CREATE_PIPELINE,
+			handle->streamid, &handle->vfh, true);
+	}
+
 	switch (s->target) {
 	case V4L2_SEL_TGT_CROP:
 		r = &vdev->crop;
@@ -1439,8 +1477,8 @@ static int vidioc_s_selection(struct file *file, void *fh,
 		return -EINVAL;
 
 	if (s->target == V4L2_SEL_TGT_CROP) {
-		if (s->r.left + s->r.width > vdev->fmt.fmt.pix.width ||
-		    s->r.top + s->r.height > vdev->fmt.fmt.pix.height)
+		if (s->r.left + s->r.width > vdev->modeinfo[0].w ||
+		    s->r.top + s->r.height > vdev->modeinfo[0].h)
 			return -EINVAL;
 	}
 
@@ -1724,6 +1762,7 @@ static const struct v4l2_ctrl_config viv_ext_ctrl = {
 	.step = 1,
 };
 
+#ifdef ENABLE_IRQ
 static int viv_notifier_bound(struct v4l2_async_notifier *notifier,
 		    struct v4l2_subdev *sd, struct v4l2_async_subdev *asd)
 {
@@ -1765,9 +1804,9 @@ static int viv_notifier_complete(struct v4l2_async_notifier *notifier)
 		return 0;
 
 	if (dev->sdcount > 0) {
-		mutex_lock(&dev->mdev.graph_mutex);
+		mutex_lock(&dev->mdev->graph_mutex);
 		rc = viv_create_default_links(dev);
-		mutex_unlock(&dev->mdev.graph_mutex);
+		mutex_unlock(&dev->mdev->graph_mutex);
 
 		if (rc) {
 			pr_err("failed to create media links!\n");
@@ -1775,10 +1814,7 @@ static int viv_notifier_complete(struct v4l2_async_notifier *notifier)
 		}
 	}
 
-	rc = v4l2_device_register_subdev_nodes(dev->v4l2_dev);
-	if (!rc)
-		rc = media_device_register(&dev->mdev);
-	return rc;
+	return v4l2_device_register_subdev_nodes(dev->v4l2_dev);
 }
 
 static const struct v4l2_async_notifier_operations sd_async_notifier_ops = {
@@ -1808,14 +1844,13 @@ static const struct media_entity_operations viv_media_ops = {
 	.link_validate = v4l2_subdev_link_validate,
 };
 
-#ifdef ENABLE_IRQ
 static void viv_buf_notify(struct vvbuf_ctx *ctx, struct vb2_dc_buf *buf)
 {
 	struct viv_video_file *fh;
 	struct viv_video_device *vdev;
 	u64 cur_ts, interval;
 	u32 fps;
-	static u32 loop_cnt = 0;
+	int i;
 
 	if (!buf || buf->vb.vb2_buf.state != VB2_BUF_STATE_ACTIVE)
 		return;
@@ -1834,21 +1869,25 @@ static void viv_buf_notify(struct vvbuf_ctx *ctx, struct vb2_dc_buf *buf)
 	vb2_buffer_done(&buf->vb.vb2_buf, VB2_BUF_STATE_DONE);
 
 	/* print fps info for debugging purpose */
-	interval = (cur_ts - vdev->last_ts) / 1000000; /*ms*/
-	if (vdev->duration >= 3 * 1000/*ms*/) {
-		loop_cnt++;
-		if (loop_cnt >= 10) {
-			fps = vdev->frame_count * 100000 / vdev->duration;
-			pr_info("###### video%d(%d) %d.%02d fps ######\n",
-					vdev->video->num, vdev->id,
-					fps / 100, fps % 100);
-			loop_cnt = 0;
+        interval = ktime_us_delta(cur_ts,vdev->last_ts);
+	for (i = 0; i < VIDEO_NODE_NUM; i++) {
+		if (vdev->id == i) {
+			if (vdev->duration >= 3 * 1000000/*ms*/) {
+				vdev->loop_cnt[i]++;
+				if (vdev->loop_cnt[i] >= 10) {
+					fps = vdev->frameCnt[i] * 100000000 / vdev->duration;
+					pr_info("###### video%d(%d) %d.%02d fps ######\n",
+						vdev->video->num, vdev->id,
+						fps / 100, fps % 100);
+					vdev->loop_cnt[i] = 0;
+				}
+				vdev->frameCnt[i] = 0;
+				vdev->duration = 0;
+			} else if (interval > 0) {
+				vdev->frameCnt[i]++;
+				vdev->duration += interval;
+			}
 		}
-		vdev->frame_count = 0;
-		vdev->duration = 0;
-	} else if (interval > 0) {
-		vdev->frame_count++;
-		vdev->duration += interval;
 	}
 	vdev->last_ts = cur_ts;
 }
@@ -1949,12 +1988,17 @@ static int viv_video_probe(struct platform_device *pdev)
 {
 	struct viv_video_device *vdev;
 	int rc = 0;
-	int i;
+	int i,m;
 #ifdef ENABLE_IRQ
 	int j;
 	struct dev_node nodes[MAX_SUBDEVS_NUM];
 	int nodecount = viv_find_compatible_nodes(nodes, MAX_SUBDEVS_NUM);
 	struct v4l2_async_subdev *asd;
+
+	strscpy(mdev.model, "viv_media", sizeof(mdev.model));
+	mdev.ops = &viv_mdev_ops;
+	mdev.dev = &pdev->dev;
+	media_device_init(&mdev);
 #endif
 
 	for (i = 0; i < VIDEO_NODE_NUM; i++) {
@@ -2003,13 +2047,8 @@ static int viv_video_probe(struct platform_device *pdev)
 		vvbuf_ctx_init(&vdev->bctx);
 		vdev->bctx.ops = &viv_buf_ops;
 
-		snprintf(vdev->mdev.model, sizeof(vdev->mdev.model)-1,
-				"viv_media%d", i);
-		vdev->mdev.ops = &viv_mdev_ops;
-		vdev->mdev.dev = &pdev->dev;
-		vdev->v4l2_dev->mdev = &vdev->mdev;
-
-		media_device_init(&vdev->mdev);
+		vdev->mdev = &mdev;
+		vdev->v4l2_dev->mdev = &mdev;
 
 		vdev->video->entity.name = vdev->video->name;
 		vdev->video->entity.obj_type = MEDIA_ENTITY_TYPE_VIDEO_DEVICE;
@@ -2078,11 +2117,21 @@ static int viv_video_probe(struct platform_device *pdev)
 			memcpy(vdev->formats, formats, sizeof(formats));
 			vdev->formatscount = ARRAY_SIZE(formats);
 		}
+                for (m = 0; m < VIDEO_NODE_NUM; m++) {
+		   vdev->loop_cnt[m] = 0;
+                   vdev->frameCnt[m] = 0;
+	 	}
+	 	vdev->duration = 0;
+                vdev->last_ts = 0;
 
 		continue;
 register_fail:
 		video_device_release(vdev->video);
 	}
+#ifdef ENABLE_IRQ
+	if (!rc)
+		rc = media_device_register(&mdev);
+#endif
 probe_end:
 	return rc;
 }
@@ -2098,8 +2147,6 @@ static int viv_video_remove(struct platform_device *pdev)
 			continue;
 #ifdef ENABLE_IRQ
 		media_entity_cleanup(&vdev->video->entity);
-		media_device_unregister(&vdev->mdev);
-		media_device_cleanup(&vdev->mdev);
 		v4l2_async_notifier_cleanup(&vdev->subdev_notifier);
 		v4l2_async_notifier_unregister(&vdev->subdev_notifier);
 		v4l2_device_unregister(vdev->v4l2_dev);
@@ -2118,6 +2165,11 @@ static int viv_video_remove(struct platform_device *pdev)
 		kfree(vvdev[i]);
 		vvdev[i] = NULL;
 	}
+
+#ifdef ENABLE_IRQ
+	media_device_unregister(&mdev);
+	media_device_cleanup(&mdev);
+#endif
 	return 0;
 }
 

@@ -64,6 +64,7 @@
 #include "vvbuf.h"
 
 #define MAX_SUBDEVS_NUM (8)
+#define VIDEO_NODE_NUM  (2)
 
 struct viv_custom_ctrls {
 	struct v4l2_ctrl_handler handler;
@@ -88,7 +89,7 @@ struct viv_video_device {
 	int sdcount;
 	struct v4l2_async_subdev *asd[MAX_SUBDEVS_NUM];
 	int asdcount;
-	struct media_device mdev;
+	struct media_device *mdev;
 	struct media_pad pad;
 	struct v4l2_format fmt;
 	struct v4l2_fract timeperframe;
@@ -103,7 +104,8 @@ struct viv_video_device {
 	int event_result;
 	bool dweEnabled;
 	struct viv_caps_supports caps_supports;
-	u64 frame_count, duration, last_ts;
+	u64 duration, last_ts, frameCnt[VIDEO_NODE_NUM];
+	u32 loop_cnt[VIDEO_NODE_NUM];
 	struct completion subscribed_wait;
 	int subscribed_cnt;
 	int active;

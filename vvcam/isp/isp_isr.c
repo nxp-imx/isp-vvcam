@@ -178,8 +178,27 @@ int clean_dma_buffer(struct isp_ic_dev *dev)
 	return 0;
 }
 
+void isp_clear_interrupts(struct isp_ic_dev *dev)
+{
+	u32 isp_mis, mi_mis;
+
+	isp_mis = isp_read_reg(dev, REG_ADDR(isp_mis));
+	isp_write_reg(dev, REG_ADDR(isp_icr), isp_mis);
+
+#ifdef ISP_MIV1
+	mi_mis = isp_read_reg(dev, REG_ADDR(mi_mis));
+	isp_write_reg(dev, REG_ADDR(mi_icr), mi_mis);
+#elif defined(ISP_MIV2)
+	mi_mis = isp_read_reg(dev, REG_ADDR(miv2_mis));
+	isp_write_reg(dev, REG_ADDR(miv2_icr), mi_mis);
+#else
+	mi_mis = 0;
+#endif
+}
+
 irqreturn_t isp_hw_isr(int irq, void *data)
 {
+	u32 isp_ctrl;
 	struct isp_ic_dev *dev = (struct isp_ic_dev *)data;
 	static const u32 frameendmask = MRV_MI_MP_FRAME_END_MASK |
 #ifdef ISP_MI_BP
@@ -249,6 +268,18 @@ irqreturn_t isp_hw_isr(int irq, void *data)
 
 			if (dev->cproc.changed) {
 				isp_s_cproc(dev);
+			}
+
+			if (dev->gamma_out.changed) {
+				isp_s_gamma_out(dev);
+			}
+
+			if(dev->update_gamma_en) {
+				isp_ctrl = isp_read_reg(dev, REG_ADDR(isp_ctrl));
+				REG_SET_SLICE(isp_ctrl, MRV_ISP_ISP_GAMMA_OUT_ENABLE,
+								dev->gamma_out.enableGamma);
+				isp_write_reg(dev, REG_ADDR(isp_ctrl), isp_ctrl);
+				dev->update_gamma_en = false;
 			}
 		}
 

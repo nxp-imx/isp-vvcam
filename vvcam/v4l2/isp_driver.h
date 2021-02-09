@@ -64,6 +64,10 @@ struct isp_device {
 	struct v4l2_device *vd;
 #endif
 	struct isp_ic_dev ic_dev;
+	struct clk *clk_core;
+	struct clk *clk_axi;
+	struct clk *clk_ahb;
+	int refcnt;
 #ifdef ENABLE_IRQ
 	struct media_pad pads[ISP_PADS_NUM];
 	int state;

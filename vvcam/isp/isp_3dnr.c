@@ -173,7 +173,7 @@ int isp_s_3dnr_cmp(struct isp_ic_dev *dev) {
 #ifndef ISP_3DNR
 	return -1;
 #elif !defined(ISP_3DNR_DDR_LESS)
-	pr_err("Not supported 3dnr ddr less\n");
+	//pr_err("Not supported 3dnr ddr less\n");
 	return -1;
 #else
 	struct isp_3dnr_compress_context *compress = &dev->dnr3.compress;
@@ -200,7 +200,7 @@ int isp_s_3dnr_cmp(struct isp_ic_dev *dev) {
 int isp_s_3dnr(struct isp_ic_dev *dev)
 {
 #ifndef ISP_3DNR
-	pr_err("Not supported 3dnr\n");
+	//pr_err("Not supported 3dnr\n");
 	return -1;
 #else
 	struct isp_3dnr_context *dnr3 = &dev->dnr3;

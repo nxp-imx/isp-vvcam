@@ -781,6 +781,9 @@ struct isp_ic_dev {
 	struct isp_ca_context ca;
 	struct isp_dummy_hblank_cxt hblank;
 	struct isp_wdr_context wdr;
+	bool streaming;
+	bool update_lsc_tbl;
+	bool update_gamma_en;
 };
 
 struct isp_extmem_info {

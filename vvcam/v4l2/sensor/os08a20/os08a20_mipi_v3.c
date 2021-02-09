@@ -187,17 +187,19 @@ struct os08a20 {
 	container_of(i2c_get_clientdata(client), struct os08a20, subdev)
 
 long os08a20_priv_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg);
+static void os08a20_stop(struct os08a20 *sensor);
+s32 os08a20_write_reg(struct os08a20 *sensor, u16 reg, u8 val);
 
 static struct vvcam_mode_info pos08a20_mode_info[] = {
-    {
-    	.index     = 0,
-        .width     = 1920,
-        .height    = 1080,
-        .fps       = 60,
-        .hdr_mode  = SENSOR_MODE_LINEAR,
-        .bit_width = 10,
-        .bayer_pattern = BAYER_BGGR,
-        .ae_info = {
+	{
+		.index	   = 0,
+		.width	   = 1920,
+		.height    = 1080,
+		.fps	   = 60,
+		.hdr_mode  = SENSOR_MODE_LINEAR,
+		.bit_width = 10,
+		.bayer_pattern = BAYER_BGGR,
+		.ae_info = {
 			.DefaultFrameLengthLines = 0x492,
 			.one_line_exp_time_ns = 14250,
 			.max_integration_time = 0x492 - 8,
@@ -208,17 +210,17 @@ static struct vvcam_mode_info pos08a20_mode_info[] = {
 		},
 		.preg_data = os08a20_init_setting_1080p,
 		.reg_data_count = ARRAY_SIZE(os08a20_init_setting_1080p),
-    },
-    {
-        .index     = 1,
-        .width    = 1920,
-        .height   = 1080,
-        .fps      = 30,
-        .hdr_mode = SENSOR_MODE_HDR_STITCH,
-        .stitching_mode = SENSOR_STITCHING_DUAL_DCG,
-        .bit_width = 10,
-        .bayer_pattern = BAYER_BGGR,
-        .ae_info = {
+	},
+	{
+		.index	   = 1,
+		.width	  = 1920,
+		.height   = 1080,
+		.fps	  = 30,
+		.hdr_mode = SENSOR_MODE_HDR_STITCH,
+		.stitching_mode = SENSOR_STITCHING_DUAL_DCG,
+		.bit_width = 10,
+		.bayer_pattern = BAYER_BGGR,
+		.ae_info = {
 			.DefaultFrameLengthLines = 0x492,
 			.one_line_exp_time_ns = 14250,
 			.max_integration_time = 0x492 - 8,
@@ -229,16 +231,16 @@ static struct vvcam_mode_info pos08a20_mode_info[] = {
 		},
 		.preg_data = os08a20_init_setting_1080p_hdr,
 		.reg_data_count = ARRAY_SIZE(os08a20_init_setting_1080p_hdr),
-    },
-    {
-    	.index     = 2,
-        .width    = 3840,
-        .height   = 2160,
-        .fps      = 30,
-        .hdr_mode = SENSOR_MODE_LINEAR,
-        .bit_width = 12,
-        .bayer_pattern = BAYER_BGGR,
-        .ae_info = {
+	},
+	{
+		.index	   = 2,
+		.width	  = 3840,
+		.height   = 2160,
+		.fps	  = 30,
+		.hdr_mode = SENSOR_MODE_LINEAR,
+		.bit_width = 12,
+		.bayer_pattern = BAYER_BGGR,
+		.ae_info = {
 			.DefaultFrameLengthLines = 0x924,
 			.one_line_exp_time_ns = 14250,
 			.max_integration_time = 0x924 - 64 - 4,
@@ -249,17 +251,17 @@ static struct vvcam_mode_info pos08a20_mode_info[] = {
 		},
 		.preg_data = os08a20_init_setting_4k,
 		.reg_data_count = ARRAY_SIZE(os08a20_init_setting_4k),
-    },
-    {
-    	.index     = 3,
-        .width    = 3840,
-        .height   = 2160,
-        .fps      = 15,
-        .hdr_mode = SENSOR_MODE_HDR_STITCH,
-        .stitching_mode = SENSOR_STITCHING_L_AND_S,
-        .bit_width = 10,
-        .bayer_pattern = BAYER_BGGR,
-        .ae_info = {
+	},
+	{
+		.index	   = 3,
+		.width	  = 3840,
+		.height   = 2160,
+		.fps	  = 15,
+		.hdr_mode = SENSOR_MODE_HDR_STITCH,
+		.stitching_mode = SENSOR_STITCHING_L_AND_S,
+		.bit_width = 10,
+		.bayer_pattern = BAYER_BGGR,
+		.ae_info = {
 			.DefaultFrameLengthLines = 0x924,
 			.one_line_exp_time_ns = 14250,
 			.max_integration_time = 0x924 - 64 - 4,//T_long + Tshort < VTS - 4
@@ -270,7 +272,7 @@ static struct vvcam_mode_info pos08a20_mode_info[] = {
 		},
 		.preg_data = os08a20_init_setting_4k_hdr,
 		.reg_data_count = ARRAY_SIZE(os08a20_init_setting_4k_hdr),
-    },
+	},
 };
 
 
@@ -294,6 +296,33 @@ static const struct i2c_device_id os08a20_id[] = {
 
 MODULE_DEVICE_TABLE(i2c, os08a20_id);
 
+static int __maybe_unused os08a20_suspend(struct device *dev)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct os08a20 *sensor = client_to_os08a20(client);
+
+	if (sensor->on) {
+		os08a20_stop(sensor);
+	}
+
+	return 0;
+}
+
+static int __maybe_unused os08a20_resume(struct device *dev)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct os08a20 *sensor = client_to_os08a20(client);
+
+	if (sensor->on) {
+		os08a20_write_reg(sensor, 0x0100, 0x01);
+	}
+	return 0;
+}
+
+
+static const struct dev_pm_ops os08a20_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(os08a20_suspend, os08a20_resume)
+};
 static const struct of_device_id os08a20_dt_ids[] = {
 	{ .compatible = "ovti,ov2775" },
 	{ /* sentinel */ }
@@ -304,9 +333,10 @@ static struct i2c_driver os08a20_i2c_driver = {
 	.driver = {
 		.owner = THIS_MODULE,
 		.name  = "ov2775",
+		.pm = &os08a20_pm_ops,
 		.of_match_table	= os08a20_dt_ids,
 	},
-	.probe  = os08a20_probe,
+	.probe	= os08a20_probe,
 	.remove = os08a20_remove,
 	.id_table = os08a20_id,
 };
@@ -356,7 +386,7 @@ static __u16 find_hs_configure(struct os08a20 *sensor)
 	for (i = 0; i < ARRAY_SIZE(hs_setting); i++) {
 		if (hs_setting[i].width == pix->width &&
 			hs_setting[i].height == pix->height &&
-		    hs_setting[i].frame_rate == frame_rate)
+			hs_setting[i].frame_rate == frame_rate)
 			return hs_setting[i].val;
 	}
 
@@ -418,42 +448,41 @@ static int os08a20_regulator_enable(struct os08a20 *sensor)
 	if (sensor->io_regulator)
 	{
 		regulator_set_voltage(sensor->io_regulator,
-				      OS08a20_VOLTAGE_DIGITAL_IO,
-				      OS08a20_VOLTAGE_DIGITAL_IO);
+					  OS08a20_VOLTAGE_DIGITAL_IO,
+					  OS08a20_VOLTAGE_DIGITAL_IO);
 		ret = regulator_enable(sensor->io_regulator);
-		if (ret) 
+		if (ret)
 		{
 			dev_err(dev, "set io voltage failed\n");
 			return ret;
-		} 
-	} 
+		}
+	}
 
 	if (sensor->analog_regulator)
 	{
 		regulator_set_voltage(sensor->analog_regulator,
-				      OS08a20_VOLTAGE_ANALOG,
-				      OS08a20_VOLTAGE_ANALOG);
+					  OS08a20_VOLTAGE_ANALOG,
+					  OS08a20_VOLTAGE_ANALOG);
 		ret = regulator_enable(sensor->analog_regulator);
 		if (ret)
 		{
 			dev_err(dev, "set analog voltage failed\n");
 			goto err_disable_io;
 		}
-			
 	}
 
 	if (sensor->core_regulator)
 	{
 		regulator_set_voltage(sensor->core_regulator,
-				      OS08a20_VOLTAGE_DIGITAL_CORE,
-				      OS08a20_VOLTAGE_DIGITAL_CORE);
+					  OS08a20_VOLTAGE_DIGITAL_CORE,
+					  OS08a20_VOLTAGE_DIGITAL_CORE);
 		ret = regulator_enable(sensor->core_regulator);
 		if (ret) {
 			dev_err(dev, "set core voltage failed\n");
 			goto err_disable_analog;
 		}
 	}
-	
+
 	return 0;
 
 err_disable_analog:
@@ -541,7 +570,7 @@ static int os08a20_set_clk_rate(struct os08a20 *sensor)
 	tgt_xclk = max_t(u32, tgt_xclk, (u32) OS08a20_XCLK_MIN);
 	sensor->mclk = tgt_xclk;
 
-	pr_debug("   Setting mclk to %d MHz\n", tgt_xclk / 1000000);
+	pr_debug("	 Setting mclk to %d MHz\n", tgt_xclk / 1000000);
 	ret = clk_set_rate(sensor->sensor_clk, sensor->mclk);
 	if (ret < 0)
 		pr_debug("set rate filed, rate=%d\n", sensor->mclk);
@@ -550,8 +579,8 @@ static int os08a20_set_clk_rate(struct os08a20 *sensor)
 
 /* download os08a20 settings to sensor through i2c */
 static int os08a20_download_firmware(struct os08a20 *sensor,
-				    struct vvsensor_reg_value_t *mode_setting,
-				    s32 size)
+					struct vvsensor_reg_value_t *mode_setting,
+					s32 size)
 {
 	register u32 delay_ms = 0;
 	register u16 reg_addr = 0;
@@ -664,7 +693,7 @@ static int os08a20_g_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *a)
 		break;
 
 	default:
-		pr_debug("   type is unknown - %d\n", a->type);
+		pr_debug("	 type is unknown - %d\n", a->type);
 		ret = -EINVAL;
 		break;
 	}
@@ -677,7 +706,7 @@ static int os08a20_g_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *a)
  * @s: pointer to standard V4L2 sub device structure
  * @a: pointer to standard V4L2 VIDIOC_S_PARM ioctl structure
  *
- * Configures the sensor to use the input parameters, if possible.  If
+ * Configures the sensor to use the input parameters, if possible.	If
  * not possible, reverts to the old parameters and returns the
  * appropriate error code.
  */
@@ -697,7 +726,7 @@ static int os08a20_s_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *a)
 	case V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE:
 		/* Check that the new frame rate is allowed. */
 		if ((timeperframe->numerator == 0) ||
-		    (timeperframe->denominator == 0)) {
+			(timeperframe->denominator == 0)) {
 			timeperframe->denominator = DEFAULT_FPS;
 			timeperframe->numerator = 1;
 		}
@@ -728,13 +757,13 @@ static int os08a20_s_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *a)
 	case V4L2_BUF_TYPE_VBI_OUTPUT:
 	case V4L2_BUF_TYPE_SLICED_VBI_CAPTURE:
 	case V4L2_BUF_TYPE_SLICED_VBI_OUTPUT:
-		pr_debug("   type is not V4L2_BUF_TYPE_VIDEO_CAPTURE but %d\n",
+		pr_debug("	 type is not V4L2_BUF_TYPE_VIDEO_CAPTURE but %d\n",
 			 a->type);
 		ret = -EINVAL;
 		break;
 
 	default:
-		pr_debug("   type is unknown - %d\n", a->type);
+		pr_debug("	 type is unknown - %d\n", a->type);
 		ret = -EINVAL;
 		break;
 	}
@@ -778,7 +807,7 @@ static struct os08a20_mode_info *get_max_resolution(enum os08a20_frame_rate rate
 }
 
 static struct os08a20_mode_info *match(struct v4l2_mbus_framefmt *fmt,
-				      enum os08a20_frame_rate rate)
+					  enum os08a20_frame_rate rate)
 {
 	struct os08a20_mode_info *info;
 	int i;
@@ -786,7 +815,7 @@ static struct os08a20_mode_info *match(struct v4l2_mbus_framefmt *fmt,
 	pr_debug("enter %s\n", __func__);
 	for (i = 0; i < (os08a20_mode_MAX + 1); i++) {
 		if (fmt->width == os08a20_mode_info_data[rate][i].width &&
-		    fmt->height == os08a20_mode_info_data[rate][i].height) {
+			fmt->height == os08a20_mode_info_data[rate][i].height) {
 			info = &os08a20_mode_info_data[rate][i];
 			break;
 		}
@@ -809,7 +838,7 @@ static void try_to_find_resolution(struct os08a20 *sensor,
 
 	pr_debug("enter %s\n", __func__);
 	if ((mf->width == os08a20_mode_info_data[frame_rate][mode].width) &&
-	    (mf->height == os08a20_mode_info_data[frame_rate][mode].height)) {
+		(mf->height == os08a20_mode_info_data[frame_rate][mode].height)) {
 		info = &os08a20_mode_info_data[frame_rate][mode];
 		found = true;
 	} else {
@@ -867,9 +896,9 @@ static int os08a20_set_fmt(struct v4l2_subdev *sd,
 	}
 
 	mf->field = V4L2_FIELD_NONE;
-	/*  old search method,  vsi need change to
-	    search resolution by width/height */
-	/*  try_to_find_resolution(sensor, mf); */
+	/*	old search method,	vsi need change to
+		search resolution by width/height */
+	/*	try_to_find_resolution(sensor, mf); */
 	if (format->which == V4L2_SUBDEV_FORMAT_TRY)
 		return 0;
 
@@ -877,7 +906,7 @@ static int os08a20_set_fmt(struct v4l2_subdev *sd,
 	{
 		if (sensor->hdr)
 		{
-			if (mf->width == pos08a20_mode_info[i].width && 
+			if (mf->width == pos08a20_mode_info[i].width &&
 				mf->height == pos08a20_mode_info[i].height &&
 				pos08a20_mode_info[i].hdr_mode != SENSOR_MODE_LINEAR)
 			{
@@ -888,7 +917,7 @@ static int os08a20_set_fmt(struct v4l2_subdev *sd,
 			}
 		}else
 		{
-			if (mf->width == pos08a20_mode_info[i].width && 
+			if (mf->width == pos08a20_mode_info[i].width &&
 				mf->height == pos08a20_mode_info[i].height &&
 				pos08a20_mode_info[i].hdr_mode == SENSOR_MODE_LINEAR)
 			{
@@ -934,8 +963,8 @@ static int os08a20_get_fmt(struct v4l2_subdev *sd,
 }
 
 static int os08a20_enum_code(struct v4l2_subdev *sd,
-			    struct v4l2_subdev_pad_config *cfg,
-			    struct v4l2_subdev_mbus_code_enum *code)
+				struct v4l2_subdev_pad_config *cfg,
+				struct v4l2_subdev_mbus_code_enum *code)
 {
 	pr_debug("enter %s\n", __func__);
 	if (code->pad || code->index >= ARRAY_SIZE(os08a20_colour_fmts))
@@ -961,9 +990,9 @@ static int os08a20_enum_framesizes(struct v4l2_subdev *sd,
 	if (fse->index >  ARRAY_SIZE(pos08a20_mode_info))
 		return -EINVAL;
 
-	fse->min_width = pos08a20_mode_info[fse->index].width;   
+	fse->min_width = pos08a20_mode_info[fse->index].width;
 	fse->max_width = fse->min_width;
-	fse->min_height = pos08a20_mode_info[fse->index].height;    
+	fse->min_height = pos08a20_mode_info[fse->index].height;
 	fse->max_height = fse->min_height;
 
 	return 0;
@@ -978,9 +1007,9 @@ static int os08a20_enum_framesizes(struct v4l2_subdev *sd,
  * Return 0 if successful, otherwise -EINVAL.
  */
 static int os08a20_enum_frameintervals(struct v4l2_subdev *sd,
-				      struct v4l2_subdev_pad_config *cfg,
-				      struct v4l2_subdev_frame_interval_enum
-				      *fie)
+					  struct v4l2_subdev_pad_config *cfg,
+					  struct v4l2_subdev_frame_interval_enum
+					  *fie)
 {
 
 	pr_debug("enter %s\n", __func__);
@@ -999,8 +1028,8 @@ static int os08a20_enum_frameintervals(struct v4l2_subdev *sd,
 }
 
 static int os08a20_link_setup(struct media_entity *entity,
-			     const struct media_pad *local,
-			     const struct media_pad *remote, u32 flags)
+				 const struct media_pad *local,
+				 const struct media_pad *remote, u32 flags)
 {
 	return 0;
 }
@@ -1038,7 +1067,7 @@ static const struct media_entity_operations os08a20_sd_media_ops = {
  * os08a20 I2C probe function
  *
  * @param adapter struct i2c_adapter *
- * @return  Error code indicating success or failure
+ * @return	Error code indicating success or failure
  */
 
 static int os08a20_probe(struct i2c_client *client,
@@ -1048,7 +1077,7 @@ static int os08a20_probe(struct i2c_client *client,
 	struct device *dev = &client->dev;
 	struct v4l2_subdev *sd;
 	int retval;
-	u8  reg_val = 0;
+	u8	reg_val = 0;
 	u16 chip_id = 0;
 	struct os08a20 *sensor;
 
@@ -1073,8 +1102,8 @@ static int os08a20_probe(struct i2c_client *client,
 		dev_warn(dev, "No sensor pwdn pin available");
 	else {
 		retval = devm_gpio_request_one(dev, sensor->pwn_gpio,
-					       GPIOF_OUT_INIT_HIGH,
-					       "os08a20_mipi_pwdn");
+						   GPIOF_OUT_INIT_HIGH,
+						   "os08a20_mipi_pwdn");
 		if (retval < 0) {
 			dev_warn(dev, "Failed to set power pin\n");
 			dev_warn(dev, "retval=%d\n", retval);
@@ -1088,8 +1117,8 @@ static int os08a20_probe(struct i2c_client *client,
 		dev_warn(dev, "No sensor reset pin available");
 	else {
 		retval = devm_gpio_request_one(dev, sensor->rst_gpio,
-					       GPIOF_OUT_INIT_HIGH,
-					       "os08a20_mipi_reset");
+						   GPIOF_OUT_INIT_HIGH,
+						   "os08a20_mipi_reset");
 		if (retval < 0) {
 			dev_warn(dev, "Failed to set reset pin\n");
 			return retval;
@@ -1112,7 +1141,7 @@ static int os08a20_probe(struct i2c_client *client,
 	}
 
 	retval = of_property_read_u32(dev->of_node, "mclk_source",
-				      (u32 *)&(sensor->mclk_source));
+					  (u32 *)&(sensor->mclk_source));
 	if (retval) {
 		dev_err(dev, "mclk_source missing or invalid\n");
 		return retval;
@@ -1167,7 +1196,7 @@ static int os08a20_probe(struct i2c_client *client,
 	sensor->pix.width =pos08a20_mode_info[0].width;
 	sensor->pix.height = pos08a20_mode_info[0].height;
 	sensor->streamcap.capability = V4L2_MODE_HIGHQUALITY |
-	    V4L2_CAP_TIMEPERFRAME;
+		V4L2_CAP_TIMEPERFRAME;
 	sensor->streamcap.capturemode = 0;
 	sensor->streamcap.timeperframe.denominator = pos08a20_mode_info[0].fps;
 	sensor->streamcap.timeperframe.numerator = 1;
@@ -1218,7 +1247,7 @@ probe_err_regulator_disable:
  * os08a20 I2C detach function
  *
  * @param client struct i2c_client *
- * @return  Error code indicating success or failure
+ * @return	Error code indicating success or failure
  */
 static int os08a20_remove(struct i2c_client *client)
 {
@@ -1247,12 +1276,12 @@ int sensor_calc_gain(__u32 total_gain, __u32 *pagain, __u32 *pdgain)
 	{
 		total_gain = 1024;
 	}
-	
+
 	if(total_gain < (0x7c0 << 3))
 	{
 		*pdgain = 0x400;
 		*pagain = (total_gain << 7) / *pdgain;//(128 * 1024)/1024 = 128
-		
+
 	}else
 	{
 		*pagain = 0x7c0;
@@ -1268,13 +1297,13 @@ int os08a20_s_long_gain(struct os08a20 *sensor, __u32 new_gain)
 	int ret = 0;
 
 	sensor_calc_gain(new_gain, &again, &dgain);
-	
+
 	ret |= os08a20_write_reg(sensor, 0x3508, (again >> 8) & 0xff);
 	ret |= os08a20_write_reg(sensor, 0x3509, again & 0xff);
-	
+
 	ret |= os08a20_write_reg(sensor, 0x350a, (dgain >> 8) & 0xff);
 	ret |= os08a20_write_reg(sensor, 0x350b, dgain & 0x00FF);
-	
+
 	return ret;
 }
 
@@ -1288,31 +1317,28 @@ int os08a20_s_short_gain(struct os08a20 *sensor, __u32 new_gain)
 
 	ret |= os08a20_write_reg(sensor, 0x350c, (again >> 8) & 0xff);
 	ret |= os08a20_write_reg(sensor, 0x350d, again & 0xff);
-	
+
 	ret |= os08a20_write_reg(sensor, 0x350e, (dgain >> 8) & 0xff);
 	ret |= os08a20_write_reg(sensor, 0x350f, dgain & 0x00FF);
-	
+
 	return ret;
 }
 
 int os08a20_s_long_exp(struct os08a20 *sensor, __u32 exp)
 {
 	int ret = 0;
-			
 	ret |= os08a20_write_reg(sensor, 0x3501, (exp >> 8) & 0xff);
 	ret |= os08a20_write_reg(sensor, 0x3502, exp & 0xff);
-	
-	
+
 	return ret;
 }
 
 int os08a20_s_short_exp(struct os08a20 *sensor, __u32 exp)
 {
 	int ret = 0;
-			
 	ret |= os08a20_write_reg(sensor, 0x3511, (exp >> 8) & 0xff);
 	ret |= os08a20_write_reg(sensor, 0x3512, exp & 0xff);
-	
+
 	return ret;
 }
 
@@ -1366,9 +1392,9 @@ int os08a20_s_fps(struct os08a20 *sensor, __u32 fps)
 		fps = sensor->cur_mode.fps;
 	}
 	sensor->fps = fps;
-	
+
 	vts =  sensor->cur_mode.fps * sensor->cur_mode.ae_info.DefaultFrameLengthLines / sensor->fps;
-	
+
 	os08a20_write_reg(sensor, 0x380e, (vts >> 8)&0xff);
 	os08a20_write_reg(sensor, 0x380f, vts&0xff);
 
@@ -1383,7 +1409,7 @@ int os08a20_s_fps(struct os08a20 *sensor, __u32 fps)
 		sensor->cur_mode.ae_info.CurFrameLengthLines = vts;
 		sensor->cur_mode.ae_info.max_integration_time = vts - 8;
 	}
-	
+
 	return 0;
 }
 
@@ -1426,7 +1452,13 @@ int os08a20_ioc_qcap(struct os08a20 *sensor, void *args)
 int os08a20_ioc_query_mode(struct os08a20 *sensor, struct vvcam_mode_info_array *array)
 {
 	array->count = ARRAY_SIZE(pos08a20_mode_info);
+#ifdef CONFIG_HARDENED_USERCOPY
+	unsigned long copy_ret = 0;
+	pr_debug("sensor %p\n", sensor);
+	copy_ret = copy_to_user(&array->modes,pos08a20_mode_info,sizeof(pos08a20_mode_info));
+#else
 	memcpy(&array->modes,pos08a20_mode_info,sizeof(pos08a20_mode_info));
+#endif
 	return 0;
 }
 
@@ -1435,15 +1467,15 @@ int os08a20_g_mode(struct os08a20 *sensor, struct vvcam_mode_info *pmode)
 	int i = 0;
 	struct vvcam_mode_info *pcur_mode = NULL;
 
-	if (sensor->cur_mode.index == pmode->index && 
-	    sensor->cur_mode.width != 0 &&
-	    sensor->cur_mode.height != 0)
+	if (sensor->cur_mode.index == pmode->index &&
+		sensor->cur_mode.width != 0 &&
+		sensor->cur_mode.height != 0)
 	{
 		pcur_mode = &(sensor->cur_mode);
 		memcpy(pmode,pcur_mode,sizeof(struct vvcam_mode_info));
 		return 0;
 	}
-	
+
 	for(i=0; i < ARRAY_SIZE(pos08a20_mode_info); i++)
 	{
 		if (pmode->index == pos08a20_mode_info[i].index)
@@ -1565,7 +1597,6 @@ long os08a20_priv_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg_user
 	case VIDIOC_QUERYCAP:
 		ret = os08a20_ioc_qcap(sensor, arg);
 		break;
-		
 	case VVSENSORIOC_G_CHIP_ID: {
 		USER_TO_KERNEL(__u32);
 		ret = os08a20_g_chipid(sensor, (__u32 *)arg);
@@ -1573,23 +1604,21 @@ long os08a20_priv_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg_user
 		KERNEL_TO_USER(__u32);
 		break;
 	}
-	
 	case VVSENSORIOC_G_RESERVE_ID: {
 		__u32  correct_id = 0x5308;
 		ret = copy_to_user(arg_user, &correct_id, sizeof(__u32));
 		ret = ret? -1 : 0;
 		break;
 	}
-	
 	case VVSENSORIOC_S_HDR_MODE: {
 		USER_TO_KERNEL(bool);
 		ret = os08a20_s_hdr(sensor, *(bool *)arg);
 		break;
 	}
 	case VVSENSORIOC_QUERY: {
-		USER_TO_KERNEL(struct vvcam_mode_info_arry);
+		//USER_TO_KERNEL(struct vvcam_mode_info_array);
 		os08a20_ioc_query_mode(sensor, arg);
-		KERNEL_TO_USER(struct vvcam_mode_info_arry);
+		//KERNEL_TO_USER(struct vvcam_mode_info_array);
 		break;
 	}
 	case VVSENSORIOC_G_SENSOR_MODE: {

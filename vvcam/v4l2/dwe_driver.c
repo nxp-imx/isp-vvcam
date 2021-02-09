@@ -106,6 +106,40 @@ long dwe_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 }
 #endif /* CONFIG_COMPAT */
 
+static int dwe_enable_clocks(struct dwe_device *dwe_dev)
+{
+	int ret;
+
+	ret = clk_prepare_enable(dwe_dev->clk_core);
+	if (ret)
+		return ret;
+
+	ret = clk_prepare_enable(dwe_dev->clk_axi);
+	if (ret)
+		goto disable_clk_core;
+
+	ret = clk_prepare_enable(dwe_dev->clk_ahb);
+	if (ret)
+		goto disable_clk_axi;
+
+	return 0;
+
+disable_clk_axi:
+	clk_disable_unprepare(dwe_dev->clk_axi);
+disable_clk_core:
+	clk_disable_unprepare(dwe_dev->clk_core);
+
+	return ret;
+}
+
+static void dwe_disable_clocks(struct dwe_device *dwe_dev)
+{
+	clk_disable_unprepare(dwe_dev->clk_ahb);
+	clk_disable_unprepare(dwe_dev->clk_axi);
+	clk_disable_unprepare(dwe_dev->clk_core);
+}
+
+
 int dwe_set_stream(struct v4l2_subdev *sd, int enable)
 {
 	return 0;
@@ -126,8 +160,26 @@ static struct v4l2_subdev_ops dwe_v4l2_subdev_ops = {
 	.video = &dwe_v4l2_subdev_video_ops,
 };
 
+static int dwe_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
+{
+	pm_runtime_get_sync(sd->dev);
+	return 0;
+}
+
+static int dwe_close(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
+{
+	pm_runtime_put_sync(sd->dev);
+	return 0;
+}
+
+static struct v4l2_subdev_internal_ops dwe_internal_ops = {
+	.open = dwe_open,
+	.close = dwe_close,
+};
+
 int dwe_hw_probe(struct platform_device *pdev)
 {
+	struct device *dev = &pdev->dev;
 	struct dwe_device *dwe_dev;
 	struct resource *mem_res;
 	int rc = 0;
@@ -139,11 +191,35 @@ int dwe_hw_probe(struct platform_device *pdev)
 		goto end;
 	}
 
+	dwe_dev->clk_core = devm_clk_get(dev, "core");
+	if (IS_ERR(dwe_dev->clk_core)) {
+		rc = PTR_ERR(dwe_dev->clk_core);
+		dev_err(dev, "can't get core clock: %d\n", rc);
+		return rc;
+	}
+
+	dwe_dev->clk_axi = devm_clk_get(dev, "axi");
+	if (IS_ERR(dwe_dev->clk_axi)) {
+		rc = PTR_ERR(dwe_dev->clk_axi);
+		dev_err(dev, "can't get axi clock: %d\n", rc);
+		return rc;
+	}
+
+	dwe_dev->clk_ahb = devm_clk_get(dev, "ahb");
+	if (IS_ERR(dwe_dev->clk_ahb)) {
+		rc = PTR_ERR(dwe_dev->clk_ahb);
+		dev_err(dev, "can't get ahb clock: %d\n", rc);
+		return rc;
+	}
+
+	dwe_dev->sd.internal_ops = &dwe_internal_ops;
+
 	v4l2_subdev_init(&dwe_dev->sd, &dwe_v4l2_subdev_ops);
 	snprintf(dwe_dev->sd.name, sizeof(dwe_dev->sd.name), DEVICE_NAME);
 	dwe_dev->sd.flags |= V4L2_SUBDEV_FL_HAS_DEVNODE;
 	dwe_dev->sd.flags |= V4L2_SUBDEV_FL_HAS_EVENTS;
 	dwe_dev->sd.owner = THIS_MODULE;
+	dwe_dev->sd.dev = &pdev->dev;
 	v4l2_set_subdevdata(&dwe_dev->sd, dwe_dev);
 	dwe_dev->vd = kzalloc(sizeof(*dwe_dev->vd), GFP_KERNEL);
 	if (WARN_ON(!dwe_dev->vd)) {
@@ -173,6 +249,7 @@ int dwe_hw_probe(struct platform_device *pdev)
 #endif
 	platform_set_drvdata(pdev, dwe_dev);
 	rc = v4l2_device_register_subdev_nodes(dwe_dev->vd);
+	pm_runtime_enable(&pdev->dev);
 	pr_info("vvcam dewarp driver probed\n");
 	return 0;
 end:
@@ -187,6 +264,7 @@ int dwe_hw_remove(struct platform_device *pdev)
 
 	if (!dwe)
 		return -1;
+	pm_runtime_disable(&pdev->dev);
 	v4l2_device_unregister_subdev(&dwe->sd);
 	v4l2_device_disconnect(dwe->vd);
 	v4l2_device_put(dwe->vd);
@@ -217,8 +295,27 @@ static int dwe_system_resume(struct device *dev)
 	return 0;
 }
 
+static int dwe_runtime_suspend(struct device *dev)
+{
+	struct dwe_device *dwe_dev = dev_get_drvdata(dev);
+
+	dwe_disable_clocks(dwe_dev);
+
+	return 0;
+}
+
+static int dwe_runtime_resume(struct device *dev)
+{
+	struct dwe_device *dwe_dev = dev_get_drvdata(dev);
+
+	dwe_enable_clocks(dwe_dev);
+
+	return 0;
+}
+
 static const struct dev_pm_ops dwe_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(dwe_system_suspend, dwe_system_resume)
+	SET_RUNTIME_PM_OPS(dwe_runtime_suspend, dwe_runtime_resume, NULL)
 };
 
 static const struct of_device_id dwe_of_match[] = {

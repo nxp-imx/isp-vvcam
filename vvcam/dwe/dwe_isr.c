@@ -107,6 +107,10 @@ static int update_dma_buffer(struct dwe_ic_dev *dev)
 	overflow_err = BUF_ERR_OVERFLOW0 << dev->index;
 	dev->dst = vvbuf_try_dqbuf(dev->src_bctx[dev->index]);
 	if (!dev->dst) {
+		if (!(*dev->state[dev->index] & STATE_STREAM_STARTED)) {
+			vvbuf_try_dqbuf_done(dev->sink_bctx, dev->src);
+			vvbuf_ready(dev->sink_bctx, dev->src->pad, dev->src);
+		}
 		dev->error |= overflow_err;
 		dev->src = NULL;
 		return -ENOMEM;
@@ -139,6 +143,15 @@ int dwe_on_buf_update(struct dwe_ic_dev *dev)
 		spin_unlock_irqrestore(&dev->irqlock, flags);
 	}
 	return rc;
+}
+
+void dwe_clear_interrupts(struct dwe_ic_dev *dev)
+{
+	u32 status;
+	u32 clr;
+	status = dwe_read_reg(dev, INTERRUPT_STATUS);
+	clr = (status & 0xFF) << 24;
+	dwe_write_reg(dev, INTERRUPT_STATUS, clr);
 }
 
 irqreturn_t dwe_hw_isr(int irq, void *data)

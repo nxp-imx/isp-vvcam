@@ -86,6 +86,10 @@ struct dwe_device {
 	struct v4l2_device *vd;
 	struct dwe_ic_dev ic_dev;
 #endif
+	struct clk *clk_core;
+	struct clk *clk_axi;
+	struct clk *clk_ahb;
+	int refcnt;
 };
 
 #ifdef ENABLE_IRQ
