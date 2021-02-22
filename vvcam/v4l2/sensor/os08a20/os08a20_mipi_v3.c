@@ -595,6 +595,7 @@ static int os08a20_s_power(struct v4l2_subdev *sd, int on)
 	return 0;
 }
 
+#if 0
 /*!
  * os08a20_g_parm - V4L2 sensor interface handler for VIDIOC_G_PARM ioctl
  * @s: pointer to standard V4L2 sub device structure
@@ -710,6 +711,7 @@ static int os08a20_s_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *a)
 
 	return ret;
 }
+#endif
 
 static int os08a20_s_stream(struct v4l2_subdev *sd, int enable)
 {
@@ -975,8 +977,8 @@ static int os08a20_link_setup(struct media_entity *entity,
 }
 
 static struct v4l2_subdev_video_ops os08a20_subdev_video_ops = {
-	.g_parm = os08a20_g_parm,
-	.s_parm = os08a20_s_parm,
+//	.g_parm = os08a20_g_parm,
+//	.s_parm = os08a20_s_parm,
 	.s_stream = os08a20_s_stream,
 };
 

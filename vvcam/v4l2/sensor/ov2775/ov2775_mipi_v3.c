@@ -529,6 +529,7 @@ static int ov2775_s_power(struct v4l2_subdev *sd, int on)
 	return 0;
 }
 
+#if 0
 /*!
  * ov2775_g_parm - V4L2 sensor interface handler for VIDIOC_G_PARM ioctl
  * @s: pointer to standard V4L2 sub device structure
@@ -612,6 +613,7 @@ static int ov2775_s_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *a)
 
 	return ret;
 }
+#endif
 
 static int ov2775_s_stream(struct v4l2_subdev *sd, int enable)
 {
@@ -776,8 +778,8 @@ static int ov2775_link_setup(struct media_entity *entity,
 }
 
 static struct v4l2_subdev_video_ops ov2775_subdev_video_ops = {
-	.g_parm = ov2775_g_parm,
-	.s_parm = ov2775_s_parm,
+//	.g_parm = ov2775_g_parm,
+//	.s_parm = ov2775_s_parm,
 	.s_stream = ov2775_s_stream,
 };
 
