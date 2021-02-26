@@ -4,6 +4,7 @@ KERNEL_SRC := $(INCLUDE_DIR)
 endif
 
 SRC := $(shell pwd)
+PWD := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 
 EXTRA_CFLAGS += -I$(PWD)/../common/
 EXTRA_CFLAGS += -I$(PWD)/../isp/

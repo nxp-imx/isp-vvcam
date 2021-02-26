@@ -3,7 +3,6 @@ INCLUDE_DIR := /usr/src/linux-headers-$(shell uname -r)
 KERNEL_SRC := $(INCLUDE_DIR)
 endif
 
-PWD := $(ANDROID_BUILD_TOP)/vendor/nxp-opensource/verisilicon_sw_isp_vvcam/vvcam/v4l2
 SRC := $(shell pwd)
 
 EXTRA_CFLAGS += -I$(PWD)/../common/
