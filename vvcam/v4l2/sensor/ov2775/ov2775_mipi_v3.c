@@ -14,6 +14,7 @@
 
 #include <linux/clk.h>
 #include <linux/delay.h>
+#include <linux/of_graph.h>
 #include <linux/device.h>
 #include <linux/i2c.h>
 #include <linux/init.h>
@@ -25,7 +26,7 @@
 #include <linux/v4l2-mediabus.h>
 #include <media/v4l2-device.h>
 #include <media/v4l2-ctrls.h>
-
+#include <media/v4l2-fwnode.h>
 #include "vvsensor.h"
 
 #include "ov2775_regs_1080p.h"
@@ -50,6 +51,11 @@
 struct ov2775_datafmt {
 	u32 code;
 	enum v4l2_colorspace colorspace;
+};
+struct ov2775_csi_information {
+	__u64 max_lane_frequency;
+	__u8 lane_count;
+	__u8 lane_assignment[4];
 };
 
 struct ov2775 {
@@ -89,6 +95,7 @@ struct ov2775 {
 	sensor_blc_t blc;
 	sensor_white_balance_t wb;
 	struct mutex lock;
+	struct ov2775_csi_information oci;
 };
 
 #define client_to_ov2775(client)\
@@ -186,28 +193,6 @@ static struct vvcam_mode_info pov2775_mode_info[] = {
 		.preg_data = ov2775_init_setting_720p,
 		.reg_data_count = ARRAY_SIZE(ov2775_init_setting_720p),
 	},
-	{
-		.index     = 4,
-		.width    = 1920,
-		.height   = 1080,
-		.fps      = 30,
-		.hdr_mode = SENSOR_MODE_HDR_STITCH,
-		.stitching_mode = SENSOR_STITCHING_DUAL_DCG,
-		.bit_width = 12,
-		.data_compress.enable = 0,
-		.bayer_pattern = BAYER_BGGR,
-		.ae_info = {
-			.DefaultFrameLengthLines = 0x466,
-			.one_line_exp_time_ns = 59167,
-			.max_integration_time = 0x466 - 64 - 2,
-			.min_integration_time = 1,
-			.gain_accuracy = 1024,
-			.max_gain = 21 * 1024,
-			.min_gain = 1 * 1024,
-		},
-		.preg_data = ov2775_init_setting_1080p_hdr_low_freq,
-		.reg_data_count = ARRAY_SIZE(ov2775_init_setting_1080p_hdr_low_freq),
-	},
 };
 
 static int ov2775_probe(struct i2c_client *adapter,
@@ -221,6 +206,48 @@ static const struct i2c_device_id ov2775_id[] = {
 };
 
 MODULE_DEVICE_TABLE(i2c, ov2775_id);
+
+static int ov2775_retrieve_csi_information(struct ov2775 *sensor,struct ov2775_csi_information* oci)
+{
+	struct v4l2_fwnode_endpoint bus_cfg = { .bus_type = V4L2_MBUS_CSI2_DPHY };
+	struct device *dev = &sensor->i2c_client->dev;
+	struct device_node *ep;
+	int ret;
+
+	/* We need a function that searches for the device that holds
+	 * the csi-2 bus information. For now we put the bus information
+	 * also into the sensor endpoint itself.
+	 */
+
+	ep = of_graph_get_next_endpoint(dev->of_node, NULL);
+	if (!ep) {
+			pr_info("missing endpoint node\n");
+			return -ENODEV;
+	}
+
+	ret = v4l2_fwnode_endpoint_alloc_parse(of_fwnode_handle(ep), &bus_cfg);
+	of_node_put(ep);
+	if (ret) {
+			pr_info( "failed to parse endpoint\n");
+			return ret;
+	}
+
+	if (bus_cfg.bus_type != V4L2_MBUS_CSI2_DPHY ||
+		bus_cfg.bus.mipi_csi2.num_data_lanes == 0 ||
+		bus_cfg.nr_of_link_frequencies == 0) {
+		pr_info( "missing CSI-2 properties in endpoint\n");
+			ret = -ENODATA;
+	} else {
+			int i;
+			oci->max_lane_frequency = bus_cfg.link_frequencies[0];
+			oci->lane_count = bus_cfg.bus.mipi_csi2.num_data_lanes;
+			for (i = 0; i < bus_cfg.bus.mipi_csi2.num_data_lanes; ++i) {
+					oci->lane_assignment[i] = bus_cfg.bus.mipi_csi2.data_lanes[i];
+			}
+			ret = 0;
+	}
+	return ret;
+}
 
 static int __maybe_unused ov2775_suspend(struct device *dev)
 {
@@ -498,6 +525,15 @@ static int ov2775_download_firmware(struct ov2775 *sensor,
 	u8 reg_val = 0;
 	int i, retval = 0;
 
+	struct i2c_msg msg;
+	u16   reg_len;
+	u8	 *reg_buf;
+	struct vvsensor_reg_value_t *mode_setting_next;
+	struct i2c_client *i2c_client = sensor->i2c_client;
+	reg_buf = (u8 *)kmalloc(size + 2, GFP_KERNEL);
+	if (!reg_buf)
+		return -ENOMEM;
+
 	pr_debug("enter %s\n", __func__);
 	for (i = 0; i < size; ++i, ++mode_setting) {
 		delay_ms = mode_setting->delay;
@@ -505,24 +541,54 @@ static int ov2775_download_firmware(struct ov2775 *sensor,
 		val = mode_setting->val;
 		mask = mode_setting->mask;
 
-		if (mask) {
-			retval = ov2775_read_reg(sensor, reg_addr, &reg_val);
+		if(unlikely(mask || delay_ms)) {
+			if (mask) {
+				retval = ov2775_read_reg(sensor, reg_addr, &reg_val);
+				if (retval < 0)
+					break;
+
+				reg_val &= ~(u8)mask;
+				val &= mask;
+				val |= reg_val;
+			}
+
+			retval = ov2775_write_reg(sensor, reg_addr, val);
 			if (retval < 0)
 				break;
 
-			reg_val &= ~(u8)mask;
-			val &= mask;
-			val |= reg_val;
+			if (delay_ms)
+				msleep(delay_ms);
+		} else {
+			mode_setting_next = mode_setting + 1;
+			reg_buf[0] = reg_addr >> 8;
+			reg_buf[1] = reg_addr & 0xff;
+			reg_buf[2] = val;
+			reg_len = 3;
+
+			while(i + 1 < size &&
+				  !mode_setting_next->mask && !mode_setting_next->delay &&
+				   mode_setting_next->addr == reg_addr + 1) {
+				reg_buf[reg_len++] = mode_setting_next->val;
+				i++;
+				mode_setting++;
+				mode_setting_next++;
+				reg_addr++;
+			}
+			msg.addr	= i2c_client->addr;
+			msg.flags	= i2c_client->flags;
+			msg.len 	= reg_len;
+			msg.buf 	= reg_buf;
+			pr_debug("start reg_addr=0x%02x%02x reg_num=%d\n",
+						reg_buf[0], reg_buf[1], reg_len-2);
+			retval = i2c_transfer(i2c_client->adapter, &msg, 1);
+			if (retval < 0) {
+				dev_err(&i2c_client->dev, "i2c transfer error\n");
+				break;
+			}
 		}
-
-		retval = ov2775_write_reg(sensor, reg_addr, val);
-		if (retval < 0)
-			break;
-
-		if (delay_ms)
-			msleep(delay_ms);
 	}
 
+	kfree(reg_buf);
 	return retval;
 }
 
@@ -578,30 +644,56 @@ static int ov2775_change_mode(struct ov2775 *sensor)
 
 static void ov2775_stop(struct ov2775 *sensor)
 {
-    int i;
-    struct vvsensor_reg_value_t *mode_setting;
+	int i, size, retval = 0;
+	struct vvsensor_reg_value_t *mode_setting, *mode_setting_next;
+	struct i2c_msg msg;
+	register u16 reg_addr = 0;
+	u16 reg_len;
+	u8 *reg_buf;
+	struct i2c_client *i2c_client = sensor->i2c_client;
 	pr_debug("enter %s\n", __func__);
-#if 1
-	ov2775_write_reg(sensor, 0x3012, 0x00);
 
+	ov2775_write_reg(sensor, 0x3012, 0x00);
 	/* if the sensor re-enter streaming from standby mode
 	 * all registers starting with 0x7000 must be resent
 	 * before setting 0x3012[0]=1.
 	 */
 	mode_setting =
 		(struct vvsensor_reg_value_t *)sensor->cur_mode.preg_data;
-	for(i = 0; i < sensor->cur_mode.reg_data_count; i++) {
-		if(mode_setting[i].addr >= 0x7000) {
-		   ov2775_write_reg(sensor,
-				mode_setting[i].addr, mode_setting[i].val);
+	size = sensor->cur_mode.reg_data_count;
+	reg_buf = (u8 *)kmalloc(size + 2, GFP_KERNEL);
+	if (!reg_buf)
+		return;
+	for(i = 0; i < size; i++, mode_setting++) {
+		reg_addr = mode_setting->addr;
+		mode_setting_next = mode_setting + 1;
+		if(reg_addr >= 0x7000) {
+			reg_buf[0] = reg_addr >> 8;
+			reg_buf[1] = reg_addr & 0xff;
+			reg_buf[2] = mode_setting->val;
+			reg_len = 3;
+			while(i + 1 < size && reg_addr >= 0x7000 &&
+				    mode_setting_next->addr == reg_addr + 1) {
+				reg_buf[reg_len++] = mode_setting_next->val;
+				i++;
+				mode_setting++;
+				mode_setting_next++;
+				reg_addr++;
+			}
+			msg.addr	= i2c_client->addr;
+			msg.flags	= i2c_client->flags;
+			msg.len 	= reg_len;
+			msg.buf 	= reg_buf;
+			pr_debug("start reg_addr=0x%02x%02x reg_num=%d\n",
+						reg_buf[0], reg_buf[1], reg_len-2);
+			retval = i2c_transfer(i2c_client->adapter, &msg, 1);
+			if (retval < 0) {
+				dev_err(&i2c_client->dev, "i2c transfer error\n");
+				break;
+			}
 		}
 	}
-
-#else
-	ov2775_write_reg(sensor, 0x4202, 0x0f);
-	ov2775_write_reg(sensor, 0x3008, 0x42);
-	ov2775_write_reg(sensor, 0x4800, 0x24);
-#endif
+	kfree(reg_buf);
 
 }
 
@@ -740,6 +832,15 @@ static int ov2775_set_fmt(struct v4l2_subdev *sd,
 	int array_size = 0;
 
 	pr_debug("enter %s\n", __func__);
+	if(sensor->oci.max_lane_frequency == 266000000) {
+		pov2775_mode_info[1].preg_data = ov2775_init_setting_1080p_hdr_low_freq;
+		pov2775_mode_info[1].reg_data_count = ARRAY_SIZE(ov2775_init_setting_1080p_hdr_low_freq);
+		pov2775_mode_info[1].ae_info.one_line_exp_time_ns = 60784;
+	} else {
+		pov2775_mode_info[1].preg_data = ov2775_init_setting_1080p_hdr;
+		pov2775_mode_info[1].reg_data_count = ARRAY_SIZE(ov2775_init_setting_1080p_hdr);
+		pov2775_mode_info[1].ae_info.one_line_exp_time_ns = 59167;
+	}
 	if (format->pad) {
 		return -EINVAL;
 	}
@@ -1071,6 +1172,7 @@ static int ov2775_probe(struct i2c_client *client,
 	}
 
 	mutex_init(&sensor->lock);
+	ov2775_retrieve_csi_information(sensor,&sensor->oci);
 	pr_info("%s camera mipi ov2775, is found\n", __func__);
 
 	return 0;
@@ -1275,6 +1377,8 @@ int ov2775_s_vsexp(struct ov2775 *sensor, __u32 exp)
 
 	if (exp == 0x16)
 		exp = 0x15;
+	if (exp >0x2c)
+		exp = 0x2c;
 
 	ov2775_write_reg(sensor, 0x30b8, (exp & 0xFF00) >> 8);
 	ov2775_write_reg(sensor, 0x30b9, exp & 0x00FF);

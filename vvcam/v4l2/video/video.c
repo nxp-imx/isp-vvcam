@@ -1078,7 +1078,11 @@ static int vidioc_s_fmt_vid_cap(struct file *file, void *priv,
 				struct v4l2_format *f)
 {
 	struct viv_video_file *handle = priv_to_handle(file->private_data);
+	struct viv_video_device *vdev = handle->vdev;
 	int ret;
+	struct v4l2_event event;
+	struct viv_video_event *v_event;
+	struct viv_rect *rect = (struct viv_rect *)handle->event_buf.va;
 
 	pr_debug("enter %s\n", __func__);
 	if (f->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
@@ -1090,6 +1094,43 @@ static int vidioc_s_fmt_vid_cap(struct file *file, void *priv,
 		return -EINVAL;
 
 	handle->vdev->fmt = *f;
+
+	if (vdev->crop.top == 0 &&
+	    vdev->crop.left == 0 &&
+		vdev->crop.width == vdev->compose.width &&
+		vdev->crop.height == vdev->compose.height) {
+		vdev->compose.width = f->fmt.pix.width;
+		vdev->compose.height = f->fmt.pix.height;
+		vdev->crop.width = vdev->compose.width;
+		vdev->crop.height = vdev->compose.height;
+
+		rect->left = 0;
+		rect->top = 0;
+		rect->width = vdev->compose.width;
+		rect->height = vdev->compose.height;
+		v_event = (struct viv_video_event *)&event.u.data[0];
+		v_event->stream_id = handle->streamid;
+		v_event->file = &(handle->vfh);
+		v_event->sync = true;
+		v_event->addr = handle->event_buf.pa;
+		event.type = VIV_VIDEO_EVENT_TYPE;
+		event.id = VIV_VIDEO_EVENT_SET_COMPOSE;
+		viv_post_event(&event, &handle->vfh, true);
+
+		rect->left = 0;
+		rect->top = 0;
+		rect->width = 0;
+		rect->height = 0;
+		v_event = (struct viv_video_event *)&event.u.data[0];
+		v_event->stream_id = handle->streamid;
+		v_event->file = &(handle->vfh);
+		v_event->sync = true;
+		v_event->addr = handle->event_buf.pa;
+		event.type = VIV_VIDEO_EVENT_TYPE;
+		event.id = VIV_VIDEO_EVENT_SET_CROP;
+		viv_post_event(&event, &handle->vfh, true);
+	}
+
 	return ret;
 }
 
@@ -1273,20 +1314,16 @@ static int vidioc_enum_framesizes(struct file *file, void *priv,
 
 	if (i == dev->formatscount)
 		return -EINVAL;
-#if 0
-	fsize->stepwise.min_width = 320;
+
+	fsize->stepwise.min_width = 176;
 	fsize->stepwise.max_width = dev->modeinfo[fsize->index].w;
-	fsize->stepwise.step_width = 2;
-	fsize->stepwise.min_height = 240;
+	fsize->stepwise.step_width = 8;
+	fsize->stepwise.min_height = 144;
 	fsize->stepwise.max_height = dev->modeinfo[fsize->index].h;
-	fsize->stepwise.step_height = 2;
+	fsize->stepwise.step_height = 8;
 
 	fsize->type = V4L2_FRMSIZE_TYPE_STEPWISE;
-#else
-	fsize->discrete.width = dev->modeinfo[fsize->index].w;
-	fsize->discrete.height = dev->modeinfo[fsize->index].h;
-	fsize->type = V4L2_FRMSIZE_TYPE_DISCRETE;
-#endif
+
 	return 0;
 }
 
@@ -1416,8 +1453,8 @@ static int vidioc_g_selection(struct file *file, void *fh,
 	case V4L2_SEL_TGT_CROP_BOUNDS:
 		s->r.left = 0;
 		s->r.top = 0;
-		s->r.width = vdev->modeinfo[0].w;
-		s->r.height =  vdev->modeinfo[0].h;
+		s->r.width = vdev->compose.width;
+		s->r.height =  vdev->compose.height;
 		break;
 	case V4L2_SEL_TGT_CROP:
 		s->r = vdev->crop;
@@ -1449,6 +1486,10 @@ static int vidioc_s_selection(struct file *file, void *fh,
 	struct viv_video_event *v_event;
 	struct viv_rect *rect = (struct viv_rect *)handle->event_buf.va;
 	int rc;
+	int crop_flag = 1;
+
+	if (!rect)
+		return -ENOMEM;
 
 	if (s->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
 		return -EINVAL;
@@ -1477,13 +1518,19 @@ static int vidioc_s_selection(struct file *file, void *fh,
 		return -EINVAL;
 
 	if (s->target == V4L2_SEL_TGT_CROP) {
-		if (s->r.left + s->r.width > vdev->modeinfo[0].w ||
-		    s->r.top + s->r.height > vdev->modeinfo[0].h)
+		if (s->r.left + s->r.width > vdev->compose.width ||
+		    s->r.top + s->r.height > vdev->compose.height)
 			return -EINVAL;
 	}
 
-	if (!rect)
-		return -ENOMEM;
+	if (s->target == V4L2_SEL_TGT_COMPOSE) {
+		if (vdev->crop.top == 0 &&
+			vdev->crop.left == 0 &&
+			vdev->crop.width == vdev->compose.width &&
+			vdev->crop.height == vdev->compose.height) {
+			crop_flag = 0;
+		}
+	}
 
 	rect->left = s->r.left;
 	rect->top = s->r.top;
@@ -1507,6 +1554,10 @@ static int vidioc_s_selection(struct file *file, void *fh,
 		s->r.width = rect->width;
 		s->r.height = rect->height;
 		*r = s->r;
+		if (s->target == V4L2_SEL_TGT_COMPOSE && crop_flag == 0) {
+			vdev->crop.width = vdev->compose.width;
+			vdev->crop.height = vdev->compose.height;
+		}
 	}
 	return rc;
 }
