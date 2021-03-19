@@ -2086,7 +2086,11 @@ static int viv_video_probe(struct platform_device *pdev)
 		vdev->video->fops = &video_ops;
 		vdev->video->ioctl_ops = &video_ioctl_ops;
 		vdev->video->minor = -1;
+#if LINUX_VERSION_CODE > KERNEL_VERSION(5, 10, 0)
+		vdev->video->vfl_type = VFL_TYPE_VIDEO;
+#else
 		vdev->video->vfl_type = VFL_TYPE_GRABBER;
+#endif
 		vdev->video->ctrl_handler = &vdev->ctrls.handler;
 #if LINUX_VERSION_CODE > KERNEL_VERSION(5, 0, 0)
 		vdev->video->device_caps =
@@ -2115,7 +2119,12 @@ static int viv_video_probe(struct platform_device *pdev)
 		v4l2_async_notifier_init(&vdev->subdev_notifier);
 		vdev->subdev_notifier.ops = &sd_async_notifier_ops;
 #endif
+
+#if LINUX_VERSION_CODE > KERNEL_VERSION(5, 10, 0)
+		rc = video_register_device(vdev->video, VFL_TYPE_VIDEO, -1);
+#else
 		rc = video_register_device(vdev->video, VFL_TYPE_GRABBER, -1);
+#endif
 		if (WARN_ON(rc < 0))
 			goto register_fail;
 
