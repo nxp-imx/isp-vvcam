@@ -110,6 +110,7 @@ struct viv_video_device {
 	int subscribed_cnt;
 	int active;
 	void *rmem;
+	bool frame_flag;
 };
 
 struct viv_video_file {

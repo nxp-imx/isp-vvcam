@@ -66,6 +66,7 @@ int isp_s_dpf(struct isp_ic_dev *dev)
 	struct isp_dpf_context *dpf = &dev->dpf;
 	u32 value;
 	int i = 0;
+	u32 isp_ctrl = isp_read_reg(dev, REG_ADDR(isp_ctrl));
 	u32 isp_dpf_mode = isp_read_reg(dev, REG_ADDR(isp_dpf_mode));
 
 	//pr_info("enter %s\n", __func__);
@@ -186,6 +187,7 @@ int isp_s_dpf(struct isp_ic_dev *dev)
 	isp_write_reg(dev, REG_ADDR(isp_dpf_mode), isp_dpf_mode);
 	isp_write_reg(dev, REG_ADDR(isp_dpf_mode),
 		      isp_dpf_mode | MRV_DPF_DPF_ENABLE_MASK);
-
+        REG_SET_SLICE(isp_ctrl, MRV_ISP_ISP_GEN_CFG_UPD, 1);
+        isp_write_reg(dev, REG_ADDR(isp_ctrl), isp_ctrl);
 	return 0;
 }

@@ -236,14 +236,14 @@ static struct vvcam_mode_info pos08a20_mode_info[] = {
 		.index	   = 2,
 		.width	  = 3840,
 		.height   = 2160,
-		.fps	  = 30,
+		.fps	  = 20,
 		.hdr_mode = SENSOR_MODE_LINEAR,
 		.bit_width = 12,
 		.bayer_pattern = BAYER_BGGR,
 		.ae_info = {
-			.DefaultFrameLengthLines = 0x924,
+			.DefaultFrameLengthLines = 0xDB4,
 			.one_line_exp_time_ns = 14250,
-			.max_integration_time = 0x924 - 64 - 4,
+			.max_integration_time = 0xDB4 - 64 - 4,
 			.min_integration_time = 8,
 			.gain_accuracy = 1024,
 			.max_gain = 62 * 1024,
@@ -262,9 +262,9 @@ static struct vvcam_mode_info pos08a20_mode_info[] = {
 		.bit_width = 10,
 		.bayer_pattern = BAYER_BGGR,
 		.ae_info = {
-			.DefaultFrameLengthLines = 0x924,
-			.one_line_exp_time_ns = 14250,
-			.max_integration_time = 0x924 - 64 - 4,//T_long + Tshort < VTS - 4
+			.DefaultFrameLengthLines = 0x960,
+			.one_line_exp_time_ns = 13889,
+			.max_integration_time = 0x960 - 64 - 4,//T_long + Tshort < VTS - 4
 			.min_integration_time = 8,
 			.gain_accuracy = 1024,
 			.max_gain = 62 * 1024,
@@ -1023,7 +1023,7 @@ static int os08a20_enum_frameintervals(struct v4l2_subdev *sd,
 
 	fie->interval.numerator = 1;
 	fie->interval.denominator = pos08a20_mode_info[fie->index].fps;
-	
+
 	return 0;
 }
 

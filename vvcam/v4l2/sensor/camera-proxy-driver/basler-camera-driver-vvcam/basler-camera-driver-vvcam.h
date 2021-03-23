@@ -17,7 +17,7 @@ extern "C" {
 #define V4L2_CID_BASLER_ACCESS_REGISTER		(V4L2_CID_PROXY_BASE+2)
 #define V4L2_CID_BASLER_DEVICE_INFORMATION	(V4L2_CID_PROXY_BASE+3)
 #define V4L2_CID_BASLER_CSI_INFORMATION		(V4L2_CID_PROXY_BASE+4)
-
+#define V4L2_CID_BASLER_CAPTURE_PROPERTIES  (V4L2_CID_PROXY_BASE+5)
 #define I2CREAD		(1)
 #define I2CWRITE	(2)
 
@@ -29,8 +29,7 @@ extern "C" {
  * Basler interface Version
  */
 #define BASLER_INTERFACE_VERSION_MAJOR	((__u16) 1)
-#define BASLER_INTERFACE_VERSION_MINOR	((__u16) 0)
-
+#define BASLER_INTERFACE_VERSION_MINOR	((__u16) 1)
 
 /*
   Write register:
@@ -66,6 +65,7 @@ struct basler_device_information {
 /**
  * struct basler_csi_information - sensor specific csi2 bus configuration.
  * The cid to query this structure is V4L2_CID_BASLER_CSI_INFORMATION.
+ * The ioctl to query this structure is BASLER_IOC_G_CAPTURE_PROPERTIES
  *
  * @max_lanefrequency  Max theoretical CSI frequency per lane in hertz.
  * @lanecount          Available CSI lane count.
@@ -79,12 +79,29 @@ struct basler_csi_information {
 	__u8 lane_assignment[4];
 };
 
+/**
+* struct basler_capture_properties - sensor specific capture path properties
+* The cid to query this structure is V4L2_CID_BASLER_CAPTURE_PROPERTIES
+* The ioctl to query this structure is BASLER_IOC_G_CAPTURE_PROPERTIES
+*
+* @max_lane_frequency   Max supported CSI frequency per lane in hertz.
+* @max_pixel_frequency  Max supported Pixel frequency for the video capture.
+* @max_data_rate        Max supported data rate in bytes/second
+*/
+struct basler_capture_properties {
+	__u64 max_lane_frequency;
+	__u64 max_pixel_frequency;
+	__u64 max_data_rate;
+};
+
 enum {
 	BASLER_IOC_G_INTERFACE_VERSION = 0x100,
 	BASLER_IOC_READ_REGISTER,
 	BASLER_IOC_WRITE_REGISTER,
 	BASLER_IOC_G_DEVICE_INFORMATION,
-	BASLER_IOC_G_CSI_INFORMATION
+	BASLER_IOC_G_CSI_INFORMATION,
+	BASLER_IOC_G_CAPTURE_PROPERTIES
+
 };
 
 

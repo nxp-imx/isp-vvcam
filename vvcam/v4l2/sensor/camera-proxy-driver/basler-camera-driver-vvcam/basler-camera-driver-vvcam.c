@@ -387,7 +387,6 @@ static int basler_retrieve_device_information(struct i2c_client* client, struct 
 	return 0;
 }
 
-#if LINUX_VERSION_CODE > KERNEL_VERSION(4,19,0) // since 4.19.0-rc1
 static int basler_retrieve_csi_information(struct basler_camera_dev *sensor,
 					   struct basler_csi_information* bci)
 {
@@ -429,51 +428,53 @@ static int basler_retrieve_csi_information(struct basler_camera_dev *sensor,
 	}
 	return ret;
 }
-#else
-static int basler_retrieve_csi_information(struct basler_camera_dev *sensor,
-					   struct basler_csi_information* bci)
+
+static int basler_retrieve_capture_properties(struct basler_camera_dev *sensor,
+						struct basler_capture_properties* bcp)
 {
 	struct device *dev = &sensor->i2c_client->dev;
-	struct v4l2_fwnode_endpoint *endpoint;
+	__u64 mlf = 0;
+	__u64 mpf = 0;
+	__u64 mdr = 0;
 	struct device_node *ep;
+
 	int ret;
 
-	/* We need a function that searches for the device that holds
-	 * the csi-2 bus information. For now we put the bus information
-	 * also into the sensor endpoint itself.
-	 */
+	/* Collecting the information about limits of capture path
+	* has been centralized to the sensor
+	* also into the sensor endpoint itself.
+	*/
 	ep = of_graph_get_next_endpoint(dev->of_node, NULL);
 	if (!ep) {
 		dev_err(dev, "missing endpoint node\n");
 		return -ENODEV;
 	}
 
-	endpoint = v4l2_fwnode_endpoint_alloc_parse(of_fwnode_handle(ep));
-	of_node_put(ep);
-	if (IS_ERR(endpoint)) {
-		dev_err(dev, "failed to parse endpoint\n");
-		return PTR_ERR(endpoint);
+	ret = fwnode_property_read_u64(of_fwnode_handle(ep),
+		"max-lane-frequency", &mlf);
+	if (ret || mlf == 0) {
+		dev_dbg(dev, "no limit for max-lane-frequency\n");
 	}
 
-	if (endpoint->bus_type != V4L2_MBUS_CSI2 ||
-	    endpoint->bus.mipi_csi2.num_data_lanes == 0 ||
-	    endpoint->nr_of_link_frequencies == 0) {
-		dev_err(dev, "missing CSI-2 properties in endpoint\n");
-		ret = -ENODATA;
-	} else {
-		int i;
-		bci->max_lane_frequency = endpoint->link_frequencies[0];
-		bci->lane_count = endpoint->bus.mipi_csi2.num_data_lanes;
-		for (i = 0; i < endpoint->bus.mipi_csi2.num_data_lanes; ++i) {
-			bci->lane_assignment[i] = endpoint->bus.mipi_csi2.data_lanes[i];
-		}
-		ret = 0;
+	ret = fwnode_property_read_u64(of_fwnode_handle(ep),
+		"max-pixel-frequency", &mpf);
+	if (ret || mpf == 0) {
+	dev_dbg(dev, "no limit for max-pixel-frequency\n");
 	}
 
-	v4l2_fwnode_endpoint_free(endpoint);
+	ret = fwnode_property_read_u64(of_fwnode_handle(ep),
+		"max-data-rate", &mdr);
+	if (ret || mdr == 0) {
+	dev_dbg(dev, "no limit for max-data_rate\n");
+	}
+
+	bcp->max_lane_frequency = mlf;
+	bcp->max_pixel_frequency = mpf;
+	bcp->max_data_rate = mdr;
+
 	return ret;
 }
-#endif
+
 
 static inline struct basler_camera_dev *to_basler_camera_dev(struct v4l2_subdev *sd)
 {
@@ -648,6 +649,13 @@ static long basler_camera_priv_ioctl(struct v4l2_subdev *sd, unsigned int cmd, v
 		USER_TO_KERNEL(struct basler_csi_information);
 		ret = basler_retrieve_csi_information(sensor, (struct basler_csi_information*)arg);
 		KERNEL_TO_USER(struct basler_csi_information);
+		break;
+	}
+	case BASLER_IOC_G_CAPTURE_PROPERTIES:
+	{
+		USER_TO_KERNEL(struct basler_capture_properties);
+		ret = basler_retrieve_capture_properties(sensor, (struct basler_capture_properties*)arg);
+		KERNEL_TO_USER(struct basler_capture_properties);
 		break;
 	}
 
@@ -853,6 +861,18 @@ static int basler_camera_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
 			ret = -ENOMEM;
 		}
 		break;
+	case V4L2_CID_BASLER_CAPTURE_PROPERTIES:
+                if (ctrl->elem_size == sizeof(struct basler_capture_properties))
+                {
+                        struct basler_capture_properties* l_bcp = NULL;
+                        l_bcp = (struct basler_capture_properties*) ctrl->p_new.p;
+                        ret = basler_retrieve_capture_properties(sensor, l_bcp);
+                }
+                else
+                {
+                        ret = -ENOMEM;
+                }
+                break;
 
 	default:
 		ret = -EINVAL;

@@ -32,7 +32,6 @@
 #include "ov2775_regs_1080p.h"
 #include "ov2775_regs_1080p_hdr.h"
 #include "ov2775_regs_1080p_hdr_low_freq.h"
-#include "ov2775_regs_720p.h"
 #include "ov2775_regs_1080p_native_hdr.h"
 
 #define OV2775_VOLTAGE_ANALOG			2800000
@@ -52,10 +51,11 @@ struct ov2775_datafmt {
 	u32 code;
 	enum v4l2_colorspace colorspace;
 };
-struct ov2775_csi_information {
+struct ov2775_capture_properties {
 	__u64 max_lane_frequency;
-	__u8 lane_count;
-	__u8 lane_assignment[4];
+	__u64 max_pixel_frequency;
+	__u64 max_data_rate;
+
 };
 
 struct ov2775 {
@@ -95,7 +95,7 @@ struct ov2775 {
 	sensor_blc_t blc;
 	sensor_white_balance_t wb;
 	struct mutex lock;
-	struct ov2775_csi_information oci;
+	struct ov2775_capture_properties ocp;
 };
 
 #define client_to_ov2775(client)\
@@ -172,27 +172,6 @@ static struct vvcam_mode_info pov2775_mode_info[] = {
 		.preg_data = ov2775_1080p_native_hdr_regs,
 		.reg_data_count = ARRAY_SIZE(ov2775_1080p_native_hdr_regs),
 	},
-	{
-		.index     = 3,
-		.width    = 1280,
-		.height   = 720,
-		.fps      = 60,
-		.hdr_mode = SENSOR_MODE_LINEAR,
-		.bit_width = 12,
-		.data_compress.enable = 0,
-		.bayer_pattern = BAYER_BGGR,
-		.ae_info = {
-			.DefaultFrameLengthLines = 0x466,
-			.one_line_exp_time_ns = 29583,
-			.max_integration_time = 0x466 - 2,
-			.min_integration_time = 1,
-			.gain_accuracy = 1024,
-			.max_gain = 21 * 1024,
-			.min_gain = 1 * 1024,
-		},
-		.preg_data = ov2775_init_setting_720p,
-		.reg_data_count = ARRAY_SIZE(ov2775_init_setting_720p),
-	},
 };
 
 static int ov2775_probe(struct i2c_client *adapter,
@@ -207,45 +186,49 @@ static const struct i2c_device_id ov2775_id[] = {
 
 MODULE_DEVICE_TABLE(i2c, ov2775_id);
 
-static int ov2775_retrieve_csi_information(struct ov2775 *sensor,struct ov2775_csi_information* oci)
+static int ov2775_retrieve_capture_properties(struct ov2775 *sensor,struct ov2775_capture_properties* ocp)
 {
-	struct v4l2_fwnode_endpoint bus_cfg = { .bus_type = V4L2_MBUS_CSI2_DPHY };
 	struct device *dev = &sensor->i2c_client->dev;
+	__u64 mlf = 0;
+	__u64 mpf = 0;
+	__u64 mdr = 0;
+
 	struct device_node *ep;
 	int ret;
-
-	/* We need a function that searches for the device that holds
-	 * the csi-2 bus information. For now we put the bus information
-	 * also into the sensor endpoint itself.
-	 */
+	/*Collecting the information about limits of capture path
+	* has been centralized to the sensor
+	* * also into the sensor endpoint itself.
+	*/
 
 	ep = of_graph_get_next_endpoint(dev->of_node, NULL);
 	if (!ep) {
-			pr_info("missing endpoint node\n");
-			return -ENODEV;
+	dev_err(dev, "missing endpoint node\n");
+		return -ENODEV;
+
 	}
 
-	ret = v4l2_fwnode_endpoint_alloc_parse(of_fwnode_handle(ep), &bus_cfg);
-	of_node_put(ep);
-	if (ret) {
-			pr_info( "failed to parse endpoint\n");
-			return ret;
+	ret = fwnode_property_read_u64(of_fwnode_handle(ep),
+		 "max-lane-frequency", &mlf);
+	if (ret || mlf == 0) {
+		dev_dbg(dev, "no limit for max-lane-frequency\n");
+
+	}
+	ret = fwnode_property_read_u64(of_fwnode_handle(ep),
+	"max-pixel-frequency", &mpf);
+	if (ret || mpf == 0) {
+	dev_dbg(dev, "no limit for max-pixel-frequency\n");
 	}
 
-	if (bus_cfg.bus_type != V4L2_MBUS_CSI2_DPHY ||
-		bus_cfg.bus.mipi_csi2.num_data_lanes == 0 ||
-		bus_cfg.nr_of_link_frequencies == 0) {
-		pr_info( "missing CSI-2 properties in endpoint\n");
-			ret = -ENODATA;
-	} else {
-			int i;
-			oci->max_lane_frequency = bus_cfg.link_frequencies[0];
-			oci->lane_count = bus_cfg.bus.mipi_csi2.num_data_lanes;
-			for (i = 0; i < bus_cfg.bus.mipi_csi2.num_data_lanes; ++i) {
-					oci->lane_assignment[i] = bus_cfg.bus.mipi_csi2.data_lanes[i];
-			}
-			ret = 0;
+	ret = fwnode_property_read_u64(of_fwnode_handle(ep),
+		"max-data-rate", &mdr);
+	if (ret || mdr == 0) {
+		dev_dbg(dev, "no limit for max-data_rate\n");
 	}
+
+	ocp->max_lane_frequency = mlf;
+	ocp->max_pixel_frequency = mpf;
+	ocp->max_data_rate = mdr;
+
 	return ret;
 }
 
@@ -530,6 +513,10 @@ static int ov2775_download_firmware(struct ov2775 *sensor,
 	u8	 *reg_buf;
 	struct vvsensor_reg_value_t *mode_setting_next;
 	struct i2c_client *i2c_client = sensor->i2c_client;
+	//sensor soft rest
+	ov2775_write_reg(sensor, 0x3013, 0x1);
+	msleep(10);
+
 	reg_buf = (u8 *)kmalloc(size + 2, GFP_KERNEL);
 	if (!reg_buf)
 		return -ENOMEM;
@@ -832,7 +819,7 @@ static int ov2775_set_fmt(struct v4l2_subdev *sd,
 	int array_size = 0;
 
 	pr_debug("enter %s\n", __func__);
-	if(sensor->oci.max_lane_frequency == 266000000) {
+	if(sensor->ocp.max_pixel_frequency == 266000000) {
 		pov2775_mode_info[1].preg_data = ov2775_init_setting_1080p_hdr_low_freq;
 		pov2775_mode_info[1].reg_data_count = ARRAY_SIZE(ov2775_init_setting_1080p_hdr_low_freq);
 		pov2775_mode_info[1].ae_info.one_line_exp_time_ns = 60784;
@@ -1172,7 +1159,7 @@ static int ov2775_probe(struct i2c_client *client,
 	}
 
 	mutex_init(&sensor->lock);
-	ov2775_retrieve_csi_information(sensor,&sensor->oci);
+	ov2775_retrieve_capture_properties(sensor,&sensor->ocp);
 	pr_info("%s camera mipi ov2775, is found\n", __func__);
 
 	return 0;
@@ -1376,9 +1363,11 @@ int ov2775_s_vsexp(struct ov2775 *sensor, __u32 exp)
 	ov2775_write_reg(sensor, 0x3464, 0x04);
 
 	if (exp == 0x16)
-		exp = 0x15;
-	if (exp >0x2c)
-		exp = 0x2c;
+		exp = 0x17;
+	if (sensor->hdr == SENSOR_MODE_HDR_STITCH) {
+		if (exp >0x2c)
+			exp = 0x2c;
+	}
 
 	ov2775_write_reg(sensor, 0x30b8, (exp & 0xFF00) >> 8);
 	ov2775_write_reg(sensor, 0x30b9, exp & 0x00FF);
