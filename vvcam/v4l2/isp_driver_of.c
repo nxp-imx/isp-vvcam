@@ -361,9 +361,6 @@ int isp_hw_probe(struct platform_device *pdev)
 	struct resource *mem_res;
 	int irq;
 	int rc;
-#ifndef ENABLE_IRQ
-	struct device_node *mem_node;
-#endif
 	pr_info("enter %s\n", __func__);
 	isp_dev = kzalloc(sizeof(struct isp_device), GFP_KERNEL);
 	if (!isp_dev)
@@ -407,19 +404,6 @@ int isp_hw_probe(struct platform_device *pdev)
 		pr_warn("failed to get mix gpr\n");
 		isp_dev->ic_dev.mix_gpr = NULL;
 		return -ENOMEM;
-	}
-#endif
-#ifndef ENABLE_IRQ
-	mem_node = of_parse_phandle(pdev->dev.of_node, "memory-region", 0);
-	if (!mem_node) {
-		pr_err("No memory-region found\n");
-		return -ENODEV;
-	}
-
-	isp_dev->ic_dev.rmem = of_reserved_mem_lookup(mem_node);
-	if (!isp_dev->ic_dev.rmem) {
-		pr_err("of_reserved_mem_lookup() returned NULL\n");
-		return -ENODEV;
 	}
 #endif
 	v4l2_subdev_init(&isp_dev->sd, &isp_v4l2_subdev_ops);
