@@ -2095,7 +2095,7 @@ static inline int viv_find_compatible_nodes(struct dev_node *nodes, int size)
 	}
 	return cnt;
 }
-
+#ifndef ENABLE_IRQ
 static struct reserved_mem * viv_find_isp_reserve_mem(int dev_id)
 {
 	int i,rc;
@@ -2131,7 +2131,7 @@ static struct reserved_mem * viv_find_isp_reserve_mem(int dev_id)
 
 	return NULL;
 }
-
+#endif
 static int viv_video_probe(struct platform_device *pdev)
 {
 	struct viv_video_device *vdev;
@@ -2171,7 +2171,9 @@ static int viv_video_probe(struct platform_device *pdev)
 			}
 			vdev = vvdev[video_id];
 			vdev->id = video_id;
+#ifndef ENABLE_IRQ
 			vdev->rmem = viv_find_isp_reserve_mem(vdev->id);
+#endif
 			vdev->v4l2_dev = kzalloc(sizeof(*vdev->v4l2_dev), GFP_KERNEL);
 			if (WARN_ON(!vdev->v4l2_dev)) {
 				rc = -ENOMEM;

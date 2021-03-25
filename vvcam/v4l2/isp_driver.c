@@ -329,6 +329,7 @@ int isp_hw_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 #endif
+#ifndef ENABLE_IRQ
 	mem_node = of_parse_phandle(pdev->dev.of_node, "memory-region", 0);
 	if (!mem_node) {
 		pr_err("No memory-region found\n");
@@ -340,7 +341,7 @@ int isp_hw_probe(struct platform_device *pdev)
 		pr_err("of_reserved_mem_lookup() returned NULL\n");
 		return -ENODEV;
 	}
-
+#endif
 	v4l2_subdev_init(&isp_dev->sd, &isp_v4l2_subdev_ops);
 	snprintf(isp_dev->sd.name, sizeof(isp_dev->sd.name), 
 				"vvcam-isp.%d", isp_dev->ic_dev.id);
