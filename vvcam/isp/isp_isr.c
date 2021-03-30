@@ -116,7 +116,7 @@ static int update_dma_buffer(struct isp_ic_dev *dev)
 	struct isp_mi_context *mi = &dev->mi;
 	struct vb2_dc_buf *buf = NULL;
 	struct isp_buffer_context dmabuf;
-	int i, dequeued;
+	int i;
 
 	for (i = 0; i < MI_PATH_NUM; ++i) {
 		if (!mi->path[i].enable)
@@ -128,14 +128,13 @@ static int update_dma_buffer(struct isp_ic_dev *dev)
 		}
 		if (dev->state && !(*dev->state & STATE_DRIVER_STARTED))
 			continue;
-		dequeued = 1;
-		buf = vvbuf_try_dqbuf(dev->bctx);
+
+		buf = vvbuf_pull_buf(dev->bctx);
 		if (!buf) {
 			buf = dev->mi_buf_shd[i];
 			if (!buf)
 				return -ENOMEM;
 			dev->mi_buf_shd[i] = NULL;
-			dequeued = 0;
 		} else if (dev->mi_buf_shd[i]) {
 			dev->mi_buf[i] = dev->mi_buf_shd[i];
 			dev->mi_buf_shd[i] = NULL;
@@ -143,12 +142,12 @@ static int update_dma_buffer(struct isp_ic_dev *dev)
 
 		memset(&dmabuf, 0, sizeof(dmabuf));
 		dmabuf.path = i;
-		if (config_dma_buf(&mi->path[i], buf->dma, &dmabuf))
+		if (config_dma_buf(&mi->path[i], buf->dma, &dmabuf)){
+			vvbuf_push_buf(dev->bctx,buf);
 			continue;
+		}
 		isp_set_buffer(dev, &dmabuf);
 		dev->mi_buf_shd[i] = buf;
-		if (dequeued)
-			vvbuf_try_dqbuf_done(dev->bctx, buf);
 	}
 #endif
 	return 0;
