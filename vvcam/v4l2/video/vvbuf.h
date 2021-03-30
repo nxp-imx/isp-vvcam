@@ -81,6 +81,9 @@ struct vvbuf_ctx {
 
 void vvbuf_ctx_init(struct vvbuf_ctx *ctx);
 void vvbuf_ctx_deinit(struct vvbuf_ctx *ctx);
+struct vb2_dc_buf *vvbuf_pull_buf(struct vvbuf_ctx *ctx);
+int vvbuf_push_buf(struct vvbuf_ctx *ctx, struct vb2_dc_buf *buf);
+
 struct vb2_dc_buf *vvbuf_try_dqbuf(struct vvbuf_ctx *ctx);
 void vvbuf_try_dqbuf_done(struct vvbuf_ctx *ctx, struct vb2_dc_buf *buf);
 void vvbuf_ready(struct vvbuf_ctx *ctx, struct media_pad *pad,

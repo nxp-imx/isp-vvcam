@@ -70,6 +70,41 @@ void vvbuf_ctx_deinit(struct vvbuf_ctx *ctx)
 	/*nop*/
 }
 
+struct vb2_dc_buf *vvbuf_pull_buf(struct vvbuf_ctx *ctx)
+{
+	unsigned long flags;
+	struct vb2_dc_buf *buf = NULL;
+	if (unlikely(!ctx))
+		return NULL;
+	spin_lock_irqsave(&ctx->irqlock, flags);
+
+	if (list_empty(&ctx->dmaqueue)) {
+		spin_unlock_irqrestore(&ctx->irqlock, flags);
+		return NULL;
+	}
+	buf = list_first_entry(&ctx->dmaqueue, struct vb2_dc_buf, irqlist);
+	list_del(&buf->irqlist);
+
+	spin_unlock_irqrestore(&ctx->irqlock, flags);
+	return buf;
+}
+
+int vvbuf_push_buf(struct vvbuf_ctx *ctx, struct vb2_dc_buf *buf)
+{
+	unsigned long flags;
+	if (unlikely(!ctx))
+		return -1;
+	if (unlikely(!buf))
+		return -1;
+
+	spin_lock_irqsave(&ctx->irqlock, flags);
+	list_add_tail(&buf->irqlist, &ctx->dmaqueue);
+	spin_unlock_irqrestore(&ctx->irqlock, flags);
+	return 0;
+}
+
+
+
 struct vb2_dc_buf *vvbuf_try_dqbuf(struct vvbuf_ctx *ctx)
 {
 	struct vb2_dc_buf *buf;

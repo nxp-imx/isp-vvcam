@@ -129,15 +129,12 @@ int isp_set_stream(struct v4l2_subdev *sd, int enable)
 
 	if (!enable) {
 		isp_dev->state &= ~STATE_STREAM_STARTED;
-		buf = vvbuf_try_dqbuf(ctx);
-		if (!buf)
-			return 0;
-
-		do {
-			vvbuf_try_dqbuf_done(ctx, buf);
+		buf = vvbuf_pull_buf(ctx);
+		while( buf != NULL ){
 			if (buf->flags)
 				kfree(buf);
-		} while ((buf = vvbuf_try_dqbuf(ctx)));
+			buf = vvbuf_pull_buf(ctx);
+		}
 	} else
 		isp_dev->state |= STATE_STREAM_STARTED;
 	return 0;
@@ -222,8 +219,6 @@ static void isp_buf_notify(struct vvbuf_ctx *ctx, struct vb2_dc_buf *buf)
 {
 	struct v4l2_subdev *sd;
 	struct isp_device *isp;
-	unsigned long flags;
-
 	if (unlikely(!ctx || !buf))
 		return;
 
@@ -236,9 +231,7 @@ static void isp_buf_notify(struct vvbuf_ctx *ctx, struct vb2_dc_buf *buf)
 		}
 	}
 
-	spin_lock_irqsave(&ctx->irqlock, flags);
-	list_add_tail(&buf->irqlist, &ctx->dmaqueue);
-	spin_unlock_irqrestore(&ctx->irqlock, flags);
+	vvbuf_push_buf(ctx,buf);
 }
 
 static const struct vvbuf_ops isp_buf_ops = {
@@ -248,8 +241,7 @@ static const struct vvbuf_ops isp_buf_ops = {
 static int isp_buf_alloc(struct isp_ic_dev *dev, struct isp_buffer_context *buf)
 {
 	struct isp_device *isp_dev;
-	struct vb2_dc_buf *buff, *b;
-	unsigned long flags;
+	struct vb2_dc_buf *buff;
 
 	if (!dev || !buf)
 		return -EINVAL;
@@ -269,17 +261,7 @@ static int isp_buf_alloc(struct isp_ic_dev *dev, struct isp_buffer_context *buf)
 #endif
 	buff->flags = 1;
 
-	spin_lock_irqsave(&isp_dev->bctx.irqlock, flags);
-	list_for_each_entry(b, &isp_dev->bctx.dmaqueue, irqlist) {
-		if (b->dma == buff->dma) {
-			list_del(&b->irqlist);
-			if (b->flags)
-				kfree(b);
-			break;
-		}
-	}
-	list_add_tail(&buff->irqlist, &isp_dev->bctx.dmaqueue);
-	spin_unlock_irqrestore(&isp_dev->bctx.irqlock, flags);
+	vvbuf_push_buf(&isp_dev->bctx, buff);
 	return 0;
 }
 
@@ -297,14 +279,13 @@ static int isp_buf_free(struct isp_ic_dev *dev, struct vb2_dc_buf *buf)
 	isp_dev = container_of(dev, struct isp_device, ic_dev);
 	ctx = &isp_dev->bctx;
 
-	buf = vvbuf_try_dqbuf(ctx);
-	if (!buf || !buf->flags)
-		return 0;
+	buf = vvbuf_pull_buf(ctx);
+	while(buf != NULL) {
+		if (buf->flags)
+			kfree(buf);
+		buf = vvbuf_pull_buf(ctx);
+	}
 
-	do {
-		vvbuf_try_dqbuf_done(ctx, buf);
-		kfree(buf);
-	} while ((buf = vvbuf_try_dqbuf(ctx)));
 	return 0;
 }
 
@@ -331,6 +312,8 @@ static int isp_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 static int isp_close(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 {
 	struct isp_device *isp_dev = v4l2_get_subdevdata(sd);
+	struct isp_ic_dev *ic_dev;
+	int i;
 
 	isp_dev->refcnt--;
 	if (isp_dev->refcnt < 0) {
@@ -342,7 +325,20 @@ static int isp_close(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 		devm_free_irq(sd->dev, isp_dev->irq, &isp_dev->ic_dev);
 		isp_priv_ioctl(&isp_dev->ic_dev, ISPIOC_RESET, NULL);
 		isp_clear_interrupts(&isp_dev->ic_dev);
+		isp_dev->state = STATE_STOPPED;
 		msleep(5);
+
+		ic_dev = &isp_dev->ic_dev;
+		for (i = 0; i < MI_PATH_NUM; ++i) {
+			if (ic_dev->mi_buf[i]) {
+				ic_dev->free(ic_dev, ic_dev->mi_buf[i]);
+				ic_dev->mi_buf[i] = NULL;
+			}
+			if (ic_dev->mi_buf_shd[i]) {
+				ic_dev->free(ic_dev, ic_dev->mi_buf_shd[i]);
+				ic_dev->mi_buf_shd[i] = NULL;
+			}
+		}
 	}
 
 	pm_runtime_put(sd->dev);
