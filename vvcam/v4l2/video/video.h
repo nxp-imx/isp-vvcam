@@ -135,6 +135,12 @@ struct viv_video_file {
 	} event_buf;
 };
 
+#define VIDEO_FRAME_MIN_WIDTH 176
+#define VIDEO_FRAME_MIN_HEIGHT 144
+#define VIDEO_FRAME_MAX_WIDTH 3840
+#define VIDEO_FRAME_MAX_HEIGHT 2160
+
+
 #define priv_to_handle(priv)	container_of(priv, struct viv_video_file, vfh)
 #define queue_to_handle(__q)	container_of(__q, struct viv_video_file, queue)
 
