@@ -813,6 +813,8 @@ static int viv_set_modeinfo(struct viv_video_file *handle,
 		memset(vdev->modeinfo, 0, sizeof(vdev->modeinfo));
 		memset(&vdev->crop, 0, sizeof(struct v4l2_rect));
 		memset(&vdev->compose, 0, sizeof(struct v4l2_rect));
+		vdev->fmt.fmt.pix.width = 0;
+		vdev->fmt.fmt.pix.height = 0;
 		return -EINVAL;
 	}
 
@@ -859,6 +861,9 @@ static int viv_set_modeinfo(struct viv_video_file *handle,
 		}
 		if (pfmt == NULL)
 			pfmt = &vdev->formats[0];
+
+		vdev->fmt.fmt.pix.width = vdev->modeinfo[0].w;
+		vdev->fmt.fmt.pix.height = vdev->modeinfo[0].h;
 
 		init_v4l2_fmt(&vdev->fmt, pfmt->bpp, pfmt->depth,
 				&vdev->fmt.fmt.pix.bytesperline,
@@ -1097,7 +1102,6 @@ static int vidioc_g_fmt_vid_cap(struct file *file, void *priv,
 
 	if (f->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
 		return -EINVAL;
-
 	*f = handle->vdev->fmt;
 	return 0;
 }
@@ -1114,6 +1118,11 @@ static int vidioc_try_fmt_vid_cap(struct file *file, void *priv,
 
 	if (f->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
 		return -EINVAL;
+
+	f->fmt.pix.width = clamp_t(u32, f->fmt.pix.width, VIDEO_FRAME_MIN_WIDTH,
+				VIDEO_FRAME_MAX_WIDTH) & ~1;
+	f->fmt.pix.height = clamp_t(u32, f->fmt.pix.height, VIDEO_FRAME_MIN_HEIGHT,
+				 VIDEO_FRAME_MAX_HEIGHT) & ~1;
 
 	f->fmt.pix.width = ALIGN_UP(f->fmt.pix.width, 16);
 	f->fmt.pix.height = ALIGN_UP(f->fmt.pix.height, 8);
