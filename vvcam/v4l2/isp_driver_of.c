@@ -280,6 +280,12 @@ static int isp_buf_free(struct isp_ic_dev *dev, struct vb2_dc_buf *buf)
 	ctx = &isp_dev->bctx;
 
 	buf = vvbuf_pull_buf(ctx);
+
+	if ((buf != NULL) && (!buf->flags)) {
+		vvbuf_push_buf(ctx, buf);
+		return 0;
+	}
+
 	while(buf != NULL) {
 		if (buf->flags)
 			kfree(buf);
