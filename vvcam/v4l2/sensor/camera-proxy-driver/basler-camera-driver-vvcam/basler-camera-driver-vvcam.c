@@ -430,7 +430,7 @@ static int basler_retrieve_csi_information(struct basler_camera_dev *sensor,
 }
 
 static int basler_retrieve_capture_properties(struct basler_camera_dev *sensor,
-						struct basler_capture_properties* bcp)
+					   struct basler_capture_properties* bcp)
 {
 	struct device *dev = &sensor->i2c_client->dev;
 	__u64 mlf = 0;
@@ -441,9 +441,8 @@ static int basler_retrieve_capture_properties(struct basler_camera_dev *sensor,
 	int ret;
 
 	/* Collecting the information about limits of capture path
-	* has been centralized to the sensor
-	* also into the sensor endpoint itself.
-	*/
+	 * has been centralized to the sensor endpoint itself.
+	 */
 	ep = of_graph_get_next_endpoint(dev->of_node, NULL);
 	if (!ep) {
 		dev_err(dev, "missing endpoint node\n");
@@ -454,18 +453,38 @@ static int basler_retrieve_capture_properties(struct basler_camera_dev *sensor,
 		"max-lane-frequency", &mlf);
 	if (ret || mlf == 0) {
 		dev_dbg(dev, "no limit for max-lane-frequency\n");
+		/* reset possible read error */
+		ret = 0;
 	}
 
 	ret = fwnode_property_read_u64(of_fwnode_handle(ep),
 		"max-pixel-frequency", &mpf);
+#ifdef CONFIG_BASLER_CAMERA_VVCAM
+	/* max-pixel-frequency is mandatory for vvcam */
+	if (ret) {
+		dev_err(dev, "failed to parse endpoint: max-pixel-frequency missing\n");
+		return ret;
+	}
+#endif
+
 	if (ret || mpf == 0) {
-	dev_dbg(dev, "no limit for max-pixel-frequency\n");
+		dev_dbg(dev, "no limit for max-pixel-frequency\n");
+		/* reset possible read error */
+		ret = 0;
+	}
+
+	if (ret || mpf == 0) {
+		dev_dbg(dev, "no limit for max-pixel-frequency\n");
+		/* reset possible read error */
+		ret = 0;
 	}
 
 	ret = fwnode_property_read_u64(of_fwnode_handle(ep),
 		"max-data-rate", &mdr);
 	if (ret || mdr == 0) {
-	dev_dbg(dev, "no limit for max-data_rate\n");
+		dev_dbg(dev, "no limit for max-data_rate\n");
+		/* reset possible read error */
+		ret = 0;
 	}
 
 	bcp->max_lane_frequency = mlf;
@@ -474,6 +493,7 @@ static int basler_retrieve_capture_properties(struct basler_camera_dev *sensor,
 
 	return ret;
 }
+
 
 
 static inline struct basler_camera_dev *to_basler_camera_dev(struct v4l2_subdev *sd)
@@ -651,6 +671,7 @@ static long basler_camera_priv_ioctl(struct v4l2_subdev *sd, unsigned int cmd, v
 		KERNEL_TO_USER(struct basler_csi_information);
 		break;
 	}
+
 	case BASLER_IOC_G_CAPTURE_PROPERTIES:
 	{
 		USER_TO_KERNEL(struct basler_capture_properties);
@@ -658,6 +679,7 @@ static long basler_camera_priv_ioctl(struct v4l2_subdev *sd, unsigned int cmd, v
 		KERNEL_TO_USER(struct basler_capture_properties);
 		break;
 	}
+
 
 	default:
 		break;
@@ -861,18 +883,20 @@ static int basler_camera_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
 			ret = -ENOMEM;
 		}
 		break;
+
 	case V4L2_CID_BASLER_CAPTURE_PROPERTIES:
-                if (ctrl->elem_size == sizeof(struct basler_capture_properties))
-                {
-                        struct basler_capture_properties* l_bcp = NULL;
-                        l_bcp = (struct basler_capture_properties*) ctrl->p_new.p;
-                        ret = basler_retrieve_capture_properties(sensor, l_bcp);
-                }
-                else
-                {
-                        ret = -ENOMEM;
-                }
-                break;
+		if (ctrl->elem_size == sizeof(struct basler_capture_properties))
+		{
+			struct basler_capture_properties* l_bcp = NULL;
+			l_bcp = (struct basler_capture_properties*) ctrl->p_new.p;
+			ret = basler_retrieve_capture_properties(sensor, l_bcp);
+		}
+		else
+		{
+			ret = -ENOMEM;
+		}
+		break;
+
 
 	default:
 		ret = -EINVAL;

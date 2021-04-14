@@ -65,9 +65,9 @@ struct basler_device_information {
 /**
  * struct basler_csi_information - sensor specific csi2 bus configuration.
  * The cid to query this structure is V4L2_CID_BASLER_CSI_INFORMATION.
- * The ioctl to query this structure is BASLER_IOC_G_CAPTURE_PROPERTIES
+ * The ioctl to query this structure is BASLER_IOC_G_CSI_INFORMATION
  *
- * @max_lanefrequency  Max theoretical CSI frequency per lane in hertz.
+ * @max_lanefrequency  Max theoretical CSI frequency per lane in Hertz.
  * @lanecount          Available CSI lane count.
  * @laneassignment     describes the physical CSI-2 connection between host and camera module.
  *                     The index starts with 0 as CSI lane 1 of the host.
@@ -84,7 +84,7 @@ struct basler_csi_information {
 * The cid to query this structure is V4L2_CID_BASLER_CAPTURE_PROPERTIES
 * The ioctl to query this structure is BASLER_IOC_G_CAPTURE_PROPERTIES
 *
-* @max_lane_frequency   Max supported CSI frequency per lane in hertz.
+ * @max_lane_frequency  Max supported CSI frequency per lane in Hertz.
 * @max_pixel_frequency  Max supported Pixel frequency for the video capture.
 * @max_data_rate        Max supported data rate in bytes/second
 */
