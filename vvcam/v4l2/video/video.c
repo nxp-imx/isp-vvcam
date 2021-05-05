@@ -1056,10 +1056,13 @@ static long private_ioctl(struct file *file, void *fh,
 		break;
 	}
 
-	case VIV_VIDIOC_SET_CAPS_SUPPORTS:
+	case VIV_VIDIOC_SET_CAPS_SUPPORTS:{
 		pcaps_supports = (struct viv_caps_supports *)arg;
 		memcpy(&(dev->caps_supports), arg, sizeof(dev->caps_supports));
 		break;
+	}
+	default:
+		return -ENOTTY;
 	}
 	return rc;
 }
