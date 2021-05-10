@@ -136,12 +136,12 @@ int dwe_on_buf_update(struct dwe_ic_dev *dev)
 	int rc = 0;
 	unsigned long flags;
 
-	if (dev) {
-		spin_lock_irqsave(&dev->irqlock, flags);
-		if (dev->error)
-			rc = update_dma_buffer(dev);
-		spin_unlock_irqrestore(&dev->irqlock, flags);
-	}
+	if (dwe_read_reg(dev, INTERRUPT_STATUS) & INT_FRAME_BUSY)
+		return 0;
+	spin_lock_irqsave(&dev->irqlock, flags);
+	if (dev->error)
+		rc = update_dma_buffer(dev);
+	spin_unlock_irqrestore(&dev->irqlock, flags);
 	return rc;
 }
 
