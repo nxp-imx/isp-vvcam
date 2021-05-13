@@ -245,8 +245,9 @@ static void dwe_dst_buf_notify(struct vvbuf_ctx *ctx, struct vb2_dc_buf *buf)
 	list_add_tail(&buf->irqlist, &ctx->dmaqueue);
 	spin_unlock_irqrestore(&ctx->irqlock, flags);
 
-	if (dwe)
-		dwe_on_buf_update(&dwe->core->ic_dev);
+	if (!dwe || !(dwe->state & STATE_STREAM_STARTED))
+		return;
+	dwe_on_buf_update(&dwe->core->ic_dev);
 }
 
 static const struct vvbuf_ops dwe_dst_buf_ops = {
@@ -306,8 +307,16 @@ static int dwe_close(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 		dwe_dev->refcnt = 0;
 		return 0;
 	}
-	if (dwe_dev->refcnt == 0)
+	if (dwe_dev->refcnt == 0){
 		dwe_dev->state = 0;
+		ctx = &dwe_dev->bctx[DWE_PAD_SOURCE];
+		spin_lock_irqsave(&ctx->irqlock, flags);
+		if (!list_empty(&ctx->dmaqueue))
+			list_del_init(&ctx->dmaqueue);
+		spin_unlock_irqrestore(&ctx->irqlock, flags);
+
+	}
+
 
 	if ((pdwe_dev[0]->refcnt + pdwe_dev[1]->refcnt) == 0) {
 		devm_free_irq(pdwe_dev[0]->sd.dev, pdwe_dev[0]->irq, &pdwe_dev[0]->core->ic_dev);
