@@ -135,12 +135,14 @@ int dwe_on_buf_update(struct dwe_ic_dev *dev)
 {
 	int rc = 0;
 	unsigned long flags;
+	u32 dewarp_status;
 
-	if (dwe_read_reg(dev, INTERRUPT_STATUS) & INT_FRAME_BUSY)
-		return 0;
 	spin_lock_irqsave(&dev->irqlock, flags);
-	if (dev->error)
-		rc = update_dma_buffer(dev);
+	dewarp_status = dwe_read_reg(dev, INTERRUPT_STATUS);
+	if ((dewarp_status & INT_FRAME_BUSY) != INT_FRAME_BUSY){
+		if (dev->error)
+			rc = update_dma_buffer(dev);
+	}
 	spin_unlock_irqrestore(&dev->irqlock, flags);
 	return rc;
 }
@@ -150,7 +152,7 @@ void dwe_clear_interrupts(struct dwe_ic_dev *dev)
 	u32 status;
 	u32 clr;
 	status = dwe_read_reg(dev, INTERRUPT_STATUS);
-	clr = (status & 0xFF) << 24;
+	clr = status | INT_CLR_MASK;
 	dwe_write_reg(dev, INTERRUPT_STATUS, clr);
 }
 
@@ -166,7 +168,7 @@ irqreturn_t dwe_hw_isr(int irq, void *data)
 
 	status = dwe_read_reg(dev, INTERRUPT_STATUS);
 	if (status & INT_FRAME_DONE) {
-		clr = (status & 0xFF) << 24;
+		clr = status | INT_CLR_MASK;
 		dwe_write_reg(dev, INTERRUPT_STATUS, clr);
 		spin_lock_irqsave(&dev->irqlock, flags);
 		if (dev->dst) {
