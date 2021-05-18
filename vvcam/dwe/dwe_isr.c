@@ -152,7 +152,7 @@ void dwe_clear_interrupts(struct dwe_ic_dev *dev)
 	u32 status;
 	u32 clr;
 	status = dwe_read_reg(dev, INTERRUPT_STATUS);
-	clr = status | INT_CLR_MASK;
+	clr = (status & 0xFF) << 24;
 	dwe_write_reg(dev, INTERRUPT_STATUS, clr);
 }
 
@@ -168,7 +168,7 @@ irqreturn_t dwe_hw_isr(int irq, void *data)
 
 	status = dwe_read_reg(dev, INTERRUPT_STATUS);
 	if (status & INT_FRAME_DONE) {
-		clr = status | INT_CLR_MASK;
+		clr = (status & 0xFF) << 24;
 		dwe_write_reg(dev, INTERRUPT_STATUS, clr);
 		spin_lock_irqsave(&dev->irqlock, flags);
 		if (dev->dst) {
