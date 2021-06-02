@@ -110,9 +110,13 @@ static int isp_enable_clocks(struct isp_device *isp_dev)
 {
 	int ret;
 
-	ret = clk_prepare_enable(isp_dev->clk_core);
+	ret = clk_prepare_enable(isp_dev->clk_sensor);
 	if (ret)
 		return ret;
+
+	ret = clk_prepare_enable(isp_dev->clk_core);
+	if (ret)
+		goto disable_clk_sensor;
 
 	ret = clk_prepare_enable(isp_dev->clk_axi);
 	if (ret)
@@ -128,12 +132,15 @@ disable_clk_axi:
 	clk_disable_unprepare(isp_dev->clk_axi);
 disable_clk_core:
 	clk_disable_unprepare(isp_dev->clk_core);
+disable_clk_sensor:
+	clk_disable_unprepare(isp_dev->clk_sensor);
 
 	return ret;
 }
 
 static void isp_disable_clocks(struct isp_device *isp_dev)
 {
+	clk_disable_unprepare(isp_dev->clk_sensor);
 	clk_disable_unprepare(isp_dev->clk_ahb);
 	clk_disable_unprepare(isp_dev->clk_axi);
 	clk_disable_unprepare(isp_dev->clk_core);
@@ -315,6 +322,13 @@ int isp_hw_probe(struct platform_device *pdev)
 	if (IS_ERR(isp_dev->clk_ahb)) {
 		rc = PTR_ERR(isp_dev->clk_ahb);
 		dev_err(dev, "can't get ahb clock: %d\n", rc);
+		return rc;
+	}
+
+	isp_dev->clk_sensor = devm_clk_get(dev, "sensor");
+	if (IS_ERR(isp_dev->clk_sensor)) {
+		rc = PTR_ERR(isp_dev->clk_sensor);
+		dev_err(dev, "can't get sensor clock: %d\n", rc);
 		return rc;
 	}
 

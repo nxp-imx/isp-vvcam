@@ -241,9 +241,9 @@ static struct vvcam_mode_info pos08a20_mode_info[] = {
 		.bit_width = 12,
 		.bayer_pattern = BAYER_BGGR,
 		.ae_info = {
-			.DefaultFrameLengthLines = 0xDB4,
-			.one_line_exp_time_ns = 14250,
-			.max_integration_time = 0xDB4 - 64 - 4,
+			.DefaultFrameLengthLines = 0xD92,
+			.one_line_exp_time_ns = 14389,
+			.max_integration_time = 0xD92 - 8,
 			.min_integration_time = 8,
 			.gain_accuracy = 1024,
 			.max_gain = 62 * 1024,
@@ -262,12 +262,12 @@ static struct vvcam_mode_info pos08a20_mode_info[] = {
 		.bit_width = 10,
 		.bayer_pattern = BAYER_BGGR,
 		.ae_info = {
-			.DefaultFrameLengthLines = 0x960,
-			.one_line_exp_time_ns = 13889,
-			.max_integration_time = 0x960 - 64 - 4,//T_long + Tshort < VTS - 4
+			.DefaultFrameLengthLines = 0x90a,
+			.one_line_exp_time_ns = 14389,
+			.max_integration_time = 0x90a - 8,
 			.min_integration_time = 8,
 			.gain_accuracy = 1024,
-			.max_gain = 62 * 1024,
+			.max_gain = 48 * 1024,
 			.min_gain = 1 * 1024,
 		},
 		.preg_data = os08a20_init_setting_4k_hdr,
@@ -1453,9 +1453,8 @@ int os08a20_ioc_query_mode(struct os08a20 *sensor, struct vvcam_mode_info_array 
 {
 	array->count = ARRAY_SIZE(pos08a20_mode_info);
 #ifdef CONFIG_HARDENED_USERCOPY
-	unsigned long copy_ret = 0;
 	pr_debug("sensor %p\n", sensor);
-	copy_ret = copy_to_user(&array->modes,pos08a20_mode_info,sizeof(pos08a20_mode_info));
+	copy_to_user(&array->modes,pos08a20_mode_info,sizeof(pos08a20_mode_info));
 #else
 	memcpy(&array->modes,pos08a20_mode_info,sizeof(pos08a20_mode_info));
 #endif

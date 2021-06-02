@@ -60,6 +60,11 @@
 #include <linux/of_reserved_mem.h>
 #endif
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
+#endif
+
 #ifdef CONFIG_VSI_ISP_DEBUG
 #define isp_info(fmt, ...)	pr_info(fmt, ##__VA_ARGS__)
 #define isp_debug(fmt, ...)  pr_debug(fmt, ##__VA_ARGS__)
@@ -69,6 +74,12 @@
 #define isp_debug(fmt, ...)
 #define isp_err(fmt, ...)  pr_err(fmt, ##__VA_ARGS__)
 #endif
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
+
+
 
 volatile MrvAllRegister_t *all_regs = NULL;
 

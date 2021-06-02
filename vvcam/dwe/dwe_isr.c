@@ -72,31 +72,36 @@ static int update_dma_buffer(struct dwe_ic_dev *dev)
 		vvbuf_ready(dev->sink_bctx, dev->src->pad, dev->src);
 		dev->src = NULL;
 	}
-	dev->src = vvbuf_try_dqbuf(dev->sink_bctx);
-	if (!dev->src) {
-		dev->error |= BUF_ERR_UNDERFLOW;
-		return -ENOMEM;
-	}
-	dev->error &= ~BUF_ERR_UNDERFLOW;
-	if (!dev->get_index) {
-		dev->error |= BUF_ERR_WRONGSTATE;
-		dev->src = NULL;
-		return -ENXIO;
-	}
-	dev->index = dev->get_index(dev, dev->src);
-	if (dev->index < 0 || dev->index >= MAX_DWE_NUM) {
-		dev->error |= BUF_ERR_WRONGSTATE;
-		dev->src = NULL;
-		return -ENXIO;
-	}
-	dev->error &= ~BUF_ERR_WRONGSTATE;
-	if (!(*dev->state[dev->index] & STATE_DRIVER_STARTED)) {
-		vvbuf_try_dqbuf_done(dev->sink_bctx, dev->src);
-		vvbuf_ready(dev->sink_bctx, dev->src->pad, dev->src);
-		dev->error |= BUF_ERR_UNDERFLOW;
-		dev->src = NULL;
-		return 0;
-	}
+
+	do {
+		dev->src = vvbuf_try_dqbuf(dev->sink_bctx);
+		if (!dev->src) {
+			dev->error |= BUF_ERR_UNDERFLOW;
+			return -ENOMEM;
+		}
+		dev->error &= ~BUF_ERR_UNDERFLOW;
+		if (!dev->get_index) {
+			dev->error |= BUF_ERR_WRONGSTATE;
+			dev->src = NULL;
+			return -ENXIO;
+		}
+		dev->index = dev->get_index(dev, dev->src);
+		if (dev->index < 0 || dev->index >= MAX_DWE_NUM) {
+			dev->error |= BUF_ERR_WRONGSTATE;
+			dev->src = NULL;
+			return -ENXIO;
+		}
+		dev->error &= ~BUF_ERR_WRONGSTATE;
+		if (!(*dev->state[dev->index] & STATE_DRIVER_STARTED)) {
+			vvbuf_try_dqbuf_done(dev->sink_bctx, dev->src);
+			vvbuf_ready(dev->sink_bctx, dev->src->pad, dev->src);
+			dev->error |= BUF_ERR_UNDERFLOW;
+			dev->src = NULL;
+			continue;
+		}
+		break;
+	} while(1);
+
 	no_dist_map_err = BUF_ERR_NO_DIST_MAP0 << dev->index;
 	if (!dev->dist_map[dev->index]) {
 		dev->error |= no_dist_map_err;
@@ -107,10 +112,8 @@ static int update_dma_buffer(struct dwe_ic_dev *dev)
 	overflow_err = BUF_ERR_OVERFLOW0 << dev->index;
 	dev->dst = vvbuf_try_dqbuf(dev->src_bctx[dev->index]);
 	if (!dev->dst) {
-		if (!(*dev->state[dev->index] & STATE_STREAM_STARTED)) {
-			vvbuf_try_dqbuf_done(dev->sink_bctx, dev->src);
-			vvbuf_ready(dev->sink_bctx, dev->src->pad, dev->src);
-		}
+		vvbuf_try_dqbuf_done(dev->sink_bctx, dev->src);
+		vvbuf_ready(dev->sink_bctx, dev->src->pad, dev->src);
 		dev->error |= overflow_err;
 		dev->src = NULL;
 		return -ENOMEM;

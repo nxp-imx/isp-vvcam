@@ -67,6 +67,7 @@ struct isp_device {
 	struct clk *clk_core;
 	struct clk *clk_axi;
 	struct clk *clk_ahb;
+	struct clk *clk_sensor;
 	int refcnt;
 #ifdef ENABLE_IRQ
 	struct media_pad pads[ISP_PADS_NUM];
