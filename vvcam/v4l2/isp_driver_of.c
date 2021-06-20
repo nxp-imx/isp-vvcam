@@ -92,13 +92,20 @@ static int isp_enable_clocks(struct isp_device *isp_dev)
 {
 	int ret;
 
+#ifndef ANDROID
 	ret = clk_prepare_enable(isp_dev->clk_sensor);
 	if (ret)
 		return ret;
+#endif
 
 	ret = clk_prepare_enable(isp_dev->clk_core);
+#ifndef ANDROID
 	if (ret)
 		goto disable_clk_sensor;
+#else
+	if (ret)
+		return ret;
+#endif
 
 	ret = clk_prepare_enable(isp_dev->clk_axi);
 	if (ret)
@@ -114,15 +121,19 @@ disable_clk_axi:
 	clk_disable_unprepare(isp_dev->clk_axi);
 disable_clk_core:
 	clk_disable_unprepare(isp_dev->clk_core);
+#ifndef ANDROID
 disable_clk_sensor:
 	clk_disable_unprepare(isp_dev->clk_sensor);
+#endif
 
 	return ret;
 }
 
 static void isp_disable_clocks(struct isp_device *isp_dev)
 {
+#ifndef ANDROID
 	clk_disable_unprepare(isp_dev->clk_sensor);
+#endif
 	clk_disable_unprepare(isp_dev->clk_ahb);
 	clk_disable_unprepare(isp_dev->clk_axi);
 	clk_disable_unprepare(isp_dev->clk_core);
@@ -404,12 +415,14 @@ int isp_hw_probe(struct platform_device *pdev)
 		return rc;
 	}
 
+#ifndef ANDROID
 	isp_dev->clk_sensor = devm_clk_get(dev, "sensor");
 	if (IS_ERR(isp_dev->clk_sensor)) {
 		rc = PTR_ERR(isp_dev->clk_sensor);
 		dev_err(dev, "can't get sensor clock: %d\n", rc);
 		return rc;
 	}
+#endif
 
 	isp_dev->sd.internal_ops = &isp_internal_ops;
 

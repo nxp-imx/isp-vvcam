@@ -16,6 +16,11 @@ ifeq ($(ENABLE_IRQ), yes)
   EXTRA_CFLAGS += -DENABLE_IRQ
 endif
 
+ANDROID := no
+ifeq ($(ANDROID), yes)
+  EXTRA_CFLAGS += -DANDROID
+endif
+
 EXTRA_CFLAGS += -O2 -Werror
 
 obj-m += video/

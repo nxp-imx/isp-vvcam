@@ -7,8 +7,9 @@ SRC := $(shell pwd)
 
 ANDROID := no
 ifeq ($(ANDROID), yes)
-PWD := $(shell pwd)
-#PWD := $(ANDROID_BUILD_TOP)/vendor/nxp-opensource/verisilicon_sw_isp_vvcam/vvcam/v4l2
+  PWD := $(shell pwd)
+  EXTRA_CFLAGS += -DANDROID
+  #PWD := $(ANDROID_BUILD_TOP)/vendor/nxp-opensource/verisilicon_sw_isp_vvcam/vvcam/v4l2
 endif
 
 EXTRA_CFLAGS += -I$(PWD)/../common/
