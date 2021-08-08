@@ -1394,11 +1394,11 @@ static int vidioc_enum_framesizes(struct file *file, void *priv,
 	if (i == dev->formatscount)
 		return -EINVAL;
 
-	fsize->stepwise.min_width = 176;
-	fsize->stepwise.max_width = dev->modeinfo[fsize->index].w;
+	fsize->stepwise.min_width = VIDEO_FRAME_MIN_WIDTH;
+	fsize->stepwise.min_height = VIDEO_FRAME_MIN_HEIGHT;
+	fsize->stepwise.max_width = VIDEO_FRAME_MAX_WIDTH;
+	fsize->stepwise.max_height = VIDEO_FRAME_MAX_HEIGHT;
 	fsize->stepwise.step_width = 16;
-	fsize->stepwise.min_height = 144;
-	fsize->stepwise.max_height = dev->modeinfo[fsize->index].h;
 	fsize->stepwise.step_height = 8;
 
 	fsize->type = V4L2_FRMSIZE_TYPE_STEPWISE;
@@ -1409,20 +1409,11 @@ static int vidioc_enum_framesizes(struct file *file, void *priv,
 static inline void update_timeperframe(struct file *file)
 {
 	struct viv_video_device *dev = video_drvdata(file);
-	int i;
 
 	if (dev->timeperframe.numerator == 0 ||
 		dev->timeperframe.denominator == 0) {
 		dev->timeperframe.numerator = 1;
-		dev->timeperframe.denominator = 30;
-		for (i = 0; i < dev->modeinfocount; ++i) {
-			if (dev->fmt.fmt.pix.width == dev->modeinfo[i].w &&
-				dev->fmt.fmt.pix.height == dev->modeinfo[i].h) {
-				dev->timeperframe.denominator =
-						dev->modeinfo[i].fps;
-				break;
-			}
-		}
+		dev->timeperframe.denominator = dev->modeinfo[0].fps;
 	}
 }
 
@@ -1503,8 +1494,8 @@ static int vidioc_enum_frameintervals(struct file *filp, void *priv,
 
 	if (fival->width % 16 || fival->height % 8 ||
 		fival->width < 176 || fival->height < 144 ||
-		fival->width > dev->modeinfo[0].w ||
-		fival->height > dev->modeinfo[0].h)
+		fival->width > VIDEO_FRAME_MAX_WIDTH ||
+		fival->height > VIDEO_FRAME_MAX_HEIGHT)
 		return -EINVAL;
 
 	fival->discrete.numerator = 1;
@@ -1553,8 +1544,8 @@ static int vidioc_g_selection(struct file *file, void *fh,
 	case V4L2_SEL_TGT_COMPOSE_BOUNDS:
 		s->r.left = 0;
 		s->r.top = 0;
-		s->r.width = 3840;
-		s->r.height = 2160;
+		s->r.width = VIDEO_FRAME_MAX_WIDTH;
+		s->r.height = VIDEO_FRAME_MAX_HEIGHT;
 		break;
 	case V4L2_SEL_TGT_COMPOSE:
 		s->r = vdev->compose;

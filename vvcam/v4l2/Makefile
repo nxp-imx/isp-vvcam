@@ -77,8 +77,9 @@ modules_install:
 
 clean:
 	make -C $(KERNEL_SRC) M=$(SRC) clean
-	find . -name '*.o' -delete
-	find . -name '*.ko' -delete
-	find . -name 'modules.order' -delete
-	find . -name 'Module.symvers' -delete
-	find . -name '*.mod.c' -delete
+	find ../ -name '*.o' -delete
+	find ../ -name '*.ko' -delete
+	find ../ -name 'modules.order' -delete
+	find ../ -name 'Module.symvers' -delete
+	find ../ -name '*.mod.c' -delete
+	find ../ -name '*.cmd' -delete

@@ -169,19 +169,19 @@ irqreturn_t dwe_hw_isr(int irq, void *data)
 	if (!dev)
 		return IRQ_HANDLED;
 
+	spin_lock_irqsave(&dev->irqlock, flags);
 	status = dwe_read_reg(dev, INTERRUPT_STATUS);
 	if (status & INT_FRAME_DONE) {
 		clr = (status & 0xFF) << 24;
 		dwe_write_reg(dev, INTERRUPT_STATUS, clr);
-		spin_lock_irqsave(&dev->irqlock, flags);
 		if (dev->dst) {
 			vvbuf_ready(dev->src_bctx[dev->index],
 					dev->dst->pad, dev->dst);
 			dev->dst = NULL;
 		}
 		update_dma_buffer(dev);
-		spin_unlock_irqrestore(&dev->irqlock, flags);
 	}
+	spin_unlock_irqrestore(&dev->irqlock, flags);
 	return IRQ_HANDLED;
 }
 
