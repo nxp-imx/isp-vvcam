@@ -11,6 +11,7 @@ KERNEL_CFLAGS ?= KCFLAGS=-mno-android
 ARCH_TYPE ?= $(TARGET_ARCH)
 
 VVCAM_KERNELENVSH := $(VVCAM_OUT)/kernelenv.sh
+.PHONY: $(VVCAM_KERNELENVSH)
 $(VVCAM_KERNELENVSH):
 	mkdir -p $(VVCAM_OUT)
 	echo 'export KERNEL_SRC=$(KERNEL_SRC)' > $(VVCAM_KERNELENVSH)
@@ -27,7 +28,7 @@ vvcam: $(VVCAM_KERNELENVSH) $(VVCAM_SRC_PATH)
 		$(CLANG_TO_COMPILE) \
 		$(KERNEL_CFLAGS) \
 		ARCH_TYPE=$(ARCH_TYPE) \
-		DEBUG=$(DEBUG); \
+		DEBUG=$(DEBUG);
 	cp $(VVCAM_SRC_PATH)/sensor/ov2775/ov2775.ko $(VVCAM_OUT);
 	cp $(VVCAM_SRC_PATH)/sensor/camera-proxy-driver/basler-camera-driver-vvcam.ko $(VVCAM_OUT);
 	cp $(VVCAM_SRC_PATH)/sensor/os08a20/os08a20.ko $(VVCAM_OUT);
