@@ -150,6 +150,17 @@ enum viv_caps_hdr_mode_e
 	VIV_CAPS_MODE_HDR_NATIVE,
 };
 
+enum viv_dumpbuf_status_e {
+	DUMPBUF_DISABLE,
+	DUMPBUF_ENABLE,
+	DUMPBUF_DONE,
+};
+
+struct viv_caps_dump_buf_s {
+	unsigned int offset;
+	unsigned int size;
+};
+
 struct viv_caps_mode_info_s{
 	unsigned int index;
 	unsigned int width;
@@ -187,5 +198,8 @@ struct viv_caps_supports{
 #define VIV_VIDIOC_SET_CAPS_SUPPORTS    _IOWR('V', BASE_VIDIOC_PRIVATE + 13, struct viv_caps_supports)
 #define VIV_VIDIOC_S_DWECFG             _IOW('V',  BASE_VIDIOC_PRIVATE + 14, int)
 #define VIV_VIDIOC_G_DWECFG             _IOR('V',  BASE_VIDIOC_PRIVATE + 15, int)
+#define VIV_VIDIOC_S_DUMPBUF_STATUS     _IOW('V',  BASE_VIDIOC_PRIVATE + 16, int)
+#define VIV_VIDIOC_G_DUMPBUF_STATUS     _IOR('V',  BASE_VIDIOC_PRIVATE + 17, int)
+#define VIV_VIDIOC_DUMPBUF              _IOWR('V',  BASE_VIDIOC_PRIVATE + 18, struct viv_caps_dump_buf_s)
 
 #endif

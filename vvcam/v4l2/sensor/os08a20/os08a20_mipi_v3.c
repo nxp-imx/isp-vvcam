@@ -131,7 +131,7 @@ static struct vvcam_mode_info_s pos08a20_mode_info[] = {
 			.one_line_exp_time_ns   = 14250,
 
 			.max_integration_line   = 0x400,
-			.min_integration_line   = 8,
+			.min_integration_line   = 8 * 16,
 			.max_vsintegration_line = 56,
 			.min_vsintegration_line = 8,
 
@@ -217,7 +217,7 @@ static struct vvcam_mode_info_s pos08a20_mode_info[] = {
 			.one_line_exp_time_ns   = 14389,
 
 			.max_integration_line   = 0x800,
-			.min_integration_line   = 8,
+			.min_integration_line   = 8 * 16,
 			.max_vsintegration_line = 56,
 			.min_vsintegration_line = 8,
 
@@ -652,10 +652,13 @@ static int os08a20_set_test_pattern(struct os08a20 *sensor, void * arg)
 			os08a20_write_reg(sensor, 0x5081, 0x84);
 			break;
 		case 2:
-			os08a20_write_reg(sensor, 0x5081, 0x81);
+			os08a20_write_reg(sensor, 0x5081, 0x82);
 			break;
 		case 3:
-			os08a20_write_reg(sensor, 0x5081, 0x91);
+			os08a20_write_reg(sensor, 0x5081, 0x92);
+			break;
+		case 4:
+			os08a20_write_reg(sensor, 0x5081, 0xc4);
 			break;
 		default:
 			ret = -1;

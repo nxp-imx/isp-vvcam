@@ -111,6 +111,8 @@ struct viv_video_device {
 	int active;
 	void *rmem;
 	bool frame_flag;
+	int dumpbuf_status;
+	struct vb2_dc_buf* dumpbuf;
 };
 
 struct viv_video_file {

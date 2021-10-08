@@ -137,7 +137,7 @@ static struct vvcam_mode_info_s pov2775_mode_info[] = {
 			.one_line_exp_time_ns     = 59167,
 
 			.max_integration_line     = 0x400,
-			.min_integration_line     = 1,
+			.min_integration_line     = 16,
 
 			.max_vsintegration_line   = 44,
 			.min_vsintegration_line   = 1,
@@ -400,8 +400,10 @@ static int ov2775_query_supports(struct ov2775 *sensor, void* parry)
 {
 	int ret = 0;
 	struct vvcam_mode_info_array_s *psensor_mode_arry = parry;
-	psensor_mode_arry->count = ARRAY_SIZE(pov2775_mode_info);
-	ret = copy_to_user(&psensor_mode_arry->modes, pov2775_mode_info,
+	uint32_t support_counts = ARRAY_SIZE(pov2775_mode_info);
+
+	ret = copy_to_user(&psensor_mode_arry->count, &support_counts, sizeof(support_counts));
+	ret |= copy_to_user(&psensor_mode_arry->modes, pov2775_mode_info,
 			   sizeof(pov2775_mode_info));
 	if (ret != 0)
 		ret = -ENOMEM;
@@ -1123,6 +1125,9 @@ static long ov2775_priv_ioctl(struct v4l2_subdev *sd,
 	struct ov2775 *sensor = client_to_ov2775(client);
 	long ret = 0;
 	struct vvcam_sccb_data_s sensor_reg;
+	uint32_t value = 0;
+	sensor_blc_t blc;
+	sensor_expand_curve_t expand_curve;
 
 	mutex_lock(&sensor->lock);
 	switch (cmd){
@@ -1157,7 +1162,8 @@ static long ov2775_priv_ioctl(struct v4l2_subdev *sd,
 		ret = ov2775_set_sensor_mode(sensor, arg);
 		break;
 	case VVSENSORIOC_S_STREAM:
-		ret = ov2775_s_stream(&sensor->subdev, *(int *)arg);
+		ret = copy_from_user(&value, arg, sizeof(value));
+		ret |= ov2775_s_stream(&sensor->subdev, value);
 		break;
 	case VVSENSORIOC_WRITE_REG:
 		ret = copy_from_user(&sensor_reg, arg,
@@ -1174,40 +1180,51 @@ static long ov2775_priv_ioctl(struct v4l2_subdev *sd,
 			sizeof(struct vvcam_sccb_data_s));
 		break;
 	case VVSENSORIOC_S_LONG_EXP:
-		ret = ov2775_set_lexp(sensor, *(u32 *)arg);
+		ret = copy_from_user(&value, arg, sizeof(value));
+		ret |= ov2775_set_lexp(sensor, value);
 		break;
 	case VVSENSORIOC_S_EXP:
-		ret = ov2775_set_exp(sensor, *(u32 *)arg);
+		ret = copy_from_user(&value, arg, sizeof(value));
+		ret |= ov2775_set_exp(sensor, value);
 		break;
 	case VVSENSORIOC_S_VSEXP:
-		ret = ov2775_set_vsexp(sensor, *(u32 *)arg);
+		ret = copy_from_user(&value, arg, sizeof(value));
+		ret |= ov2775_set_vsexp(sensor, value);
 		break;
 	case VVSENSORIOC_S_LONG_GAIN:
-		ret = ov2775_set_lgain(sensor, *(u32 *)arg);
+		ret = copy_from_user(&value, arg, sizeof(value));
+		ret |= ov2775_set_lgain(sensor, value);
 		break;
 	case VVSENSORIOC_S_GAIN:
-		ret = ov2775_set_gain(sensor, *(u32 *)arg);
+		ret = copy_from_user(&value, arg, sizeof(value));
+		ret |= ov2775_set_gain(sensor, value);
 		break;
 	case VVSENSORIOC_S_VSGAIN:
-		ret = ov2775_set_vsgain(sensor, *(u32 *)arg);
+		ret = copy_from_user(&value, arg, sizeof(value));
+		ret |= ov2775_set_vsgain(sensor, value);
 		break;
 	case VVSENSORIOC_S_FPS:
-		ret = ov2775_set_fps(sensor, *(u32 *)arg);
+		ret = copy_from_user(&value, arg, sizeof(value));
+		ret |= ov2775_set_fps(sensor, value);
 		break;
 	case VVSENSORIOC_G_FPS:
-		ret = ov2775_get_fps(sensor, (u32 *)arg);
+		ret = ov2775_get_fps(sensor, &value);
+		ret |= copy_to_user(arg, &value, sizeof(value));
 		break;
 	case VVSENSORIOC_S_HDR_RADIO:
 		ret = ov2775_set_ratio(sensor, arg);
 		break;
 	case VVSENSORIOC_S_BLC:
-		ret = ov2775_set_blc(sensor, arg);
+		ret = copy_from_user(&blc, arg, sizeof(blc));
+		ret |= ov2775_set_blc(sensor, &blc);
 		break;
 	case VVSENSORIOC_S_WB:
 		ret = ov2775_set_wb(sensor, arg);
 		break;
 	case VVSENSORIOC_G_EXPAND_CURVE:
-		ret = ov2775_get_expand_curve(sensor, arg);
+		ret = copy_from_user(&expand_curve, arg, sizeof(expand_curve));
+		ret |= ov2775_get_expand_curve(sensor, &expand_curve);
+		ret |= copy_to_user(arg, &expand_curve, sizeof(expand_curve));
 		break;
 	case VVSENSORIOC_S_TEST_PATTERN:
 		ret= ov2775_set_test_pattern(sensor, arg);

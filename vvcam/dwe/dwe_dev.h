@@ -93,6 +93,11 @@ enum BUF_ERR_TYPE {
 	BUF_ERR_WRONGSTATE = 1 << 4,
 };
 
+enum HARDWARE_STATUS {
+	HARDWARE_IDLE = 0,
+	HARDWARE_BUSY,
+};
+
 struct dwe_ic_dev {
 	struct dwe_hw_info info[MAX_DWE_NUM][MAX_CFG_NUM];
 	int which[MAX_DWE_NUM];
@@ -102,6 +107,7 @@ struct dwe_ic_dev {
 	struct vvbuf_ctx *sink_bctx;
 	struct vvbuf_ctx *src_bctx[MAX_DWE_NUM];
 	dma_addr_t dist_map[MAX_DWE_NUM][MAX_CFG_NUM];
+	int hardware_status;
 	int *state[MAX_DWE_NUM];
 	int index;
 	struct vb2_dc_buf *src;

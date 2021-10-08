@@ -417,8 +417,19 @@ static void buffer_queue(struct vb2_buffer *vb)
 	if (!vdev)
 		return;
 
-	pad = &vdev->video->entity.pads[0];
-	vvbuf_ready(&vdev->bctx, pad, buf);
+	if ((vdev->dumpbuf_status == DUMPBUF_ENABLE) && (vdev->dumpbuf == NULL)){
+		vdev->dumpbuf = buf;
+		vdev->dumpbuf_status = DUMPBUF_DONE;
+	}
+	else {
+		pad = &vdev->video->entity.pads[0];
+		vvbuf_ready(&vdev->bctx, pad, buf);
+
+		if ((vdev->dumpbuf_status == DUMPBUF_DISABLE) && vdev->dumpbuf) {
+			vvbuf_ready(&vdev->bctx, pad, vdev->dumpbuf);
+			vdev->dumpbuf = NULL;
+		}
+	}
 #endif
 
 #ifndef ENABLE_IRQ
@@ -1061,6 +1072,29 @@ static long private_ioctl(struct file *file, void *fh,
 		memcpy(&(dev->caps_supports), arg, sizeof(dev->caps_supports));
 		break;
 	}
+
+	case VIV_VIDIOC_S_DUMPBUF_STATUS: {
+		dev->dumpbuf_status = *(int *)arg;
+		break;
+	}
+
+	case VIV_VIDIOC_G_DUMPBUF_STATUS: {
+		*(int *)arg = dev->dumpbuf_status;
+		break;
+	}
+
+	case VIV_VIDIOC_DUMPBUF: {
+		struct viv_caps_dump_buf_s *dump_buf = (struct viv_caps_dump_buf_s *)arg;
+		if (dev->dumpbuf != NULL) {
+			dump_buf->offset = dev->dumpbuf->vb.planes[DEF_PLANE_NO].m.offset;
+			dump_buf->size = dev->fmt.fmt.pix.sizeimage;
+		} else {
+			dump_buf->offset = 0;
+			dump_buf->size = 0;
+			rc = -1;
+		}
+		break;
+	}
 	default:
 		return -ENOTTY;
 	}
@@ -1142,10 +1176,8 @@ static int vidioc_try_fmt_vid_cap(struct file *file, void *priv,
 	f->fmt.pix.field = dev->fmt.fmt.pix.field;
 	f->fmt.pix.colorspace = dev->fmt.fmt.pix.colorspace;
 	init_v4l2_fmt(f, format->bpp, format->depth, &bytesperline, &sizeimage);
-	if (f->fmt.pix.bytesperline < bytesperline)
-		f->fmt.pix.bytesperline = bytesperline;
-	if (f->fmt.pix.sizeimage < sizeimage)
-		f->fmt.pix.sizeimage = sizeimage;
+	f->fmt.pix.bytesperline = bytesperline;
+	f->fmt.pix.sizeimage = sizeimage;
 	return 0;
 }
 
@@ -1167,6 +1199,23 @@ static int vidioc_s_fmt_vid_cap(struct file *file, void *priv,
 
 	if (ret < 0)
 		return -EINVAL;
+
+#ifdef ENABLE_IRQ
+	if ((f->fmt.pix.pixelformat == V4L2_PIX_FMT_SBGGR8) ||
+	    (f->fmt.pix.pixelformat == V4L2_PIX_FMT_SGBRG8) ||
+	    (f->fmt.pix.pixelformat == V4L2_PIX_FMT_SGRBG8) ||
+	    (f->fmt.pix.pixelformat == V4L2_PIX_FMT_SRGGB8) ||
+	    (f->fmt.pix.pixelformat == V4L2_PIX_FMT_SBGGR10) ||
+	    (f->fmt.pix.pixelformat == V4L2_PIX_FMT_SGBRG10) ||
+	    (f->fmt.pix.pixelformat == V4L2_PIX_FMT_SGRBG10) ||
+	    (f->fmt.pix.pixelformat == V4L2_PIX_FMT_SRGGB10) ||
+	    (f->fmt.pix.pixelformat == V4L2_PIX_FMT_SBGGR12) ||
+	    (f->fmt.pix.pixelformat == V4L2_PIX_FMT_SGBRG12) ||
+	    (f->fmt.pix.pixelformat == V4L2_PIX_FMT_SGRBG12) ||
+	    (f->fmt.pix.pixelformat == V4L2_PIX_FMT_SRGGB12)) {
+		viv_config_dwe(handle, false);
+	}
+#endif
 
 	handle->vdev->fmt = *f;
 
@@ -1278,6 +1327,7 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 static int vidioc_querybuf(struct file *file, void *priv, struct v4l2_buffer *p)
 {
 	struct viv_video_file *handle = priv_to_handle(file->private_data);
+	struct vb2_buffer *vb;
 	int rc = 0;
 
 	pr_debug("enter %s\n", __func__);
@@ -1287,6 +1337,12 @@ static int vidioc_querybuf(struct file *file, void *priv, struct v4l2_buffer *p)
 
 	mutex_lock(&handle->buffer_mutex);
 	rc = vb2_querybuf(&handle->queue, p);
+	if (!rc) {
+		if (p->flags & V4L2_BUF_FLAG_MAPPED) {
+			vb = handle->queue.bufs[p->index];
+			p->m.offset = vb2_dma_contig_plane_dma_addr(vb, 0);
+		}
+	}
 	mutex_unlock(&handle->buffer_mutex);
 	return rc;
 }
@@ -1790,9 +1846,8 @@ int vidioc_mmap(struct file *file, struct vm_area_struct *vma)
 {
 	int rc;
 	struct viv_video_file *handle = priv_to_handle(file->private_data);
-
-#ifndef ENABLE_IRQ
 	struct viv_video_device *dev = video_drvdata(file);
+#ifndef ENABLE_IRQ
 	struct reserved_mem *rmem = (struct reserved_mem *)dev->rmem;
 	unsigned long reserved_base_addr = 0;
 	if (!rmem)
@@ -1802,6 +1857,10 @@ int vidioc_mmap(struct file *file, struct vm_area_struct *vma)
 #endif
 
 #ifdef ENABLE_IRQ
+	if (dev->dumpbuf != NULL) {
+		return vb2_mmap(dev->dumpbuf->vb.vb2_buf.vb2_queue, vma);
+	}
+
 	if (handle->streamid < 0)
 #else
 	if (vma->vm_pgoff >= (reserved_base_addr >> PAGE_SHIFT))
