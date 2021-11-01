@@ -90,27 +90,51 @@ int isp_s_comp(struct isp_ic_dev *dev)
 	}
 
 	if (comp->expand.enable && comp->expand.update_curve) {
-		for (ri = 0; ri < 10; ri++) {
-			valr = (comp->expand.px[ri * 6 + 0] + (20-comp->expand.in_bit)) |
-			    ((comp->expand.px[ri * 6 + 1] + (20-comp->expand.in_bit)) << 5) |
-			    ((comp->expand.px[ri * 6 + 2] + (20-comp->expand.in_bit)) << 10) |
-			    ((comp->expand.px[ri * 6 + 3] + (20-comp->expand.in_bit)) << 15) |
-			    ((comp->expand.px[ri * 6 + 4] + (20-comp->expand.in_bit)) << 20) |
-			    ((comp->expand.px[ri * 6 + 5] + (20-comp->expand.in_bit)) << 25);
+		x_data = 0;
+		for (ri = 0; ri < 11; ri++) {
+			valr = 0;
+
+			x_data += 1 << comp->expand.px[ri * 6 + 0];
+			if (x_data <= (1 << comp->expand.in_bit)) {
+				valr |= comp->expand.px[ri * 6 + 0] + (20-comp->expand.in_bit);
+			}
+
+			x_data += 1 << comp->expand.px[ri * 6 + 1];
+			if (x_data <= (1 << comp->expand.in_bit)) {
+				valr |=  ((comp->expand.px[ri * 6 + 1] + (20-comp->expand.in_bit)) << 5);
+			}
+
+			x_data += 1 << comp->expand.px[ri * 6 + 2];
+			if (x_data <= (1 << comp->expand.in_bit)) {
+				valr |=  ((comp->expand.px[ri * 6 + 2] + (20-comp->expand.in_bit)) << 10);
+			}
+
+			x_data += 1 << comp->expand.px[ri * 6 + 3];
+			if (x_data <= (1 << comp->expand.in_bit)) {
+				valr |=  ((comp->expand.px[ri * 6 + 3] + (20-comp->expand.in_bit)) << 15);
+			}
+
+			if (ri != 10) {
+				x_data += 1 << comp->expand.px[ri * 6 + 4];
+				if (x_data <= (1 << comp->expand.in_bit)) {
+					valr |=  ((comp->expand.px[ri * 6 + 4] + (20-comp->expand.in_bit)) << 20);
+				}
+
+				x_data += 1 << comp->expand.px[ri * 6 + 5];
+				if (x_data <= (1 << comp->expand.in_bit)) {
+					valr |=  ((comp->expand.px[ri * 6 + 5] + (20-comp->expand.in_bit)) << 25);
+				}
+			}
+
 			isp_write_reg(dev, REG_ADDR(isp_compand_expand_px_0) + ri * 4, valr);
 		}
-		valr = ( comp->expand.px[60] + (20-comp->expand.in_bit)) | 
-		       ((comp->expand.px[61] + (20-comp->expand.in_bit)) << 5) | 
-		       ((comp->expand.px[62] + (20-comp->expand.in_bit)) << 10) | 
-		       ((comp->expand.px[63] + (20-comp->expand.in_bit)) << 15);
-		isp_write_reg(dev, REG_ADDR(isp_compand_expand_px_10), valr);
 
 		isp_write_reg(dev, REG_ADDR(isp_compand_expand_x_addr), 0x0);
 		for (ri = 0; ri < 65; ri++) {
 			x_data = (comp->expand.x_data[ri] << (20 - comp->expand.in_bit));
 			isp_write_reg(dev, REG_ADDR(isp_compand_expand_x_write_data), x_data);
 		}
-		
+
 		isp_write_reg(dev, REG_ADDR(isp_compand_expand_y_addr), 0x0);
 		for (ri = 0; ri < 65; ri++) {
 			y_data = (comp->expand.y_data[ri] << (20 - comp->expand.out_bit));
@@ -120,27 +144,53 @@ int isp_s_comp(struct isp_ic_dev *dev)
 	}
 
 	if (comp->compress.enable && comp->compress.update_curve) {
-		for (ri = 0; ri < 10; ri++) {
-			valr = comp->compress.px[ri * 6 + 0] |
-			    (comp->compress.px[ri * 6 + 1] << 5) |
-			    (comp->compress.px[ri * 6 + 2] << 10) |
-			    (comp->compress.px[ri * 6 + 3] << 15) |
-			    (comp->compress.px[ri * 6 + 4] << 20) |
-			    (comp->compress.px[ri * 6 + 5] << 25);
+		x_data = 0;
+		for (ri = 0; ri < 11; ri++) {
+			valr = 0;
+			x_data += 1 << (comp->compress.px[ri * 6 + 0]);
+			if (x_data <= (1 << comp->compress.in_bit)) {
+				valr |= (comp->compress.px[ri * 6 + 0] + (20-comp->compress.in_bit));
+			}
+
+			x_data += 1 << (comp->compress.px[ri * 6 + 1]);
+			if (x_data <= (1 << comp->compress.in_bit)) {
+				valr |= ((comp->compress.px[ri * 6 + 1] + (20-comp->compress.in_bit)) << 5);
+			}
+
+			x_data += 1 << (comp->compress.px[ri * 6 + 2]);
+			if (x_data <= (1 << comp->compress.in_bit)) {
+				valr |= ((comp->compress.px[ri * 6 + 2] + (20-comp->compress.in_bit)) << 10);
+			}
+
+			x_data += 1 << (comp->compress.px[ri * 6 + 3]);
+			if (x_data <= (1 << comp->compress.in_bit)) {
+				valr |= ((comp->compress.px[ri * 6 + 3] + (20-comp->compress.in_bit)) << 15);
+			}
+
+			if (ri != 10) {
+				x_data += 1 << (comp->compress.px[ri * 6 + 4]);
+				if (x_data <= (1 << comp->compress.in_bit)) {
+					valr |= ((comp->compress.px[ri * 6 + 4] + (20-comp->compress.in_bit)) << 20);
+				}
+
+				x_data += 1 << (comp->compress.px[ri * 6 + 5]);
+				if (x_data <= (1 << comp->compress.in_bit)) {
+					valr |= ((comp->compress.px[ri * 6 + 5] + (20-comp->compress.in_bit)) << 25);
+				}
+			}
+
 			isp_write_reg(dev, REG_ADDR(isp_compand_compress_px_0) + ri * 4, valr);
 		}
-		valr = comp->compress.px[60] | (comp->compress.px[61] << 5) | (comp->compress.px[62] << 10) | (comp->compress.px[63] << 15);
-		isp_write_reg(dev, REG_ADDR(isp_compand_compress_px_10), valr);
 
 		isp_write_reg(dev, REG_ADDR(isp_compand_compress_x_addr), 0x0);
-		for (ri = 1; ri < 65; ri++) {
+		for (ri = 0; ri < 65; ri++) {
 			x_data = (comp->compress.x_data[ri] << (20 - comp->compress.in_bit));
 			isp_write_reg(dev, REG_ADDR(isp_compand_compress_x_write_data), x_data);
 		}
-		
+
 		isp_write_reg(dev, REG_ADDR(isp_compand_compress_y_addr), 0x0);
-		for (ri = 1; ri < 65; ri++) {
-			y_data = (comp->compress.y_data[ri] << (20 - comp->compress.out_bit));
+		for (ri = 0; ri < 65; ri++) {
+			y_data = (comp->compress.y_data[ri] << (12 - comp->compress.out_bit));
 			isp_write_reg(dev, REG_ADDR(isp_compand_compress_y_write_data), y_data);
 		}
 	}
