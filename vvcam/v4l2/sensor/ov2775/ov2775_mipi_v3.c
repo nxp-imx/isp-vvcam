@@ -28,6 +28,7 @@
 #include <media/v4l2-ctrls.h>
 #include <media/v4l2-fwnode.h>
 #include <linux/uaccess.h>
+#include <linux/version.h>
 #include "vvsensor.h"
 
 #include "ov2775_regs_1080p.h"
@@ -1050,10 +1051,15 @@ static int ov2775_s_stream(struct v4l2_subdev *sd, int enable)
 
 	return 0;
 }
-
+#if LINUX_VERSION_CODE > KERNEL_VERSION(5, 12, 0)
+static int ov2775_enum_mbus_code(struct v4l2_subdev *sd,
+				 struct v4l2_subdev_state *state,
+				 struct v4l2_subdev_mbus_code_enum *code)
+#else
 static int ov2775_enum_mbus_code(struct v4l2_subdev *sd,
 			         struct v4l2_subdev_pad_config *cfg,
 			         struct v4l2_subdev_mbus_code_enum *code)
+#endif
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct ov2775 *sensor = client_to_ov2775(client);
@@ -1068,9 +1074,15 @@ static int ov2775_enum_mbus_code(struct v4l2_subdev *sd,
 	return 0;
 }
 
+#if LINUX_VERSION_CODE > KERNEL_VERSION(5, 12, 0)
+static int ov2775_set_fmt(struct v4l2_subdev *sd,
+			  struct v4l2_subdev_state *state,
+			  struct v4l2_subdev_format *fmt)
+#else
 static int ov2775_set_fmt(struct v4l2_subdev *sd,
 			  struct v4l2_subdev_pad_config *cfg,
 			  struct v4l2_subdev_format *fmt)
+#endif
 {
 	int ret = 0;
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
@@ -1104,9 +1116,15 @@ static int ov2775_set_fmt(struct v4l2_subdev *sd,
 	return 0;
 }
 
+#if LINUX_VERSION_CODE > KERNEL_VERSION(5, 12, 0)
+static int ov2775_get_fmt(struct v4l2_subdev *sd,
+			  struct v4l2_subdev_state *state,
+			  struct v4l2_subdev_format *fmt)
+#else
 static int ov2775_get_fmt(struct v4l2_subdev *sd,
 			  struct v4l2_subdev_pad_config *cfg,
 			  struct v4l2_subdev_format *fmt)
+#endif
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct ov2775 *sensor = client_to_ov2775(client);
@@ -1559,8 +1577,11 @@ static int ov2775_probe(struct i2c_client *client,
 				sensor->pads);
 	if (retval < 0)
 		goto probe_err_power_off;
-
+#if LINUX_VERSION_CODE > KERNEL_VERSION(5, 12, 0)
+	retval = v4l2_async_register_subdev_sensor(sd);
+#else
 	retval = v4l2_async_register_subdev_sensor_common(sd);
+#endif
 	if (retval < 0) {
 		dev_err(&client->dev,"%s--Async register failed, ret=%d\n",
 			__func__,retval);
