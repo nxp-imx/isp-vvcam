@@ -2305,10 +2305,17 @@ static int viv_video_probe(struct platform_device *pdev)
 				if (nodes[j].id == video_id) {
 					switch (nodes[j].match_type) {
 					case V4L2_ASYNC_MATCH_FWNODE:
+#if LINUX_VERSION_CODE > KERNEL_VERSION(5, 12, 0)
+						asd = __v4l2_async_notifier_add_fwnode_subdev(
+							&vdev->subdev_notifier,
+							of_fwnode_handle(nodes[j].node),
+							sizeof(struct v4l2_async_subdev));
+#else
 						asd = v4l2_async_notifier_add_fwnode_subdev(
 							&vdev->subdev_notifier,
 							of_fwnode_handle(nodes[j].node),
 							sizeof(struct v4l2_async_subdev));
+#endif
 						break;
 					case V4L2_ASYNC_MATCH_DEVNAME:
 						asd = v4l2_async_notifier_add_devname_subdev(

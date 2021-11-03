@@ -514,9 +514,15 @@ static inline struct v4l2_subdev *ctrl_to_sd(struct v4l2_ctrl *ctrl)
  *
  * Returns always zero
  */
+#if LINUX_VERSION_CODE > KERNEL_VERSION(5, 12, 0)
+static int basler_camera_set_fmt(struct v4l2_subdev *sd,
+				 struct v4l2_subdev_state *state,
+				 struct v4l2_subdev_format *format)
+#else
 static int basler_camera_set_fmt(struct v4l2_subdev *sd,
 				 struct v4l2_subdev_pad_config *cfg,
 				 struct v4l2_subdev_format *format)
+#endif
 {
 	return 0;
 }
@@ -1023,8 +1029,11 @@ static int basler_camera_probe(struct i2c_client *client,
 	ret = basler_camera_init_controls(sensor);
 	if (ret)
 		goto entity_cleanup;
-
+#if LINUX_VERSION_CODE > KERNEL_VERSION(5, 12, 0)
+	ret = v4l2_async_register_subdev_sensor(&sensor->sd);
+#else
 	ret = v4l2_async_register_subdev_sensor_common(&sensor->sd);
+#endif
 	if (ret)
 		goto entity_cleanup;
 
