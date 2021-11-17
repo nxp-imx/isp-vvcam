@@ -130,14 +130,18 @@ int isp_s_comp(struct isp_ic_dev *dev)
 		}
 
 		isp_write_reg(dev, REG_ADDR(isp_compand_expand_x_addr), 0x0);
-		for (ri = 0; ri < 65; ri++) {
+		for (ri = 1; ri < 65; ri++) {
 			x_data = (comp->expand.x_data[ri] << (20 - comp->expand.in_bit));
+			if (x_data > 0xfffff)
+				x_data = 0xfffff;
 			isp_write_reg(dev, REG_ADDR(isp_compand_expand_x_write_data), x_data);
 		}
 
 		isp_write_reg(dev, REG_ADDR(isp_compand_expand_y_addr), 0x0);
-		for (ri = 0; ri < 65; ri++) {
+		for (ri = 1; ri < 65; ri++) {
 			y_data = (comp->expand.y_data[ri] << (20 - comp->expand.out_bit));
+			if (y_data > 0xfffff)
+				y_data = 0xfffff;
 			isp_write_reg(dev, REG_ADDR(isp_compand_expand_y_write_data), y_data);
 		}
 	
@@ -183,14 +187,18 @@ int isp_s_comp(struct isp_ic_dev *dev)
 		}
 
 		isp_write_reg(dev, REG_ADDR(isp_compand_compress_x_addr), 0x0);
-		for (ri = 0; ri < 65; ri++) {
+		for (ri = 1; ri < 65; ri++) {
 			x_data = (comp->compress.x_data[ri] << (20 - comp->compress.in_bit));
+			if (x_data > 0xfffff)
+				x_data = 0xfffff;
 			isp_write_reg(dev, REG_ADDR(isp_compand_compress_x_write_data), x_data);
 		}
 
 		isp_write_reg(dev, REG_ADDR(isp_compand_compress_y_addr), 0x0);
-		for (ri = 0; ri < 65; ri++) {
+		for (ri = 1; ri < 65; ri++) {
 			y_data = (comp->compress.y_data[ri] << (12 - comp->compress.out_bit));
+			if (y_data > 0xfff)
+				y_data = 0xfff;
 			isp_write_reg(dev, REG_ADDR(isp_compand_compress_y_write_data), y_data);
 		}
 	}
