@@ -128,13 +128,23 @@ struct ext_buf_info {
 	u64 size;
 };
 
+struct viv_caps_size_s {
+	uint32_t bounds_width;
+	uint32_t bounds_height;
+	uint32_t top;
+	uint32_t left;
+	uint32_t width;
+	uint32_t height;
+};
+
 struct vvcam_constant_modeinfo {
-	unsigned index;
-	unsigned w;
-	unsigned h;
-	unsigned fps;
-	unsigned brpat; /*bayer pattern*/
-	unsigned bitw; /*bit width*/
+	uint32_t index;
+	struct viv_caps_size_s size;
+	uint32_t fps;
+	uint32_t hdr_mode;
+	uint32_t stitching_mode;
+	uint32_t bayer_pattern;
+	uint32_t bit_width;
 };
 
 #define CALIBXML_FILE_NAME_SIZE 64

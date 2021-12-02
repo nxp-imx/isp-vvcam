@@ -239,8 +239,8 @@ int isp_s_3dnr(struct isp_ic_dev *dev)
 
 #ifndef ISP_3DNR_DDR_LESS
      u32 in_width, in_height;
-     in_width = isp_read_reg(dev, REG_ADDR(isp_acq_h_size));
-     in_height = isp_read_reg(dev, REG_ADDR(isp_acq_v_size));
+     in_width = isp_read_reg(dev, REG_ADDR(isp_out_h_size);
+     in_height = isp_read_reg(dev, REG_ADDR(isp_out_v_size));
 
      u32 size = in_width * in_height * 2; /* RAW12 */
 	    /* update sp2config */
@@ -339,8 +339,8 @@ int isp_r_3dnr(struct isp_ic_dev *dev)
 	u32 miv2_imsc = isp_read_reg(dev, REG_ADDR(miv2_imsc));
 	u32 miv2_sp2_ctrl = isp_read_reg(dev, REG_ADDR(miv2_sp2_ctrl));
 
-	in_width = isp_read_reg(dev, REG_ADDR(isp_acq_h_size));
-	in_height = isp_read_reg(dev, REG_ADDR(isp_acq_v_size));
+	in_width = isp_read_reg(dev, REG_ADDR(isp_out_h_size));
+	in_height = isp_read_reg(dev, REG_ADDR(isp_out_v_size));
 	size = in_width * in_height * 2;	/* RAW12 */
 
 	REG_SET_SLICE(miv2_ctrl, SP2_RAW_RDMA_PATH_ENABLE, 1);

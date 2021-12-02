@@ -68,7 +68,7 @@ int isp_enable_dmsc(struct isp_ic_dev *dev)
 	pr_info("enter %s\n", __func__);
 	REG_SET_SLICE(isp_dmsc_ctrl, ISP_DEMOSAIC_BYPASS, 0U);
 	REG_SET_SLICE(isp_dmsc_size_ctrl, ISP_DMSC_IMAGE_H_SIZE,
-		      isp_read_reg(dev, REG_ADDR(isp_acq_h_size)));
+		      isp_read_reg(dev, REG_ADDR(isp_out_h_size)));
 	REG_SET_SLICE(isp_dmsc_size_ctrl, ISP_DMSC_IMAGE_H_BLANK, 0x039c);
 	isp_write_reg(dev, REG_ADDR(isp_dmsc_size_ctrl), isp_dmsc_size_ctrl);
 	isp_write_reg(dev, REG_ADDR(isp_dmsc_ctrl), isp_dmsc_ctrl);

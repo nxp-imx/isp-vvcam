@@ -83,8 +83,14 @@ struct os08a20 {
 static struct vvcam_mode_info_s pos08a20_mode_info[] = {
 	{
 		.index	        = 0,
-		.width	        = 1920,
-		.height         = 1080,
+		.size           = {
+			.bounds_width  = 1920,
+			.bounds_height = 1080,
+			.top           = 0,
+			.left          = 0,
+			.width         = 1920,
+			.height        = 1080,
+		},
 		.hdr_mode       = SENSOR_MODE_LINEAR,
 		.bit_width      = 10,
 		.data_compress  = {
@@ -117,8 +123,14 @@ static struct vvcam_mode_info_s pos08a20_mode_info[] = {
 	},
 	{
 		.index	        = 1,
-		.width	        = 1920,
-		.height         = 1080,
+		.size           = {
+			.bounds_width  = 1920,
+			.bounds_height = 1080,
+			.top           = 0,
+			.left          = 0,
+			.width         = 1920,
+			.height        = 1080,
+		},
 		.hdr_mode       = SENSOR_MODE_HDR_STITCH,
 		.stitching_mode = SENSOR_STITCHING_L_AND_S,
 		.bit_width      = 10,
@@ -167,8 +179,14 @@ static struct vvcam_mode_info_s pos08a20_mode_info[] = {
 	},
 	{
 		.index	        = 2,
-		.width	        = 3840,
-		.height         = 2160,
+		.size           = {
+			.bounds_width  = 3840,
+			.bounds_height = 2160,
+			.top           = 0,
+			.left          = 0,
+			.width         = 3840,
+			.height        = 2160,
+		},
 		.hdr_mode       = SENSOR_MODE_LINEAR,
 		.bit_width      = 12,
 		.data_compress  = {
@@ -203,8 +221,14 @@ static struct vvcam_mode_info_s pos08a20_mode_info[] = {
 	},
 	{
 		.index	        = 3,
-		.width	        = 3840,
-		.height         = 2160,
+		.size           = {
+			.bounds_width  = 3840,
+			.bounds_height = 2160,
+			.top           = 0,
+			.left          = 0,
+			.width         = 3840,
+			.height        = 2160,
+		},
 		.hdr_mode       = SENSOR_MODE_HDR_STITCH,
 		.stitching_mode = SENSOR_STITCHING_L_AND_S,
 		.bit_width      = 10,
@@ -767,8 +791,8 @@ static int os08a20_set_fmt(struct v4l2_subdev *sd,
 	struct os08a20 *sensor = client_to_os08a20(client);
 	mutex_lock(&sensor->lock);
 
-	if ((fmt->format.width != sensor->cur_mode.width) ||
-	    (fmt->format.height != sensor->cur_mode.height)) {
+	if ((fmt->format.width != sensor->cur_mode.size.bounds_width) ||
+	    (fmt->format.height != sensor->cur_mode.size.bounds_height)) {
 		pr_err("%s:set sensor format %dx%d error\n",
 			__func__,fmt->format.width,fmt->format.height);
 		mutex_unlock(&sensor->lock);

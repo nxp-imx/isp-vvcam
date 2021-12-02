@@ -222,10 +222,18 @@ typedef struct sensor_data_compress_s {
 	uint32_t y_bit;
 } sensor_data_compress_t;
 
-typedef struct vvcam_mode_info_s {
-	uint32_t index;
+typedef struct vvcam_size_s {
+	uint32_t bounds_width;
+	uint32_t bounds_height;
+	uint32_t top;
+	uint32_t left;
 	uint32_t width;
 	uint32_t height;
+} vvcam_size_t;
+
+typedef struct vvcam_mode_info_s {
+	uint32_t index;
+	vvcam_size_t size;
 	uint32_t hdr_mode;
 	uint32_t stitching_mode;
 	uint32_t bit_width;
