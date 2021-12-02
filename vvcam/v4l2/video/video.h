@@ -95,8 +95,8 @@ struct viv_video_device {
 	struct v4l2_fract timeperframe;
 	struct v4l2_rect crop, compose;
 	struct viv_custom_ctrls ctrls;
-	struct vvcam_constant_modeinfo modeinfo[20];
-	int modeinfocount;
+	struct vvcam_constant_modeinfo camera_mode;
+	uint32_t camera_status;
 	struct viv_video_fmt formats[20];
 	int formatscount;
 	int id;
@@ -139,8 +139,11 @@ struct viv_video_file {
 
 #define VIDEO_FRAME_MIN_WIDTH 176
 #define VIDEO_FRAME_MIN_HEIGHT 144
-#define VIDEO_FRAME_MAX_WIDTH 3840
-#define VIDEO_FRAME_MAX_HEIGHT 2160
+#define VIDEO_FRAME_MAX_WIDTH 4096
+#define VIDEO_FRAME_MAX_HEIGHT 3072
+#define VIDEO_FRAME_WIDTH_ALIGN 16
+#define VIDEO_FRAME_HEIGHT_ALIGN 8
+
 
 
 #define priv_to_handle(priv)	container_of(priv, struct viv_video_file, vfh)

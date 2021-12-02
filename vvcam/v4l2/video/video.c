@@ -805,94 +805,54 @@ static inline void init_v4l2_fmt(struct v4l2_format *f, unsigned int bpp,
 		    unsigned int depth, unsigned int *bytesperline,
 		    unsigned int *sizeimage)
 {
-	v4l_bound_align_image(&f->fmt.pix.width, 48, 3840, 2,
-			&f->fmt.pix.height, 32, 2160, 0, 0);
-	*bytesperline = ALIGN_UP(f->fmt.pix.width * bpp, 16);
-	*sizeimage = f->fmt.pix.height * ALIGN_UP(f->fmt.pix.width * depth / 8, 16);
+	v4l_bound_align_image(&f->fmt.pix.width,
+		VIDEO_FRAME_MIN_WIDTH, VIDEO_FRAME_MAX_WIDTH, 0,
+		&f->fmt.pix.height, VIDEO_FRAME_MIN_HEIGHT,
+		VIDEO_FRAME_MAX_HEIGHT, 0, 0);
+	*bytesperline = (f->fmt.pix.width) * bpp;
+	*sizeimage = (f->fmt.pix.width) * (f->fmt.pix.height) * depth / 8;
+	return;
 }
 
 static int viv_set_modeinfo(struct viv_video_file *handle,
-			  struct vvcam_constant_modeinfo *modeinfo)
+			  struct vvcam_constant_modeinfo *pcamera_mode)
 {
 	struct viv_video_device *vdev = handle->vdev;
 	struct viv_video_fmt fmt;
 	struct viv_video_fmt *pfmt = NULL;
-	int i;
 
-	if (modeinfo->w == 0 || modeinfo->h == 0 || modeinfo->fps == 0) {
-		vdev->modeinfocount = 0;
-		memset(vdev->modeinfo, 0, sizeof(vdev->modeinfo));
-		memset(&vdev->crop, 0, sizeof(struct v4l2_rect));
-		memset(&vdev->compose, 0, sizeof(struct v4l2_rect));
-		vdev->fmt.fmt.pix.width = 0;
-		vdev->fmt.fmt.pix.height = 0;
+	if (pcamera_mode->size.width == 0 || pcamera_mode->size.height == 0 ) {
+		vdev->camera_status = 0;
 		return -EINVAL;
 	}
 
-	for (i = 0; i < vdev->modeinfocount; ++i) {
-		if (vdev->modeinfo[i].index == modeinfo->index) {
-			pr_debug("sensor mode info already configured!\n");
-			return 0;
-		}
+	vdev->camera_status = 1;
+	memcpy(&vdev->camera_mode, pcamera_mode, sizeof(struct vvcam_constant_modeinfo));
+
+	memcpy(vdev->formats, formats, sizeof(formats));
+	vdev->formatscount = ARRAY_SIZE(formats);
+	if (bayer_pattern_to_format(pcamera_mode->bayer_pattern, pcamera_mode->bit_width, &fmt) == 0) {
+		memcpy(&vdev->formats[vdev->formatscount], &fmt, sizeof(fmt));
+		vdev->formatscount++;
 	}
 
-	if (vdev->modeinfocount < ARRAY_SIZE(vdev->modeinfo)) {
-		memcpy(&vdev->modeinfo[vdev->modeinfocount],
-				modeinfo, sizeof(*modeinfo));
-		vdev->modeinfocount++;
-	}
+	pfmt = &vdev->formats[0];
 
-	if (!bayer_pattern_to_format(modeinfo->brpat, modeinfo->bitw, &fmt) &&
-		vdev->formatscount < ARRAY_SIZE(vdev->formats)) {
-		for (i = 0; i < vdev->formatscount; ++i)
-			if (vdev->formats[i].fourcc == fmt.fourcc)
-				break;
-		if (i == vdev->formatscount) {
-			memcpy(&vdev->formats[vdev->formatscount],
-					&fmt, sizeof(fmt));
-			vdev->formatscount++;
-		}
-	}
+	vdev->fmt.fmt.pix.width = vdev->camera_mode.size.width;
+	vdev->fmt.fmt.pix.height = vdev->camera_mode.size.height;
+	vdev->fmt.fmt.pix.pixelformat = pfmt->fourcc;
+	vdev->timeperframe.numerator = 1;
 
-	if (vdev->fmt.fmt.pix.width == 0 || vdev->fmt.fmt.pix.height == 0) {
-		if (vdev->formats[0].fourcc == 0 || vdev->formats[0].bpp == 0 ||
-			vdev->formats[0].depth == 0 ||
-			vdev->modeinfo[0].w == 0 || vdev->modeinfo[0].h == 0 ||
-			vdev->modeinfo[0].fps == 0)
-			pr_err("invalid default format!\n");
-
-		if (vdev->fmt.fmt.pix.pixelformat == 0) {
-			vdev->fmt.fmt.pix.pixelformat = vdev->formats[0].fourcc;
-		}
-		for (i = 0; i < vdev->formatscount; ++i) {
-			if (vdev->fmt.fmt.pix.pixelformat == vdev->formats[i].fourcc) {
-				pfmt = &vdev->formats[i];
-				break;
-			}
-		}
-		if (pfmt == NULL)
-			pfmt = &vdev->formats[0];
-
-		vdev->fmt.fmt.pix.width = vdev->modeinfo[0].w;
-		vdev->fmt.fmt.pix.height = vdev->modeinfo[0].h;
-
-		init_v4l2_fmt(&vdev->fmt, pfmt->bpp, pfmt->depth,
+	vdev->timeperframe.denominator = vdev->camera_mode.fps;
+	init_v4l2_fmt(&vdev->fmt, pfmt->bpp, pfmt->depth,
 				&vdev->fmt.fmt.pix.bytesperline,
 				&vdev->fmt.fmt.pix.sizeimage);
 
-		vdev->timeperframe.numerator = 1;
-		vdev->timeperframe.denominator = vdev->modeinfo[0].fps;
-	}
+	vdev->crop.width = vdev->camera_mode.size.width;
+	vdev->crop.height = vdev->camera_mode.size.height;
+	vdev->compose.width = vdev->camera_mode.size.width;
+	vdev->compose.height = vdev->camera_mode.size.height;
 
-	if (vdev->crop.width == 0 || vdev->crop.height == 0) {
-		vdev->crop.width = vdev->modeinfo[0].w;
-		vdev->crop.height = vdev->modeinfo[0].h;
-	}
-
-	if (vdev->compose.width == 0 || vdev->compose.height == 0) {
-		vdev->compose.width = vdev->modeinfo[0].w;
-		vdev->compose.height = vdev->modeinfo[0].h;
-	}
 	return 0;
 }
 
@@ -1115,7 +1075,7 @@ static int video_querycap(struct file *file, void *fh,
 				"platform:viv%d", dev->id);
 
 	cap->capabilities = V4L2_CAP_VIDEO_CAPTURE |
-			V4L2_CAP_STREAMING | V4L2_CAP_DEVICE_CAPS;
+			V4L2_CAP_STREAMING | V4L2_CAP_DEVICE_CAPS | V4L2_CAP_TIMEPERFRAME;
 	cap->device_caps = V4L2_CAP_VIDEO_CAPTURE | V4L2_CAP_STREAMING;
 	return 0;
 }
@@ -1157,12 +1117,12 @@ static int vidioc_try_fmt_vid_cap(struct file *file, void *priv,
 		return -EINVAL;
 
 	f->fmt.pix.width = clamp_t(u32, f->fmt.pix.width, VIDEO_FRAME_MIN_WIDTH,
-				VIDEO_FRAME_MAX_WIDTH) & ~1;
+				VIDEO_FRAME_MAX_WIDTH);
 	f->fmt.pix.height = clamp_t(u32, f->fmt.pix.height, VIDEO_FRAME_MIN_HEIGHT,
-				 VIDEO_FRAME_MAX_HEIGHT) & ~1;
+				 VIDEO_FRAME_MAX_HEIGHT);
 
-	f->fmt.pix.width = ALIGN_UP(f->fmt.pix.width, 16);
-	f->fmt.pix.height = ALIGN_UP(f->fmt.pix.height, 8);
+	f->fmt.pix.width = ALIGN_UP(f->fmt.pix.width, VIDEO_FRAME_WIDTH_ALIGN);
+	f->fmt.pix.height = ALIGN_UP(f->fmt.pix.height, VIDEO_FRAME_HEIGHT_ALIGN);
 
 	for (i = 0; i < dev->formatscount; ++i) {
 		if (dev->formats[i].fourcc == f->fmt.pix.pixelformat) {
@@ -1219,41 +1179,23 @@ static int vidioc_s_fmt_vid_cap(struct file *file, void *priv,
 
 	handle->vdev->fmt = *f;
 
-	if (vdev->crop.top == 0 &&
-	    vdev->crop.left == 0 &&
-		vdev->crop.width == vdev->compose.width &&
-		vdev->crop.height == vdev->compose.height) {
-		vdev->compose.width = f->fmt.pix.width;
-		vdev->compose.height = f->fmt.pix.height;
-		vdev->crop.width = vdev->compose.width;
-		vdev->crop.height = vdev->compose.height;
+	vdev->compose.left   = 0;
+	vdev->compose.top    = 0;
+	vdev->compose.width  = f->fmt.pix.width;
+	vdev->compose.height = f->fmt.pix.height;
 
-		rect->left = 0;
-		rect->top = 0;
-		rect->width = vdev->compose.width;
-		rect->height = vdev->compose.height;
-		v_event = (struct viv_video_event *)&event.u.data[0];
-		v_event->stream_id = handle->streamid;
-		v_event->file = &(handle->vfh);
-		v_event->sync = true;
-		v_event->addr = handle->event_buf.pa;
-		event.type = VIV_VIDEO_EVENT_TYPE;
-		event.id = VIV_VIDEO_EVENT_SET_COMPOSE;
-		viv_post_event(&event, &handle->vfh, true);
-
-		rect->left = 0;
-		rect->top = 0;
-		rect->width = 0;
-		rect->height = 0;
-		v_event = (struct viv_video_event *)&event.u.data[0];
-		v_event->stream_id = handle->streamid;
-		v_event->file = &(handle->vfh);
-		v_event->sync = true;
-		v_event->addr = handle->event_buf.pa;
-		event.type = VIV_VIDEO_EVENT_TYPE;
-		event.id = VIV_VIDEO_EVENT_SET_CROP;
-		viv_post_event(&event, &handle->vfh, true);
-	}
+	rect->left   = vdev->compose.left;
+	rect->top    = vdev->compose.top;
+	rect->width  = vdev->compose.width;
+	rect->height = vdev->compose.height;
+	v_event = (struct viv_video_event *)&event.u.data[0];
+	v_event->stream_id = handle->streamid;
+	v_event->file = &(handle->vfh);
+	v_event->sync = true;
+	v_event->addr = handle->event_buf.pa;
+	event.type = VIV_VIDEO_EVENT_TYPE;
+	event.id = VIV_VIDEO_EVENT_SET_COMPOSE;
+	viv_post_event(&event, &handle->vfh, true);
 
 	return ret;
 }
@@ -1435,12 +1377,12 @@ static int vidioc_enum_framesizes(struct file *file, void *priv,
 	struct viv_video_file *handle = priv_to_handle(file->private_data);
 	int i;
 
-	if (dev->modeinfocount == 0) {
+	if (dev->camera_status == 0) {
 		viv_post_simple_event(VIV_VIDEO_EVENT_CREATE_PIPELINE,
 			handle->streamid, &handle->vfh, true);
 	}
 
-	if (fsize->index >= dev->modeinfocount)
+	if (fsize->index > 0)
 		return -EINVAL;
 
 	for (i = 0; i < dev->formatscount; ++i)
@@ -1454,23 +1396,12 @@ static int vidioc_enum_framesizes(struct file *file, void *priv,
 	fsize->stepwise.min_height = VIDEO_FRAME_MIN_HEIGHT;
 	fsize->stepwise.max_width = VIDEO_FRAME_MAX_WIDTH;
 	fsize->stepwise.max_height = VIDEO_FRAME_MAX_HEIGHT;
-	fsize->stepwise.step_width = 16;
-	fsize->stepwise.step_height = 8;
+	fsize->stepwise.step_width = VIDEO_FRAME_WIDTH_ALIGN;
+	fsize->stepwise.step_height = VIDEO_FRAME_HEIGHT_ALIGN;
 
 	fsize->type = V4L2_FRMSIZE_TYPE_STEPWISE;
 
 	return 0;
-}
-
-static inline void update_timeperframe(struct file *file)
-{
-	struct viv_video_device *dev = video_drvdata(file);
-
-	if (dev->timeperframe.numerator == 0 ||
-		dev->timeperframe.denominator == 0) {
-		dev->timeperframe.numerator = 1;
-		dev->timeperframe.denominator = dev->modeinfo[0].fps;
-	}
 }
 
 static int vidioc_g_parm(struct file *file, void *fh,
@@ -1480,8 +1411,6 @@ static int vidioc_g_parm(struct file *file, void *fh,
 
 	if (a->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
 		return -EINVAL;
-
-	update_timeperframe(file);
 
 	memset(&a->parm, 0, sizeof(a->parm));
 	a->parm.capture.capability = V4L2_CAP_TIMEPERFRAME;
@@ -1499,19 +1428,19 @@ static int vidioc_s_parm(struct file *file, void *fh,
 
 	if (a->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
 		return -EINVAL;
+	if (a->parm.output.timeperframe.denominator > handle->vdev->camera_mode.fps)
+		return -EINVAL;
 
-	if (a->parm.capture.timeperframe.numerator == 0 ||
-			a->parm.capture.timeperframe.denominator == 0) {
-		update_timeperframe(file);
-		memset(&a->parm, 0, sizeof(a->parm));
-		a->parm.capture.capability = V4L2_CAP_TIMEPERFRAME;
-		a->parm.capture.timeperframe = handle->vdev->timeperframe;
-		return 0;
-	}
-	handle->vdev->timeperframe = a->parm.output.timeperframe;
 	if (vdev->ctrls.buf_va == NULL)
 		return -EINVAL;
 
+	if (a->parm.capture.timeperframe.numerator == 0 ||
+		a->parm.capture.timeperframe.denominator == 0) {
+			memset(&a->parm, 0, sizeof(a->parm));
+		a->parm.capture.capability = V4L2_CAP_TIMEPERFRAME;
+		a->parm.capture.timeperframe = handle->vdev->timeperframe;
+	}
+	handle->vdev->timeperframe = a->parm.output.timeperframe;
 	sprintf(vdev->ctrls.buf_va,"{<id>:<s.fps>;<fps>:%d}",handle->vdev->timeperframe.denominator);
 	v_event = (struct viv_video_event *)&event.u.data[0];
 	v_event->stream_id = 0;
@@ -1533,7 +1462,7 @@ static int vidioc_enum_frameintervals(struct file *filp, void *priv,
 	struct viv_video_file *handle = priv_to_handle(filp->private_data);
 	int i;
 
-	if (dev->modeinfocount == 0) {
+	if (dev->camera_status == 0) {
 		viv_post_simple_event(VIV_VIDEO_EVENT_CREATE_PIPELINE,
 			handle->streamid, &handle->vfh, true);
 	}
@@ -1545,17 +1474,19 @@ static int vidioc_enum_frameintervals(struct file *filp, void *priv,
 	if (i == dev->formatscount)
 		return -EINVAL;
 
-	if (fival->index >= dev->modeinfo[0].fps)
+	if (fival->index >= dev->camera_mode.fps)
 		return -EINVAL;
 
-	if (fival->width % 16 || fival->height % 8 ||
-		fival->width < 176 || fival->height < 144 ||
-		fival->width > VIDEO_FRAME_MAX_WIDTH ||
+	if (fival->width  % VIDEO_FRAME_WIDTH_ALIGN  ||
+		fival->height % VIDEO_FRAME_HEIGHT_ALIGN ||
+		fival->width  < VIDEO_FRAME_MIN_WIDTH    ||
+		fival->height < VIDEO_FRAME_MIN_HEIGHT   ||
+		fival->width  > VIDEO_FRAME_MAX_WIDTH    ||
 		fival->height > VIDEO_FRAME_MAX_HEIGHT)
 		return -EINVAL;
 
 	fival->discrete.numerator = 1;
-	fival->discrete.denominator = dev->modeinfo[0].fps - fival->index;
+	fival->discrete.denominator = dev->camera_mode.fps - fival->index;
 	fival->type = V4L2_FRMSIZE_TYPE_DISCRETE;
 
 	return 0;
@@ -1579,7 +1510,7 @@ static int vidioc_g_selection(struct file *file, void *fh,
 	if (s->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
 		return -EINVAL;
 
-	if (vdev->modeinfocount == 0) {
+	if (vdev->camera_status == 0) {
 		viv_post_simple_event(VIV_VIDEO_EVENT_CREATE_PIPELINE,
 			handle->streamid, &handle->vfh, true);
 	}
@@ -1587,10 +1518,10 @@ static int vidioc_g_selection(struct file *file, void *fh,
 	switch (s->target) {
 	case V4L2_SEL_TGT_CROP_DEFAULT:
 	case V4L2_SEL_TGT_CROP_BOUNDS:
-		s->r.left = 0;
-		s->r.top = 0;
-		s->r.width = vdev->compose.width;
-		s->r.height =  vdev->compose.height;
+		s->r.left   = 0;
+		s->r.top    = 0;
+		s->r.width  = vdev->camera_mode.size.width;
+		s->r.height = vdev->camera_mode.size.height;
 		break;
 	case V4L2_SEL_TGT_CROP:
 		s->r = vdev->crop;
@@ -1598,10 +1529,10 @@ static int vidioc_g_selection(struct file *file, void *fh,
 
 	case V4L2_SEL_TGT_COMPOSE_DEFAULT:
 	case V4L2_SEL_TGT_COMPOSE_BOUNDS:
-		s->r.left = 0;
-		s->r.top = 0;
-		s->r.width = VIDEO_FRAME_MAX_WIDTH;
-		s->r.height = VIDEO_FRAME_MAX_HEIGHT;
+		s->r.left   = 0;
+		s->r.top    = 0;
+		s->r.width  = vdev->crop.width;
+		s->r.height = vdev->crop.height;
 		break;
 	case V4L2_SEL_TGT_COMPOSE:
 		s->r = vdev->compose;
@@ -1617,60 +1548,47 @@ static int vidioc_s_selection(struct file *file, void *fh,
 {
 	struct viv_video_file *handle = priv_to_handle(file->private_data);
 	struct viv_video_device *vdev = handle->vdev;
-	struct v4l2_rect *r;
 	struct v4l2_event event;
 	struct viv_video_event *v_event;
-	struct viv_rect *rect = (struct viv_rect *)handle->event_buf.va;
+	struct viv_rect * rect;
 	int rc;
-	int crop_flag = 1;
-
-	if (!rect)
-		return -ENOMEM;
 
 	if (s->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
 		return -EINVAL;
 
-	if (vdev->modeinfocount == 0) {
+	if (vdev->camera_status == 0) {
 		viv_post_simple_event(VIV_VIDEO_EVENT_CREATE_PIPELINE,
 			handle->streamid, &handle->vfh, true);
-	}
-
-	switch (s->target) {
-	case V4L2_SEL_TGT_CROP:
-		r = &vdev->crop;
-		break;
-	case V4L2_SEL_TGT_COMPOSE:
-		r = &vdev->compose;
-		break;
-	default:
-		return -EINVAL;
 	}
 
 	if (s->r.top < 0 || s->r.left < 0)
 		return -EINVAL;
 
-	if (s->r.width == 0 || s->r.height == 0 ||
-	    s->r.width > 3840 || s->r.height > 2160)
-		return -EINVAL;
-
-	if (s->target == V4L2_SEL_TGT_CROP) {
-		if (s->r.left + s->r.width > vdev->compose.width ||
-		    s->r.top + s->r.height > vdev->compose.height)
+	switch (s->target) {
+	case V4L2_SEL_TGT_CROP:
+		if (((s->r.left + s->r.width) < VIDEO_FRAME_MIN_WIDTH) ||
+		    ((s->r.top + s->r.width) > vdev->camera_mode.size.width) ||
+			((s->r.left + s->r.height) < VIDEO_FRAME_MIN_HEIGHT) ||
+		    ((s->r.top + s->r.height) > vdev->camera_mode.size.height))
 			return -EINVAL;
+		break;
+	case V4L2_SEL_TGT_COMPOSE:
+		if (((s->r.left + s->r.width) < VIDEO_FRAME_MIN_WIDTH) ||
+		    ((s->r.top + s->r.width) > VIDEO_FRAME_MAX_WIDTH) ||
+			((s->r.left + s->r.height) < VIDEO_FRAME_MIN_HEIGHT) ||
+		    ((s->r.top + s->r.height) > VIDEO_FRAME_MAX_HEIGHT))
+			return -EINVAL;
+		break;
+	default:
+		return -EINVAL;
 	}
 
-	if (s->target == V4L2_SEL_TGT_COMPOSE) {
-		if (vdev->crop.top == 0 &&
-			vdev->crop.left == 0 &&
-			vdev->crop.width == vdev->compose.width &&
-			vdev->crop.height == vdev->compose.height) {
-			crop_flag = 0;
-		}
-	}
-
-	rect->left = s->r.left;
-	rect->top = s->r.top;
-	rect->width = s->r.width;
+	rect = (struct viv_rect *)handle->event_buf.va;
+	if (!rect)
+		return -ENOMEM;
+	rect->left   = s->r.left;
+	rect->top    = s->r.top;
+	rect->width  = s->r.width;
 	rect->height = s->r.height;
 
 	v_event = (struct viv_video_event *)&event.u.data[0];
@@ -1685,14 +1603,16 @@ static int vidioc_s_selection(struct file *file, void *fh,
 		event.id = VIV_VIDEO_EVENT_SET_COMPOSE;
 	rc = viv_post_event(&event, &handle->vfh, true);
 	if (rc == 0) {
-		s->r.left = rect->left;
-		s->r.top = rect->top;
-		s->r.width = rect->width;
-		s->r.height = rect->height;
-		*r = s->r;
-		if (s->target == V4L2_SEL_TGT_COMPOSE && crop_flag == 0) {
-			vdev->crop.width = vdev->compose.width;
-			vdev->crop.height = vdev->compose.height;
+		if (s->target == V4L2_SEL_TGT_COMPOSE) {
+			vdev->compose.left   = rect->left;
+			vdev->compose.top    = rect->top;
+			vdev->compose.width  = rect->width;
+			vdev->compose.height = rect->height;
+		} else {
+			vdev->crop.left   = rect->left;
+			vdev->crop.top    = rect->top;
+			vdev->crop.width  = rect->width;
+			vdev->crop.height = rect->height;
 		}
 	}
 	return rc;

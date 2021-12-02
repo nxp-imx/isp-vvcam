@@ -114,8 +114,8 @@ void wdr3_hw_init(struct isp_ic_dev *dev)
 
 	pr_info("enter %s\n", __func__);
 
-	width = isp_read_reg(dev, REG_ADDR(isp_acq_h_size));
-	height = isp_read_reg(dev, REG_ADDR(isp_acq_v_size));
+	width = isp_read_reg(dev, REG_ADDR(isp_out_h_size));
+	height = isp_read_reg(dev, REG_ADDR(isp_out_v_size));
 
 	pr_info("wdr3 res: %d %d \n", width, height);
 	/* firware initilization */
@@ -473,8 +473,8 @@ int isp_s_wdr3(struct isp_ic_dev *dev)
 #else
 	struct isp_wdr3_context *wdr3 = &dev->wdr3;
 	u32 isp_wdr3_strength = isp_read_reg(dev, REG_ADDR(isp_wdr3_strength));
-	u32 width = isp_read_reg(dev, REG_ADDR(isp_acq_h_size));
-	u32 height = isp_read_reg(dev, REG_ADDR(isp_acq_v_size));
+	u32 width = isp_read_reg(dev, REG_ADDR(isp_out_h_size));
+	u32 height = isp_read_reg(dev, REG_ADDR(isp_out_v_size));
 	width /= 32;
 	height /= 32;
 
