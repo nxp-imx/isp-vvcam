@@ -13,9 +13,27 @@ find -name *.o.cmd | xargs rm -fv
 cd -
 
 cd vvcam/v4l2
+if [ "$1" != "" ]; then
+	#echo "Arg 1 is BUILD_MODE: native or v4l2 ->"
+	#echo $1
+	BUILD_MODE=$1
+else
+	BUILD_MODE=v4l2
+fi
+
+BUILD_MODE=`echo $BUILD_MODE| tr '[:upper:]' '[:lower:]'`
+echo "BUILD_MODE: $BUILD_MODE"
 #make -f 1802_chip.mk clean
 make KERNEL_SRC=$KERNEL_SOURCE_DIR clean
-make KERNEL_SRC=$KERNEL_SOURCE_DIR ENABLE_IRQ=yes
+if [ "$BUILD_MODE" = 'v4l2' ]
+then
+   echo "v4l2 mode build --------------------->"
+   make KERNEL_SRC=$KERNEL_SOURCE_DIR ENABLE_IRQ=yes
+else
+   echo "native mode build --------------------->"
+   make KERNEL_SRC=$KERNEL_SOURCE_DIR ENABLE_IRQ=no
+fi
+
 cd -
 
 rm -rf modules
