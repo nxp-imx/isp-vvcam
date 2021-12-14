@@ -29,10 +29,12 @@ make -j4
 
 (2)编译vvcam
 DWE disable IRQ:
-make VERSION=ISP8000NANO_V1802 KERNEL_SRC=$(arm_kernel_src) ENABLE_IRQ=no
+cd verisilicon_sw_isp_vvcam
+./build-all-vvcam.sh native
 
 DWE enable IRQ:
-make VERSION=ISP8000NANO_V1802 KERNEL_SRC=$(arm_kernel_src) ENABLE_IRQ=yes
+cd verisilicon_sw_isp_vvcam
+./build-all-vvcam.sh
 
 (3)加载KO
 ov2775 insmod:
