@@ -1155,10 +1155,8 @@ static int vidioc_s_fmt_vid_cap(struct file *file, void *priv,
 	if (f->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
 		return -EINVAL;
 
-	if (vdev->camera_status == 0) {
-		viv_post_simple_event(VIV_VIDEO_EVENT_CREATE_PIPELINE,
-			handle->streamid, &handle->vfh, true);
-	}
+	viv_post_simple_event(VIV_VIDEO_EVENT_CREATE_PIPELINE,
+		handle->streamid, &handle->vfh, true);
 
 	ret = vidioc_try_fmt_vid_cap(file, priv, f);
 
