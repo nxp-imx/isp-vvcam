@@ -1,6 +1,6 @@
 #the device/fsl/common/build/kernel.mk should be included before this file
 
-KERNEL_DIR := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ
+KERNEL_SRC := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ
 TARGET_ARCH := $(TARGET_KERNEL_ARCH)
 VVCAM_CROSS_COMPILE := aarch64-linux-gnu-
 
@@ -13,7 +13,7 @@ ARCH_TYPE ?= $(TARGET_ARCH)
 VVCAM_KERNELENVSH := $(VVCAM_OUT)/kernelenv.sh
 $(VVCAM_KERNELENVSH):
 	mkdir -p $(VVCAM_OUT)
-	echo 'export KERNEL_DIR=$(KERNEL_DIR)' > $(VVCAM_KERNELENVSH)
+	echo 'export KERNEL_SRC=$(KERNEL_SRC)' > $(VVCAM_KERNELENVSH)
 	echo 'export CROSS_COMPILE=$(VVCAM_CROSS_COMPILE)' >> $(VVCAM_KERNELENVSH)
 	echo 'export ARCH_TYPE=$(ARCH_TYPE)' >> $(VVCAM_KERNELENVSH)
 
