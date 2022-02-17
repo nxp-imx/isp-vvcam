@@ -2107,7 +2107,12 @@ static int viv_video_probe(struct platform_device *pdev)
 			if (WARN_ON(rc < 0))
 				goto register_fail;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 16, 0)
+			v4l2_async_nf_init(&vdev->subdev_notifier);
+#else
 			v4l2_async_notifier_init(&vdev->subdev_notifier);
+#endif
+
 			vdev->subdev_notifier.ops = &sd_async_notifier_ops;
 #endif
 
@@ -2124,7 +2129,12 @@ static int viv_video_probe(struct platform_device *pdev)
 				if (nodes[j].id == video_id) {
 					switch (nodes[j].match_type) {
 					case V4L2_ASYNC_MATCH_FWNODE:
-#if LINUX_VERSION_CODE > KERNEL_VERSION(5, 12, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 16, 0)
+						asd = __v4l2_async_nf_add_fwnode(
+							&vdev->subdev_notifier,
+							of_fwnode_handle(nodes[j].node),
+							sizeof(struct v4l2_async_subdev));
+#elif LINUX_VERSION_CODE > KERNEL_VERSION(5, 12, 0)
 						asd = __v4l2_async_notifier_add_fwnode_subdev(
 							&vdev->subdev_notifier,
 							of_fwnode_handle(nodes[j].node),
@@ -2153,8 +2163,13 @@ static int viv_video_probe(struct platform_device *pdev)
 				}
 			}
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 16, 0)
+			rc = v4l2_async_nf_register(vdev->v4l2_dev,
+					&vdev->subdev_notifier);
+#else
 			rc = v4l2_async_notifier_register(vdev->v4l2_dev,
 					&vdev->subdev_notifier);
+#endif
 			if (WARN_ON(rc < 0))
 				goto register_fail;
 #else
@@ -2206,8 +2221,14 @@ static int viv_video_remove(struct platform_device *pdev)
 			continue;
 #ifdef ENABLE_IRQ
 		media_entity_cleanup(&vdev->video->entity);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 16, 0)
+		v4l2_async_nf_cleanup(&vdev->subdev_notifier);
+		v4l2_async_nf_unregister(&vdev->subdev_notifier);
+#else
 		v4l2_async_notifier_cleanup(&vdev->subdev_notifier);
 		v4l2_async_notifier_unregister(&vdev->subdev_notifier);
+#endif
+
 		v4l2_device_unregister(vdev->v4l2_dev);
 		kfree(vdev->v4l2_dev);
 #endif
