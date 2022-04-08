@@ -1330,13 +1330,13 @@ static const struct dev_pm_ops os08a20_pm_ops = {
 };
 
 static const struct i2c_device_id os08a20_id[] = {
-	{"ov2775", 0},
+	{"os08a20", 0},
 	{},
 };
 MODULE_DEVICE_TABLE(i2c, os08a20_id);
 
 static const struct of_device_id os08a20_of_match[] = {
-	{ .compatible = "ovti,ov2775" },
+	{ .compatible = "ovti,os08a20" },
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, os08a20_of_match);
@@ -1344,7 +1344,7 @@ MODULE_DEVICE_TABLE(of, os08a20_of_match);
 static struct i2c_driver os08a20_i2c_driver = {
 	.driver = {
 		.owner = THIS_MODULE,
-		.name  = "ov2775",
+		.name  = "os08a20",
 		.pm = &os08a20_pm_ops,
 		.of_match_table	= os08a20_of_match,
 	},
