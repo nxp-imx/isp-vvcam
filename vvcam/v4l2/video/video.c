@@ -936,8 +936,8 @@ static long private_ioctl(struct file *file, void *fh,
 		break;
 #endif
 	case VIV_VIDIOC_BUFFER_ALLOC: {
-		struct ext_buf_info *ext_buf = (struct ext_buf_info *)arg;
 #ifdef CONFIG_VIDEOBUF2_DMA_CONTIG
+		struct ext_buf_info *ext_buf = (struct ext_buf_info *)arg;
 		struct ext_dma_buf *edb = kzalloc(sizeof(*edb), GFP_KERNEL);
 
 		pr_debug("priv ioctl VIV_VIDIOC_BUFFER_ALLOC\n");
@@ -960,8 +960,8 @@ static long private_ioctl(struct file *file, void *fh,
 		break;
 	}
 	case VIV_VIDIOC_BUFFER_FREE: {
-		struct ext_buf_info *ext_buf = (struct ext_buf_info *)arg;
 #ifdef CONFIG_VIDEOBUF2_DMA_CONTIG
+		struct ext_buf_info *ext_buf = (struct ext_buf_info *)arg;
 		struct ext_dma_buf *b, *edb = NULL;
 
 		pr_debug("priv ioctl VIV_VIDIOC_BUFFER_FREE\n");
