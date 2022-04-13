@@ -173,9 +173,16 @@ struct viv_caps_dump_buf_s {
 
 struct viv_caps_mode_info_s{
 	unsigned int index;
+	unsigned int bounds_width;
+	unsigned int bounds_height;
+	unsigned int top;
+	unsigned int left;
 	unsigned int width;
 	unsigned int height;
 	unsigned int hdr_mode;
+	unsigned int stitching_mode;
+	unsigned int bit_width;
+	unsigned int bayer_pattern;
 	unsigned int fps;
 };
 

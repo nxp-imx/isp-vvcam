@@ -799,8 +799,9 @@ static int os08a20_set_fmt(struct v4l2_subdev *sd,
 		return -EINVAL;
 	}
 
+	os08a20_write_reg(sensor, 0x100, 0x00);
 	os08a20_write_reg(sensor, 0x103, 0x01);
-	msleep(10);
+	msleep(20);
 
 	ret = os08a20_write_reg_arry(sensor,
 		(struct vvcam_sccb_data_s *)sensor->cur_mode.preg_data,
@@ -1329,13 +1330,13 @@ static const struct dev_pm_ops os08a20_pm_ops = {
 };
 
 static const struct i2c_device_id os08a20_id[] = {
-	{"os08a20", 0},
+	{"ov2775", 0},
 	{},
 };
 MODULE_DEVICE_TABLE(i2c, os08a20_id);
 
 static const struct of_device_id os08a20_of_match[] = {
-	{ .compatible = "ovti,os08a20" },
+	{ .compatible = "ovti,ov2775" },
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, os08a20_of_match);
@@ -1343,7 +1344,7 @@ MODULE_DEVICE_TABLE(of, os08a20_of_match);
 static struct i2c_driver os08a20_i2c_driver = {
 	.driver = {
 		.owner = THIS_MODULE,
-		.name  = "os08a20",
+		.name  = "ov2775",
 		.pm = &os08a20_pm_ops,
 		.of_match_table	= os08a20_of_match,
 	},

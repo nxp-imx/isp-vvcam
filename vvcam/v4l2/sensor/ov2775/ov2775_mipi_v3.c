@@ -35,6 +35,7 @@
 #include "ov2775_regs_1080p_hdr.h"
 #include "ov2775_regs_1080p_hdr_low_freq.h"
 #include "ov2775_regs_1080p_native_hdr.h"
+#include "ov2775_regs_1080p_hdr_2dol.h"
 
 #define OV2775_VOLTAGE_ANALOG			2800000
 #define OV2775_VOLTAGE_DIGITAL_CORE		1500000
@@ -81,6 +82,8 @@ struct ov2775 {
 	struct mutex lock;
 	u32 stream_status;
 	u32 resume_status;
+	u32 hcg_again;
+	u32 hcg_dgain;
 };
 
 static struct vvcam_mode_info_s pov2775_mode_info[] = {
@@ -157,7 +160,7 @@ static struct vvcam_mode_info_s pov2775_mode_info[] = {
 
 			.max_long_again = 8 * 1024 * DCG_CONVERSION_GAIN,
 			.min_long_again = 1 * 1024 * DCG_CONVERSION_GAIN,
-			.max_long_dgain = 4 * 1024,
+			.max_long_dgain = 3 * 1024,
 			.min_long_dgain = 2 * 1024,
 
 			.max_again      = 8 * 1024,
@@ -219,7 +222,7 @@ static struct vvcam_mode_info_s pov2775_mode_info[] = {
 
 			.max_long_again = 8 * 1024 * DCG_CONVERSION_GAIN,
 			.min_long_again = 1 * 1024 * DCG_CONVERSION_GAIN,
-			.max_long_dgain = 4 * 1024,
+			.max_long_dgain = 3 * 1024,
 			.min_long_dgain = 2 * 1024,
 
 			.max_again      = 8 * 1024 ,
@@ -290,6 +293,62 @@ static struct vvcam_mode_info_s pov2775_mode_info[] = {
 		},
 		.preg_data      = ov2775_init_setting_1080p,
 		.reg_data_count = ARRAY_SIZE(ov2775_init_setting_1080p),
+	},
+	{
+		.index          = 4,
+		.size           = {
+			.bounds_width  = 1920,
+			.bounds_height = 1080,
+			.top           = 0,
+			.left          = 0,
+			.width         = 1920,
+			.height        = 1080,
+		},
+		.hdr_mode       = SENSOR_MODE_HDR_STITCH,
+		.stitching_mode = SENSOR_STITCHING_DUAL_DCG_NOWAIT,
+		.bit_width      = 12,
+		.data_compress  = {
+			.enable = 0,
+		},
+		.bayer_pattern  = BAYER_BGGR,
+		.ae_info = {
+			.def_frm_len_lines        = 0x466,
+			.curr_frm_len_lines       = 0x466,
+			.one_line_exp_time_ns     = 59167,
+
+			.max_integration_line     = 0x466 - 4,
+			.min_integration_line     = 1,
+
+			.max_long_again = 8 * 1024 * DCG_CONVERSION_GAIN,
+			.min_long_again = 1 * 1024 * DCG_CONVERSION_GAIN,
+			.max_long_dgain = 4 * 1024,
+			.min_long_dgain = 2 * 1024,
+
+			.max_again      = 8 * 1024,
+			.min_again      = 2 * 1024,
+			.max_dgain      = 4 * 1024,
+			.min_dgain      = 1.5 * 1024,
+
+			.start_exposure  = 3 * 400 * 1024,
+
+			.gain_step       = 4,
+			.cur_fps         = 30 * 1024,
+			.max_fps         = 30 * 1024,
+			.min_fps         = 5 * 1024,
+			.min_afps        = 5 * 1024,
+			.hdr_ratio       = {
+				.ratio_l_s = 8 * 1024,
+				.ratio_s_vs = 8 * 1024,
+				.accuracy = 1024,
+			},
+			.int_update_delay_frm = 1,
+			.gain_update_delay_frm = 1,
+		},
+		.mipi_info = {
+			.mipi_lane = 4,
+		},
+		.preg_data = ov2775_init_setting_1080p_hdr_2dol,
+		.reg_data_count = ARRAY_SIZE(ov2775_init_setting_1080p_hdr_2dol),
 	},
 };
 
@@ -575,10 +634,8 @@ static int ov2775_set_vsexp(struct ov2775 *sensor, u32 exp)
 
 static int ov2775_set_lgain(struct ov2775 *sensor, u32 gain)
 {
-	int ret = 0;
 	u32 again = 0;
 	u32 dgain = 0;
-	u8 reg_val;
 
 	if (gain < ((2 * DCG_CONVERSION_GAIN) << 10)){
 		gain = (2 * DCG_CONVERSION_GAIN) << 10;
@@ -595,21 +652,9 @@ static int ov2775_set_lgain(struct ov2775 *sensor, u32 gain)
 	}
 	dgain = (gain * 0x100) / ((( 1<< again) * DCG_CONVERSION_GAIN) << 10);
 
-	ret = ov2775_read_reg(sensor, 0x30bb, &reg_val);
-	reg_val &= ~0x03;
-	reg_val |= again  & 0x03;
-
-	ret  = ov2775_write_reg(sensor, 0x3467, 0x00);
-	ret |= ov2775_write_reg(sensor, 0x3464, 0x04);
-
-	ret |= ov2775_write_reg(sensor, 0x30bb, reg_val);
-	ret |= ov2775_write_reg(sensor, 0x315a, (dgain>>8) & 0xff);
-	ret |= ov2775_write_reg(sensor, 0x315b, dgain & 0xff);
-
-	ret |= ov2775_write_reg(sensor, 0x3464, 0x14);
-	ret |= ov2775_write_reg(sensor, 0x3467, 0x01);
-
-	return ret;
+	sensor->hcg_again = again;
+	sensor->hcg_dgain = dgain;
+	return 0;
 }
 
 static int ov2775_set_gain(struct ov2775 *sensor, u32 gain)
@@ -650,6 +695,10 @@ static int ov2775_set_gain(struct ov2775 *sensor, u32 gain)
 		ret |= ov2775_write_reg(sensor, 0x3467, 0x01);
 	} else {
 		ret = ov2775_read_reg(sensor, 0x30bb, &reg_val);
+
+		reg_val &= ~0x03;
+		reg_val |= sensor->hcg_again  & 0x03;
+
 		reg_val &= ~(0x03 << 2);
 		reg_val |= (again & 0x03) << 2;
 
@@ -657,6 +706,10 @@ static int ov2775_set_gain(struct ov2775 *sensor, u32 gain)
 		ret |= ov2775_write_reg(sensor, 0x3464, 0x04);
 
 		ret |= ov2775_write_reg(sensor, 0x30bb, reg_val);
+
+		ret |= ov2775_write_reg(sensor, 0x315a, (sensor->hcg_dgain >> 8) & 0xff);
+		ret |= ov2775_write_reg(sensor, 0x315b, sensor->hcg_dgain & 0xff);
+
 		ret |= ov2775_write_reg(sensor, 0x315c, (dgain >> 8) & 0xff);
 		ret |= ov2775_write_reg(sensor, 0x315d, dgain & 0xff);
 
@@ -1047,6 +1100,7 @@ static int ov2775_s_stream(struct v4l2_subdev *sd, int enable)
 		ov2775_write_reg(sensor, 0x3012, 0x01);
 	} else  {
 		ov2775_write_reg(sensor, 0x3012, 0x00);
+		msleep(100);
 		/* if the sensor re-enter streaming from standby mode
 		* all registers starting with 0x7000 must be resent
 		* before setting 0x3012[0]=1.
@@ -1158,8 +1212,9 @@ static int ov2775_set_fmt(struct v4l2_subdev *sd,
 		return -EINVAL;
 	}
 
+	ov2775_write_reg(sensor, 0x3012, 0x00);
 	ov2775_write_reg(sensor, 0x3013, 0x01);
-	msleep(10);
+	msleep(20);
 
 	ret = ov2775_write_reg_arry(sensor,
 		(struct vvcam_sccb_data_s *)sensor->cur_mode.preg_data,

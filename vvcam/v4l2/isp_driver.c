@@ -225,6 +225,7 @@ irqreturn_t isp_hw_isr_reg_update(int irq, void *data)
 
 	if (isp_mis) {
 		if (isp_mis & MRV_ISP_MIS_FRAME_MASK) {
+			awb_set_gain(dev);
 			if (dev->flt.changed) {
 				isp_s_flt(dev);
 			}

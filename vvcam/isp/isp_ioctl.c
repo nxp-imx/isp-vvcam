@@ -583,10 +583,12 @@ int isp_disable_awb(struct isp_ic_dev *dev)
 int isp_s_awb(struct isp_ic_dev *dev)
 {
 	struct isp_awb_context awb = *(&dev->awb);
-	u32 gain_data = 0;
 	u32 isp_awb_thresh = 0;
 	u32 isp_awb_ref = 0;
 	u32 isp_awb_prop = 0;
+#ifdef __KERNEL__
+	u32 isp_ctrl;
+#endif
 
 	/* isp_info("enter %s\n", __func__); */
 	isp_awb_prop = isp_read_reg(dev, REG_ADDR(isp_awb_prop));
@@ -628,16 +630,29 @@ int isp_s_awb(struct isp_ic_dev *dev)
 			  (MRV_ISP_AWB_H_SIZE_MASK & awb.window.width));
 	isp_write_reg(dev, REG_ADDR(isp_awb_v_size),
 			  (MRV_ISP_AWB_V_SIZE_MASK & awb.window.height));
+#ifdef __KERNEL__
+	isp_ctrl = isp_read_reg(dev, REG_ADDR(isp_ctrl));
+	if (!(isp_ctrl & MRV_ISP_ISP_ENABLE_MASK)) {
+		awb_set_gain(dev);
+	}
+#else
+	awb_set_gain(dev);
+#endif
+	return 0;
+}
 
-	gain_data = 0UL;
-	REG_SET_SLICE(gain_data, MRV_ISP_AWB_GAIN_R, awb.gain_r);
-	REG_SET_SLICE(gain_data, MRV_ISP_AWB_GAIN_B, awb.gain_b);
-	isp_write_reg(dev, REG_ADDR(isp_awb_gain_rb), gain_data);
+int awb_set_gain(struct isp_ic_dev *dev)
+{
+	struct isp_awb_context awb = *(&dev->awb);
+	u32 wb_gain_rb_reg = 0;
+	u32 wb_gain_g_reg = 0;
+	REG_SET_SLICE(wb_gain_rb_reg, MRV_ISP_AWB_GAIN_R, awb.gain_r);
+	REG_SET_SLICE(wb_gain_rb_reg, MRV_ISP_AWB_GAIN_B, awb.gain_b);
+	isp_write_reg(dev, REG_ADDR(isp_awb_gain_rb), wb_gain_rb_reg);
 
-	gain_data = 0UL;
-	REG_SET_SLICE(gain_data, MRV_ISP_AWB_GAIN_GR, awb.gain_gr);
-	REG_SET_SLICE(gain_data, MRV_ISP_AWB_GAIN_GB, awb.gain_gb);
-	isp_write_reg(dev, REG_ADDR(isp_awb_gain_g), gain_data);
+	REG_SET_SLICE(wb_gain_g_reg, MRV_ISP_AWB_GAIN_GR, awb.gain_gr);
+	REG_SET_SLICE(wb_gain_g_reg, MRV_ISP_AWB_GAIN_GB, awb.gain_gb);
+	isp_write_reg(dev, REG_ADDR(isp_awb_gain_g), wb_gain_g_reg);
 	return 0;
 }
 

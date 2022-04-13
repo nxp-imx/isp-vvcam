@@ -231,9 +231,7 @@ int dwe_read_irq(struct dwe_ic_dev *dev, u32 *ret)
 int dwe_start(struct dwe_ic_dev *dev)
 {
 #if defined(__KERNEL__) && defined(ENABLE_IRQ)
-	dev->src = NULL;
-	dev->dst = NULL;
-	dev->error = BUF_ERR_UNDERFLOW;
+	dwe_write_reg(dev, DEWARP_CTRL, 0x4C800001);
 #endif
 	return 0;
 }
@@ -241,6 +239,7 @@ int dwe_start(struct dwe_ic_dev *dev)
 int dwe_stop(struct dwe_ic_dev *dev)
 {
 	dwe_enable_bus(dev, 0);
+	dwe_write_reg(dev, DEWARP_CTRL, 0x4C800000);
 	dwe_disable_irq(dev);
 	return 0;
 }

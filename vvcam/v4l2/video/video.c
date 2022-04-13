@@ -936,8 +936,8 @@ static long private_ioctl(struct file *file, void *fh,
 		break;
 #endif
 	case VIV_VIDIOC_BUFFER_ALLOC: {
-#ifdef CONFIG_VIDEOBUF2_DMA_CONTIG
 		struct ext_buf_info *ext_buf = (struct ext_buf_info *)arg;
+#ifdef CONFIG_VIDEOBUF2_DMA_CONTIG
 		struct ext_dma_buf *edb = kzalloc(sizeof(*edb), GFP_KERNEL);
 
 		pr_debug("priv ioctl VIV_VIDIOC_BUFFER_ALLOC\n");
@@ -960,8 +960,8 @@ static long private_ioctl(struct file *file, void *fh,
 		break;
 	}
 	case VIV_VIDIOC_BUFFER_FREE: {
-#ifdef CONFIG_VIDEOBUF2_DMA_CONTIG
 		struct ext_buf_info *ext_buf = (struct ext_buf_info *)arg;
+#ifdef CONFIG_VIDEOBUF2_DMA_CONTIG
 		struct ext_dma_buf *b, *edb = NULL;
 
 		pr_debug("priv ioctl VIV_VIDIOC_BUFFER_FREE\n");
@@ -1621,112 +1621,6 @@ static int vidioc_s_selection(struct file *file, void *fh,
 	return rc;
 }
 
-int viv_gen_g_ctrl(struct v4l2_ctrl *ctrl)
-{
-	struct viv_custom_ctrls *cc =
-		container_of(ctrl->handler, struct viv_custom_ctrls, handler);
-	struct viv_video_device *vdev =
-		container_of(cc, struct viv_video_device, ctrls);
-	struct v4l2_event event;
-	struct viv_video_event *v_event;
-	struct v4l2_ctrl_data *p_data;
-	struct v4l2_ext_control *p_ctrl;
-
-	pr_debug("%s:ctrl->id=0x%x\n", __func__, ctrl->id);
-	memset(&event, 0, sizeof(event));
-	v_event = (struct viv_video_event *)&event.u.data[0];
-	v_event->file = NULL;
-	v_event->sync = true;
-	v_event->addr = vdev->ctrls.buf_pa;
-	event.type = VIV_VIDEO_EVENT_TYPE;
-	event.id = VIV_VIDEO_EVENT_EXTCTRL2;
-
-	if(!video_event_subscribed(vdev->video, &event, RETRY_TIMES_MAX)) {
-		pr_err("%s: unsubscribed event id =%d type=0x%08x",
-				__func__, event.id, event.type);
-		return -EINVAL;
-	}
-
-	p_data = (struct v4l2_ctrl_data *)vdev->ctrls.buf_va;
-	if (unlikely(!p_data))
-		return -ENOMEM;
-
-	memset(p_data, 0, sizeof(*p_data));
-	p_data->dir = V4L2_CTRL_GET;
-	p_data->ctrls.count = 1;
-	p_ctrl = nextof(p_data, struct v4l2_ext_control *);
-	p_ctrl->id = ctrl->id;
-
-	reinit_completion(&vdev->ctrls.wait);
-
-	v4l2_event_queue(vdev->video, &event);
-
-	if (wait_for_completion_timeout(&vdev->ctrls.wait,
-			msecs_to_jiffies(VIV_VIDEO_EVENT_TIMOUT_MS)) == 0) {
-		pr_err("connecting to server timed out (g)!");
-		*ctrl->p_new.p_s32 = *ctrl->p_cur.p_s32;
-		return 0;
-	}
-
-	if (p_ctrl->id == ctrl->id && !p_data->ret) {
-		*ctrl->p_new.p_s32 = p_ctrl->value;
-		return 0;
-	}
-	return -EINVAL;
-}
-
-int viv_gen_s_ctrl(struct v4l2_ctrl *ctrl)
-{
-	struct viv_custom_ctrls *cc =
-		container_of(ctrl->handler, struct viv_custom_ctrls, handler);
-	struct viv_video_device *vdev =
-		container_of(cc, struct viv_video_device, ctrls);
-	struct v4l2_event event;
-	struct viv_video_event *v_event;
-	struct v4l2_ctrl_data *p_data;
-	struct v4l2_ext_control *p_ctrl;
-
-	pr_debug("%s:ctrl->id=0x%x\n", __func__, ctrl->id);
-	memset(&event, 0, sizeof(event));
-	v_event = (struct viv_video_event *)&event.u.data[0];
-	v_event->file = NULL;
-	v_event->sync = true;
-	v_event->addr = vdev->ctrls.buf_pa;
-	event.type = VIV_VIDEO_EVENT_TYPE;
-	event.id = VIV_VIDEO_EVENT_EXTCTRL2;
-
-	if(!video_event_subscribed(vdev->video, &event, RETRY_TIMES_MAX)) {
-		pr_err("%s: unsubscribed event id =%d type=0x%08x",
-				__func__, event.id, event.type);
-		return -EINVAL;
-	}
-
-	p_data = (struct v4l2_ctrl_data *)vdev->ctrls.buf_va;
-	if (unlikely(!p_data))
-		return -ENOMEM;
-
-	memset(p_data, 0, sizeof(*p_data));
-	p_data->dir = V4L2_CTRL_SET;
-	p_data->ctrls.count = 1;
-	p_ctrl = nextof(p_data, struct v4l2_ext_control *);
-	p_ctrl->id = ctrl->id;
-	p_ctrl->value = *ctrl->p_new.p_s32;
-
-	reinit_completion(&vdev->ctrls.wait);
-
-	v4l2_event_queue(vdev->video, &event);
-
-	if (wait_for_completion_timeout(&vdev->ctrls.wait,
-			msecs_to_jiffies(VIV_VIDEO_EVENT_TIMOUT_MS)) == 0) {
-		pr_err("connecting to server timed out (s)!");
-		return 0;
-	}
-
-	if (p_ctrl->id == ctrl->id && !p_data->ret)
-		return 0;
-	return -EINVAL;
-}
-
 static const struct v4l2_ioctl_ops video_ioctl_ops = {
 	.vidioc_querycap = video_querycap,
 	.vidioc_enum_fmt_vid_cap = vidioc_enum_fmt_vid_cap,
@@ -1843,14 +1737,15 @@ static int viv_s_ctrl(struct v4l2_ctrl *ctrl)
 		container_of(cc, struct viv_video_device, ctrls);
 	int ret = -1;
 	char *szbuf = NULL;
-	unsigned long timeout =
-			msecs_to_jiffies(VIV_VIDEO_EVENT_TIMOUT_MS);
+
+	if (!vdev->ctrls.buf_va)
+		return -EINVAL;
 
 	switch (ctrl->id) {
 	case V4L2_CID_VIV_STRING: {
 		ret = 0;
 		szbuf = (char *)vdev->ctrls.buf_va;
-		if (!ctrl->p_new.p_char || !szbuf)
+		if (!ctrl->p_new.p_char)
 			return -EINVAL;
 		strcpy(szbuf, ctrl->p_new.p_char);
 		v_event = (struct viv_video_event *)&event.u.data[0];
@@ -1871,7 +1766,7 @@ static int viv_s_ctrl(struct v4l2_ctrl *ctrl)
 
 		v4l2_event_queue(vdev->video, &event);
 
-		if (!wait_for_completion_timeout(&vdev->ctrls.wait, timeout))
+		if (!wait_for_completion_timeout(&vdev->ctrls.wait, msecs_to_jiffies(VIV_VIDEO_EVENT_TIMOUT_MS)))
 			ret = -ETIMEDOUT;
 		strcpy(ctrl->p_new.p_char, szbuf);
 		break;
@@ -1884,13 +1779,15 @@ static const struct v4l2_ctrl_ops viv_ctrl_ops = {
 	.s_ctrl = viv_s_ctrl,
 };
 
-static const struct v4l2_ctrl_config viv_ext_ctrl = {
-	.ops = &viv_ctrl_ops,
-	.id = V4L2_CID_VIV_STRING,
-	.name = "viv_ext_ctrl",
-	.type = V4L2_CTRL_TYPE_STRING,
-	.max = VIV_JSON_BUFFER_SIZE-1,
-	.step = 1,
+const struct v4l2_ctrl_config viv_video_ctrls[] = {
+	{
+		.ops = &viv_ctrl_ops,
+		.id = V4L2_CID_VIV_STRING,
+		.type = V4L2_CTRL_TYPE_STRING,
+		.name = "viv_ext_ctrl",
+		.max = VIV_JSON_BUFFER_SIZE-1,
+		.step = 1,
+	},
 };
 
 #ifdef ENABLE_IRQ
@@ -2172,10 +2069,10 @@ static int viv_video_probe(struct platform_device *pdev)
 			if (WARN_ON(rc < 0))
 				goto register_fail;
 			sprintf(vdev->video->name, "viv_v4l2%d", video_id);
-			v4l2_ctrl_handler_init(&vdev->ctrls.handler, 1);
-			vdev->ctrls.request = v4l2_ctrl_new_custom(&vdev->ctrls.handler,
-					&viv_ext_ctrl, NULL);
-			create_controls(&vdev->ctrls.handler);
+
+			v4l2_ctrl_handler_init(&vdev->ctrls.handler,  2 + ARRAY_SIZE(viv_video_ctrls));
+			vdev->ctrls.request = v4l2_ctrl_new_custom(&vdev->ctrls.handler, &viv_video_ctrls[0], NULL);
+			vdev->video->ctrl_handler = &vdev->ctrls.handler;
 
 			vdev->video->release = video_device_release;
 			vdev->video->fops = &video_ops;
@@ -2186,7 +2083,6 @@ static int viv_video_probe(struct platform_device *pdev)
 #else
 			vdev->video->vfl_type = VFL_TYPE_GRABBER;
 #endif
-			vdev->video->ctrl_handler = &vdev->ctrls.handler;
 #if LINUX_VERSION_CODE > KERNEL_VERSION(5, 0, 0)
 			vdev->video->device_caps =
 					V4L2_CAP_VIDEO_CAPTURE | V4L2_CAP_STREAMING;
@@ -2211,12 +2107,7 @@ static int viv_video_probe(struct platform_device *pdev)
 			if (WARN_ON(rc < 0))
 				goto register_fail;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 16, 0)
-			v4l2_async_nf_init(&vdev->subdev_notifier);
-#else
 			v4l2_async_notifier_init(&vdev->subdev_notifier);
-#endif
-
 			vdev->subdev_notifier.ops = &sd_async_notifier_ops;
 #endif
 
@@ -2233,12 +2124,7 @@ static int viv_video_probe(struct platform_device *pdev)
 				if (nodes[j].id == video_id) {
 					switch (nodes[j].match_type) {
 					case V4L2_ASYNC_MATCH_FWNODE:
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 16, 0)
-						asd = __v4l2_async_nf_add_fwnode(
-							&vdev->subdev_notifier,
-							of_fwnode_handle(nodes[j].node),
-							sizeof(struct v4l2_async_subdev));
-#elif LINUX_VERSION_CODE > KERNEL_VERSION(5, 12, 0)
+#if LINUX_VERSION_CODE > KERNEL_VERSION(5, 12, 0)
 						asd = __v4l2_async_notifier_add_fwnode_subdev(
 							&vdev->subdev_notifier,
 							of_fwnode_handle(nodes[j].node),
@@ -2267,13 +2153,8 @@ static int viv_video_probe(struct platform_device *pdev)
 				}
 			}
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 16, 0)
-			rc = v4l2_async_nf_register(vdev->v4l2_dev,
-					&vdev->subdev_notifier);
-#else
 			rc = v4l2_async_notifier_register(vdev->v4l2_dev,
 					&vdev->subdev_notifier);
-#endif
 			if (WARN_ON(rc < 0))
 				goto register_fail;
 #else
@@ -2325,14 +2206,8 @@ static int viv_video_remove(struct platform_device *pdev)
 			continue;
 #ifdef ENABLE_IRQ
 		media_entity_cleanup(&vdev->video->entity);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 16, 0)
-		v4l2_async_nf_cleanup(&vdev->subdev_notifier);
-		v4l2_async_nf_unregister(&vdev->subdev_notifier);
-#else
 		v4l2_async_notifier_cleanup(&vdev->subdev_notifier);
 		v4l2_async_notifier_unregister(&vdev->subdev_notifier);
-#endif
-
 		v4l2_device_unregister(vdev->v4l2_dev);
 		kfree(vdev->v4l2_dev);
 #endif

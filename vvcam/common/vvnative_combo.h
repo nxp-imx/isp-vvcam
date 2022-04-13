@@ -35,7 +35,7 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
@@ -50,77 +50,29 @@
  * version of this file.
  *
  *****************************************************************************/
-#ifndef _DWE_DEV_H
-#define _DWE_DEV_H
+#ifndef _VVNATIVE_COMBO_H_
+#define _VVNATIVE_COMBO_H_
 
-#include "vvdefs.h"
+long vvcam_combo_isp_ioctl(struct vvcam_isp_dev *vvcam_isp_drv,unsigned int cmd, void *args);
+long vvcam_combo_csi_ioctl(struct vvcam_isp_dev *vvcam_isp_drv,unsigned int cmd, void *args);
+long vvcam_combo_sensor_ioctl(struct vvcam_isp_dev *vvcam_isp_drv,unsigned int cmd, void *args);
+long vvcam_combo_dwe_ioctl(struct vvcam_isp_dev *vvcam_isp_drv,unsigned int cmd, void *args);
+long vvcam_combo_vse_ioctl(struct vvcam_isp_dev *vvcam_isp_drv,unsigned int cmd, void *args);
+long vvcam_combo_soc_ioctl(struct vvcam_isp_dev *vvcam_isp_drv,unsigned int cmd, void *args);
 
-#ifndef __KERNEL__
-#define copy_from_user(a, b, c) dwe_copy_data(a, b, c)
-#define copy_to_user(a, b, c) dwe_copy_data(a, b, c)
+int vvcam_combo_isp_init(struct vvcam_isp_dev *vvcam_isp_drv);
+int vvcam_combo_csi_init(struct vvcam_isp_dev *vvcam_isp_drv);
+int vvcam_combo_sensor_init(struct vvcam_isp_dev *vvcam_isp_drv);
+int vvcam_combo_dwe_init(struct vvcam_isp_dev *vvcam_isp_drv);
+int vvcam_combo_vse_init(struct vvcam_isp_dev *vvcam_isp_drv);
+int vvcam_combo_soc_init(struct vvcam_isp_dev *vvcam_isp_drv);
 
-typedef bool(*pReadBar) (uint32_t bar, uint32_t *data);
-typedef bool(*pWriteBar) (uint32_t bar, uint32_t data);
+int vvcam_combo_isp_deinit(struct vvcam_isp_dev *vvcam_isp_drv);
+int vvcam_combo_csi_deinit(struct vvcam_isp_dev *vvcam_isp_drv);
+int vvcam_combo_sensor_deinit(struct vvcam_isp_dev *vvcam_isp_drv);
+int vvcam_combo_dwe_deinit(struct vvcam_isp_dev *vvcam_isp_drv);
+int vvcam_combo_vse_deinit(struct vvcam_isp_dev *vvcam_isp_drv);
+int vvcam_combo_soc_deinit(struct vvcam_isp_dev *vvcam_isp_drv);
 
-extern void dwe_set_func(pReadBar read_func, pWriteBar write_func);
-extern long dwe_copy_data(void *dst, void *src, int size);
 #endif
 
-#define MAX_DWE_NUM (2)
-#define MAX_CFG_NUM (2)
-
-struct dwe_hw_info {
-	u32 split_line;
-	u32 scale_factor;
-	u32 in_format;
-	u32 out_format;
-	u32 hand_shake;
-	u32 roi_x, roi_y;
-	u32 boundary_y, boundary_u, boundary_v;
-	u32 map_w, map_h;
-	u32 src_auto_shadow, dst_auto_shadow;
-	u32 src_w, src_stride, src_h;
-	u32 dst_w, dst_stride, dst_h, dst_size_uv;
-	u32 split_h, split_v1, split_v2;
-};
-
-enum BUF_ERR_TYPE {
-	BUF_ERR_UNDERFLOW = 1,
-	BUF_ERR_OVERFLOW0 = 1 << 1,
-	BUF_ERR_OVERFLOW1 = 1 << 2,
-	BUF_ERR_NO_DIST_MAP0 = 1 << 2,
-	BUF_ERR_NO_DIST_MAP1 = 1 << 3,
-	BUF_ERR_WRONGSTATE = 1 << 4,
-};
-
-enum HARDWARE_STATUS {
-	HARDWARE_IDLE = 0,
-	HARDWARE_BUSY,
-};
-
-struct dwe_ic_dev {
-	struct dwe_hw_info info[MAX_DWE_NUM][MAX_CFG_NUM];
-	int which[MAX_DWE_NUM];
-	void __iomem *base;
-	void __iomem *reset;
-#if defined(__KERNEL__) && defined(ENABLE_IRQ)
-	struct vvbuf_ctx *sink_bctx;
-	struct vvbuf_ctx *src_bctx[MAX_DWE_NUM];
-	dma_addr_t dist_map[MAX_DWE_NUM][MAX_CFG_NUM];
-	int hardware_status;
-	int *state[MAX_DWE_NUM];
-	int index;
-	struct vb2_dc_buf *src;
-	struct vb2_dc_buf *dst;
-	spinlock_t irqlock;
-	u32 error;
-	int (*get_index)(struct dwe_ic_dev *dev, struct vb2_dc_buf *buf);
-	struct tasklet_struct tasklet;
-#endif
-
-};
-
-void dwe_write_reg(struct dwe_ic_dev *dev, u32 offset, u32 val);
-u32 dwe_read_reg(struct dwe_ic_dev *dev, u32 offset);
-
-#endif /* _DWE_DEV_H */

@@ -736,6 +736,8 @@ struct isp_ic_dev {
 	int (*alloc)(struct isp_ic_dev *dev, struct isp_buffer_context *buf);
 	int (*free)(struct isp_ic_dev *dev, struct vb2_dc_buf *buf);
 	int *state;
+	struct tasklet_struct tasklet;
+	spinlock_t lock;
 #endif
 	void (*post_event)(struct isp_ic_dev *dev, void *data, size_t size);
 

@@ -517,11 +517,6 @@ int isp_mi_start(struct isp_ic_dev *dev)
 	}
 
 #if defined(__KERNEL__) && defined(ENABLE_IRQ)
-	for (i = 0; i < MI_PATH_NUM; ++i) {
-		dev->mi_buf[i] = NULL;
-		dev->mi_buf_shd[i] = NULL;
-	}
-	if (dev->state)
 		*dev->state |= STATE_DRIVER_STARTED;
 #endif
 
@@ -539,7 +534,18 @@ int isp_mi_start(struct isp_ic_dev *dev)
 #ifdef ISP_MI_BP
 	isp_bppath_start(dev);
 #endif
+
+#if defined(__KERNEL__) && defined(ENABLE_IRQ)
+	/*set memory for first frame, need set MRV_MI_MI_CFG_UPD bit to update memory to mi shadow address*/
+	update_dma_buffer(dev);
+#endif
+
 	isp_write_reg(dev, REG_ADDR(mi_init), mi_init);
+
+#if defined(__KERNEL__) && defined(ENABLE_IRQ)
+	/*prepare  memory for next frame */
+	update_dma_buffer(dev);
+#endif
 	return 0;
 }
 
@@ -563,9 +569,10 @@ int isp_mi_stop(struct isp_ic_dev *dev)
 	isp_write_reg(dev, REG_ADDR(mi_init), mi_init);
 
 #if defined(__KERNEL__) && defined(ENABLE_IRQ)
-	if (dev->state)
+	if (*dev->state & STATE_DRIVER_STARTED) {
 		*dev->state &= ~STATE_DRIVER_STARTED;
-	clean_dma_buffer(dev);
+		clean_dma_buffer(dev);
+	}
 #endif
 	return 0;
 }

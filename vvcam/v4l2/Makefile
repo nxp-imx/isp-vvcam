@@ -63,6 +63,7 @@ obj-m += vvcam-dwe.o
 
 #obj-m += csi/
 obj-m += sensor/
+obj-m += focus/
 
 all:
 	make -C $(KERNEL_SRC) M=$(SRC) ENABLE_IRQ=$(ENABLE_IRQ)

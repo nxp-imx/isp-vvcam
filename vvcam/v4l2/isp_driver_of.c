@@ -131,17 +131,10 @@ static void isp_disable_clocks(struct isp_device *isp_dev)
 int isp_set_stream(struct v4l2_subdev *sd, int enable)
 {
 	struct isp_device *isp_dev = v4l2_get_subdevdata(sd);
-	struct vvbuf_ctx *ctx = &isp_dev->bctx;
-	struct vb2_dc_buf *buf;
+	pr_info("enter %s %d\n", __func__, enable);
 
 	if (!enable) {
 		isp_dev->state &= ~STATE_STREAM_STARTED;
-		buf = vvbuf_pull_buf(ctx);
-		while( buf != NULL ){
-			if (buf->flags)
-				kfree(buf);
-			buf = vvbuf_pull_buf(ctx);
-		}
 	} else
 		isp_dev->state |= STATE_STREAM_STARTED;
 	return 0;
@@ -225,20 +218,17 @@ static const struct media_entity_operations isp_media_ops = {
 static void isp_buf_notify(struct vvbuf_ctx *ctx, struct vb2_dc_buf *buf)
 {
 	struct v4l2_subdev *sd;
-	struct isp_device *isp;
+	struct isp_device *isp_dev;
 	if (unlikely(!ctx || !buf))
 		return;
-
 	sd = media_entity_to_v4l2_subdev(buf->pad->entity);
-	isp = container_of(sd, struct isp_device, sd);
-	if (!(isp->state & STATE_STREAM_STARTED)) {
-		if (buf->flags) {
-			kfree(buf);
-			return;
-		}
+	isp_dev = container_of(sd, struct isp_device, sd);
+	if (unlikely(isp_dev->refcnt == 0)) {
+		isp_dev->ic_dev.free(&isp_dev->ic_dev, buf);
+		return;
 	}
-
 	vvbuf_push_buf(ctx,buf);
+	return;
 }
 
 static const struct vvbuf_ops isp_buf_ops = {
@@ -248,57 +238,41 @@ static const struct vvbuf_ops isp_buf_ops = {
 static int isp_buf_alloc(struct isp_ic_dev *dev, struct isp_buffer_context *buf)
 {
 	struct isp_device *isp_dev;
+	struct media_pad *remote_pad;
 	struct vb2_dc_buf *buff;
 
 	if (!dev || !buf)
 		return -EINVAL;
 
 	isp_dev = container_of(dev, struct isp_device, ic_dev);
+	remote_pad = media_entity_remote_pad(&isp_dev->pads[ISP_PAD_SOURCE]);
+	if (remote_pad) {
+		if (is_media_entity_v4l2_video_device(remote_pad->entity)) {
+			// isp connect to video, so no need allo buf for isp
+			return 0;
+		}
+	}
 
 	buff = kzalloc(sizeof(struct vb2_dc_buf), GFP_KERNEL);
 	if (!buff)
 		return -ENOMEM;
 
 	buff->pad = &isp_dev->pads[ISP_PAD_SOURCE];
-	/*single plane*/
 #ifdef ISP_MP_34BIT
 	buff->dma = buf->addr_y << 2;
 #else
 	buff->dma = buf->addr_y;
 #endif
 	buff->flags = 1;
-
 	vvbuf_push_buf(&isp_dev->bctx, buff);
+
 	return 0;
 }
 
 static int isp_buf_free(struct isp_ic_dev *dev, struct vb2_dc_buf *buf)
 {
-	struct isp_device *isp_dev;
-	struct vvbuf_ctx *ctx;
-
 	if (buf && buf->flags)
 		kfree(buf);
-
-	if (!dev)
-		return -EINVAL;
-
-	isp_dev = container_of(dev, struct isp_device, ic_dev);
-	ctx = &isp_dev->bctx;
-
-	buf = vvbuf_pull_buf(ctx);
-
-	if ((buf != NULL) && (!buf->flags)) {
-		vvbuf_push_buf(ctx, buf);
-		return 0;
-	}
-
-	while(buf != NULL) {
-		if (buf->flags)
-			kfree(buf);
-		buf = vvbuf_pull_buf(ctx);
-	}
-
 	return 0;
 }
 
@@ -325,8 +299,6 @@ static int isp_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 static int isp_close(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 {
 	struct isp_device *isp_dev = v4l2_get_subdevdata(sd);
-	struct isp_ic_dev *ic_dev;
-	int i;
 
 	isp_dev->refcnt--;
 	if (isp_dev->refcnt < 0) {
@@ -335,23 +307,14 @@ static int isp_close(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 	}
 
 	if (isp_dev->refcnt == 0){
+		if (isp_dev->state | STATE_DRIVER_STARTED)
+			isp_mi_stop(&isp_dev->ic_dev);
+		isp_dev->state = STATE_STOPPED;
 		devm_free_irq(sd->dev, isp_dev->irq, &isp_dev->ic_dev);
 		isp_priv_ioctl(&isp_dev->ic_dev, ISPIOC_RESET, NULL);
 		isp_clear_interrupts(&isp_dev->ic_dev);
-		isp_dev->state = STATE_STOPPED;
 		msleep(5);
-
-		ic_dev = &isp_dev->ic_dev;
-		for (i = 0; i < MI_PATH_NUM; ++i) {
-			if (ic_dev->mi_buf[i]) {
-				ic_dev->free(ic_dev, ic_dev->mi_buf[i]);
-				ic_dev->mi_buf[i] = NULL;
-			}
-			if (ic_dev->mi_buf_shd[i]) {
-				ic_dev->free(ic_dev, ic_dev->mi_buf_shd[i]);
-				ic_dev->mi_buf_shd[i] = NULL;
-			}
-		}
+		clean_dma_buffer(&isp_dev->ic_dev);
 	}
 
 	pm_runtime_put(sd->dev);
@@ -459,6 +422,8 @@ int isp_hw_probe(struct platform_device *pdev)
 
 	isp_dev->irq = irq;
 	pr_debug("request_irq num:%d, rc:%d", irq, rc);
+	spin_lock_init(&isp_dev->ic_dev.lock);
+	tasklet_init(&isp_dev->ic_dev.tasklet, isp_isr_tasklet, (unsigned long)(&isp_dev->ic_dev));
 
 	platform_set_drvdata(pdev, isp_dev);
 
@@ -498,7 +463,7 @@ int isp_hw_remove(struct platform_device *pdev)
 	if (!isp)
 		return -1;
 
-
+	tasklet_kill(&isp->ic_dev.tasklet);
 	vvbuf_ctx_deinit(&isp->bctx);
 	media_entity_cleanup(&isp->sd.entity);
 	v4l2_async_unregister_subdev(&isp->sd);

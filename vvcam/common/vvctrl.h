@@ -104,45 +104,4 @@ struct v4l2_ctrl_data {
 
 #define nextof(ptr, new_type) ((new_type)((ptr) + 1))
 
-#ifdef __KERNEL__
-int viv_gen_g_ctrl(struct v4l2_ctrl *ctrl);
-int viv_gen_s_ctrl(struct v4l2_ctrl *ctrl);
-
-static const struct v4l2_ctrl_ops viv_gen_ctrl_ops = {
-	.g_volatile_ctrl = viv_gen_g_ctrl,
-	.s_ctrl = viv_gen_s_ctrl,
-};
-
-static const struct v4l2_ctrl_config viv_ctrl_sensor_resw = {
-	.ops = &viv_gen_ctrl_ops,
-	.id = V4L2_CID_VIV_SENSOR_RES_W,
-	.name = "sensor.resw",
-	.type = V4L2_CTRL_TYPE_INTEGER,
-	.flags = V4L2_CTRL_FLAG_VOLATILE | V4L2_CTRL_FLAG_READ_ONLY,
-	.min = 0,
-	.max = 3840,
-	.def = 1920,
-	.step = 1,
-};
-
-static const struct v4l2_ctrl_config viv_ctrl_sensor_resh = {
-	.ops = &viv_gen_ctrl_ops,
-	.id = V4L2_CID_VIV_SENSOR_RES_H,
-	.name = "sensor.resh",
-	.type = V4L2_CTRL_TYPE_INTEGER,
-	.flags = V4L2_CTRL_FLAG_VOLATILE | V4L2_CTRL_FLAG_READ_ONLY,
-	.min = 0,
-	.max = 2160,
-	.def = 1080,
-	.step = 1,
-};
-
-#define create_controls(handler) \
-do { \
-	v4l2_ctrl_new_custom(handler, &viv_ctrl_sensor_resw, NULL); \
-	v4l2_ctrl_new_custom(handler, &viv_ctrl_sensor_resh, NULL); \
-} while (0)
-
-#endif
-
 #endif /* _VVCTRL_H_ */

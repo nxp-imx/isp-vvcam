@@ -35,7 +35,7 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
@@ -50,77 +50,28 @@
  * version of this file.
  *
  *****************************************************************************/
-#ifndef _DWE_DEV_H
-#define _DWE_DEV_H
+#ifndef _VVNATIVE_CFG_H_
+#define _VVNATIVE_CFG_H_
 
-#include "vvdefs.h"
 
-#ifndef __KERNEL__
-#define copy_from_user(a, b, c) dwe_copy_data(a, b, c)
-#define copy_to_user(a, b, c) dwe_copy_data(a, b, c)
+//#define DRIVER_NAME ""
+#define DRIVER_NAME      "vivisp"
 
-typedef bool(*pReadBar) (uint32_t bar, uint32_t *data);
-typedef bool(*pWriteBar) (uint32_t bar, uint32_t data);
+#define VVNATIVE_ISP     "vivisp"
+#define VVNATIVE_CSI     "vivcsi"
+#define VVNATIVE_SENSOR  "vivcam"
+#define VVNATIVE_DWE     "vivdwe"
+#define VVNATIVE_VSE     "vivvse"
+#define VVNATIVE_SOC     "vivsoc"
+#define VVNATIVE_NA      "nondev"
 
-extern void dwe_set_func(pReadBar read_func, pWriteBar write_func);
-extern long dwe_copy_data(void *dst, void *src, int size);
-#endif
+#define VVCAM_ISP_DEVICES          (9)
 
-#define MAX_DWE_NUM (2)
-#define MAX_CFG_NUM (2)
+char * vvnative_get_dev_name_by_idx(int devidx);
+ulong vvnative_get_reg_base_by_idx(int devidx);
+ulong vvnative_get_reg_size_by_idx(int devidx);
+ulong vvnative_get_img_buf_base(void);
+ulong vvnative_get_img_buf_size(void);
+int vvnative_get_dev_idx(int devidx);
 
-struct dwe_hw_info {
-	u32 split_line;
-	u32 scale_factor;
-	u32 in_format;
-	u32 out_format;
-	u32 hand_shake;
-	u32 roi_x, roi_y;
-	u32 boundary_y, boundary_u, boundary_v;
-	u32 map_w, map_h;
-	u32 src_auto_shadow, dst_auto_shadow;
-	u32 src_w, src_stride, src_h;
-	u32 dst_w, dst_stride, dst_h, dst_size_uv;
-	u32 split_h, split_v1, split_v2;
-};
-
-enum BUF_ERR_TYPE {
-	BUF_ERR_UNDERFLOW = 1,
-	BUF_ERR_OVERFLOW0 = 1 << 1,
-	BUF_ERR_OVERFLOW1 = 1 << 2,
-	BUF_ERR_NO_DIST_MAP0 = 1 << 2,
-	BUF_ERR_NO_DIST_MAP1 = 1 << 3,
-	BUF_ERR_WRONGSTATE = 1 << 4,
-};
-
-enum HARDWARE_STATUS {
-	HARDWARE_IDLE = 0,
-	HARDWARE_BUSY,
-};
-
-struct dwe_ic_dev {
-	struct dwe_hw_info info[MAX_DWE_NUM][MAX_CFG_NUM];
-	int which[MAX_DWE_NUM];
-	void __iomem *base;
-	void __iomem *reset;
-#if defined(__KERNEL__) && defined(ENABLE_IRQ)
-	struct vvbuf_ctx *sink_bctx;
-	struct vvbuf_ctx *src_bctx[MAX_DWE_NUM];
-	dma_addr_t dist_map[MAX_DWE_NUM][MAX_CFG_NUM];
-	int hardware_status;
-	int *state[MAX_DWE_NUM];
-	int index;
-	struct vb2_dc_buf *src;
-	struct vb2_dc_buf *dst;
-	spinlock_t irqlock;
-	u32 error;
-	int (*get_index)(struct dwe_ic_dev *dev, struct vb2_dc_buf *buf);
-	struct tasklet_struct tasklet;
-#endif
-
-};
-
-void dwe_write_reg(struct dwe_ic_dev *dev, u32 offset, u32 val);
-u32 dwe_read_reg(struct dwe_ic_dev *dev, u32 offset);
-
-#endif /* _DWE_DEV_H */
+#endif // _VVNATIVE_CFG_H_

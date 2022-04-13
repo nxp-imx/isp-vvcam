@@ -56,6 +56,7 @@
 #include "isp_types.h"
 #include "mrv_all_bits.h"
 #include "video/vvbuf.h"
+#include "isp_driver.h"
 
 extern MrvAllRegister_t *all_regs;
 
@@ -110,69 +111,113 @@ static int config_dma_buf(struct isp_mi_data_path_context *path,
 }
 #endif
 
-static int update_dma_buffer(struct isp_ic_dev *dev)
+int update_dma_buffer(struct isp_ic_dev *dev)
 {
 #ifdef CONFIG_VIDEOBUF2_DMA_CONTIG
+	int i;
+	unsigned long flags;
 	struct isp_mi_context *mi = &dev->mi;
 	struct vb2_dc_buf *buf = NULL;
 	struct isp_buffer_context dmabuf;
-	int i;
 
+	spin_lock_irqsave(&dev->lock, flags);
 	for (i = 0; i < MI_PATH_NUM; ++i) {
 		if (!mi->path[i].enable)
 			continue;
-		if (dev->mi_buf[i]) {
-			vvbuf_ready(dev->bctx, dev->mi_buf[i]->pad,
-					dev->mi_buf[i]);
-			dev->mi_buf[i] = NULL;
-		}
-		if (dev->state && !(*dev->state & STATE_DRIVER_STARTED))
-			continue;
 
 		buf = vvbuf_pull_buf(dev->bctx);
-		if (!buf) {
-			buf = dev->mi_buf_shd[i];
-			if (!buf)
-				return -ENOMEM;
-			dev->mi_buf_shd[i] = NULL;
-		} else if (dev->mi_buf_shd[i]) {
-			dev->mi_buf[i] = dev->mi_buf_shd[i];
-			dev->mi_buf_shd[i] = NULL;
-		}
+		if (buf == NULL)
+			continue;
 
-		memset(&dmabuf, 0, sizeof(dmabuf));
 		dmabuf.path = i;
 		if (config_dma_buf(&mi->path[i], buf->dma, &dmabuf)){
 			vvbuf_push_buf(dev->bctx,buf);
 			continue;
 		}
 		isp_set_buffer(dev, &dmabuf);
-		dev->mi_buf_shd[i] = buf;
+		dev->mi_buf_shd[i] = dev->mi_buf[i];
+		dev->mi_buf[i] = buf;
 	}
+	spin_unlock_irqrestore(&dev->lock, flags);
+
 #endif
 	return 0;
+}
+
+static void isr_process_frame(struct isp_ic_dev *dev)
+{
+	int i;
+	unsigned long flags;
+	struct isp_mi_context *mi = &dev->mi;
+
+	spin_lock_irqsave(&dev->lock, flags);
+	for (i = 0; i < MI_PATH_NUM; ++i) {
+		if (!mi->path[i].enable)
+			continue;
+
+		if (dev->mi_buf_shd[i]) {
+			vvbuf_ready(dev->bctx, dev->mi_buf_shd[i]->pad, dev->mi_buf_shd[i]);
+			dev->mi_buf_shd[i] = NULL;
+		}
+	}
+	spin_unlock_irqrestore(&dev->lock, flags);
+	tasklet_schedule(&dev->tasklet);
+	return;
+}
+
+void isp_isr_tasklet(unsigned long arg)
+{
+	struct isp_ic_dev *dev = (struct isp_ic_dev *)arg;
+	update_dma_buffer(dev);
+	return;
 }
 
 int clean_dma_buffer(struct isp_ic_dev *dev)
 {
 #ifdef CONFIG_VIDEOBUF2_DMA_CONTIG
 	int i;
+	struct vb2_dc_buf *buf = NULL;
+	struct isp_device *isp_dev;
+	struct media_pad *remote_pad;
+	unsigned long flags;
 
 	if (!dev->free)
 		return 0;
 
-	dev->free(dev, NULL);
+	isp_dev = container_of(dev, struct isp_device, ic_dev);
+	remote_pad = media_entity_remote_pad(&isp_dev->pads[ISP_PAD_SOURCE]);
+	if (remote_pad && is_media_entity_v4l2_video_device(remote_pad->entity)) {
+		/*if isp connect to video, the buf free by video,isp maybe not access by isp,so just empty queue*/
+		dev->mi_buf[i] = NULL;
+		dev->mi_buf_shd[i] = NULL;
 
-	for (i = 0; i < MI_PATH_NUM; ++i) {
-		if (dev->mi_buf[i]) {
-			dev->free(dev, dev->mi_buf[i]);
-			dev->mi_buf[i] = NULL;
+		spin_lock_irqsave(&dev->bctx->irqlock, flags);
+		if (!list_empty(&dev->bctx->dmaqueue))
+			list_del_init(&dev->bctx->dmaqueue);
+		spin_unlock_irqrestore(&dev->bctx->irqlock, flags);
+
+		return 0;
+	} else {
+		/*if isp connect to subdev, isp buf alloc by isp driver,need free memory*/
+		spin_lock_irqsave(&dev->lock, flags);
+		do {
+			buf = vvbuf_pull_buf(dev->bctx);
+			dev->free(dev, buf);
+		} while(buf);
+
+		for (i = 0; i < MI_PATH_NUM; ++i) {
+			if (dev->mi_buf[i]) {
+				dev->free(dev, dev->mi_buf[i]);
+				dev->mi_buf[i] = NULL;
+			}
+			if (dev->mi_buf_shd[i]) {
+				dev->free(dev, dev->mi_buf_shd[i]);
+				dev->mi_buf_shd[i] = NULL;
+			}
 		}
-		if (dev->mi_buf_shd[i]) {
-			dev->free(dev, dev->mi_buf_shd[i]);
-			dev->mi_buf_shd[i] = NULL;
-		}
+		spin_unlock_irqrestore(&dev->lock, flags);
 	}
+
 #endif
 	return 0;
 }
@@ -225,7 +270,6 @@ irqreturn_t isp_hw_isr(int irq, void *data)
 			MRV_MI_SP_CR_FIFO_FULL_MASK;
 	u32 isp_mis, mi_mis, mi_status;
 	struct isp_irq_data irq_data;
-	int rc = 0;
 
 	if (!dev)
 		return IRQ_HANDLED;
@@ -252,11 +296,17 @@ irqreturn_t isp_hw_isr(int irq, void *data)
 	if (mi_mis & errormask)
 		pr_debug("MI mis error: 0x%x\n", mi_mis);
 
-	if (mi_mis & frameendmask)
-		rc = update_dma_buffer(dev);
+#ifdef CONFIG_VIDEOBUF2_DMA_CONTIG
+	if (mi_mis & frameendmask) {
+		if (*dev->state == (STATE_DRIVER_STARTED | STATE_STREAM_STARTED)) {
+			isr_process_frame(dev);
+		}
+	}
+#endif
 
 	if (isp_mis) {
 		if (isp_mis & MRV_ISP_MIS_FRAME_MASK) {
+			awb_set_gain(dev);
 			if (dev->flt.changed) {
 				isp_s_flt(dev);
 			}

@@ -96,6 +96,7 @@ enum {
 	VVSENSORIOC_S_BLC,
 	VVSENSORIOC_G_EXPAND_CURVE,
 	VVSENSORIOC_S_TEST_PATTERN,
+	VVSENSORIOC_G_LENS,
 	VVSENSORIOC_MAX,
 };
 
@@ -263,5 +264,10 @@ typedef struct vvcam_mode_info_array_s {
 	uint32_t count;
 	struct vvcam_mode_info_s modes[VVCAM_SUPPORT_MAX_MODE_COUNT];
 } vvcam_mode_info_array_t;
+
+typedef struct vvcam_lens_s {
+	uint32_t id;
+	char name[16];
+} vvcam_lens_t;
 
 #endif

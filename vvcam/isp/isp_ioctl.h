@@ -180,6 +180,7 @@ int isp_s_bls(struct isp_ic_dev *dev);
 int isp_enable_awb(struct isp_ic_dev *dev);
 int isp_disable_awb(struct isp_ic_dev *dev);
 int isp_s_awb(struct isp_ic_dev *dev);
+int awb_set_gain(struct isp_ic_dev *dev);
 int isp_g_awbmean(struct isp_ic_dev *dev, struct isp_awb_mean *mean);
 int isp_s_is(struct isp_ic_dev *dev);
 int isp_s_raw_is(struct isp_ic_dev *dev);
@@ -264,5 +265,7 @@ int isp_s_wdr(struct isp_ic_dev *dev);
 int clean_dma_buffer(struct isp_ic_dev *dev);
 irqreturn_t isp_hw_isr(int irq, void *data);
 void isp_clear_interrupts(struct isp_ic_dev *dev);
+int update_dma_buffer(struct isp_ic_dev *dev);
+void isp_isr_tasklet(unsigned long arg);
 #endif
 #endif /* _ISP_IOC_H_ */

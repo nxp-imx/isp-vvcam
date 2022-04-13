@@ -89,8 +89,12 @@ long dwe_devcore_ioctl(struct dwe_device *dwe, unsigned int cmd, void *args)
 		dwe->state &= ~STATE_DRIVER_STARTED;
 		mutex_lock(&dwe->core->mutex);
 		dwe->core->state--;
-		if (dwe->core->state == 0)
+		if (dwe->core->state == 0) {
 			ret = dwe_priv_ioctl(&dwe->core->ic_dev, cmd, args);
+			msleep(1);
+			dwe_clean_src_memory(&dwe->core->ic_dev);
+			dwe->core->ic_dev.hardware_status = HARDWARE_IDLE;
+		}
 		mutex_unlock(&dwe->core->mutex);
 		break;
 	case DWEIOC_SET_LUT: {
@@ -191,6 +195,8 @@ struct dwe_devcore *dwe_devcore_init(struct dwe_device *dwe,
 	core->ic_dev.state[dwe->id] = &dwe->state;
 	core->ic_dev.get_index = dwe_core_get_index;
 
+	tasklet_init(&core->ic_dev.tasklet, dwe_isr_tasklet, (unsigned long)(&core->ic_dev));
+
 	mutex_init(&core->mutex);
 	refcount_set(&core->refcount, 1);
 
@@ -213,6 +219,7 @@ void dwe_devcore_deinit(struct dwe_device *dwe)
 		return;
 
 	if (refcount_dec_and_test(&core->refcount)) {
+		tasklet_kill(&core->ic_dev.tasklet);
 		spin_lock_irqsave(&devcore_list_lock, flags);
 		list_del(&core->entry);
 		spin_unlock_irqrestore(&devcore_list_lock, flags);

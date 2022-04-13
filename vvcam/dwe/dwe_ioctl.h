@@ -87,8 +87,9 @@ int dwe_start_dma_read(struct dwe_ic_dev *dev,
 int dwe_set_buffer(struct dwe_ic_dev *dev, struct dwe_hw_info *info, u64 addr);
 int dwe_set_lut(struct dwe_ic_dev *dev, u64 addr);
 #ifdef __KERNEL__
-int dwe_on_buf_update(struct dwe_ic_dev *dev);
 irqreturn_t dwe_hw_isr(int irq, void *data);
 void dwe_clear_interrupts(struct dwe_ic_dev *dev);
+void dwe_isr_tasklet(unsigned long arg);
+void dwe_clean_src_memory(struct dwe_ic_dev *dev);
 #endif
 #endif /* _DWE_IOC_H_ */

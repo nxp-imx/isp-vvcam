@@ -129,8 +129,6 @@ int dwe_set_stream(struct v4l2_subdev *sd, int enable)
 	struct vvbuf_ctx *ctx;
 	struct media_pad *pad;
 	unsigned long flags;
-	int state;
-	struct vb2_dc_buf *src_buf = NULL;
 
 	if (!enable)
 		dwe_dev->state &= ~STATE_STREAM_STARTED;
@@ -146,23 +144,6 @@ int dwe_set_stream(struct v4l2_subdev *sd, int enable)
 	}
 
 	if (!enable) {
-		mutex_lock(&dwe_dev->core->mutex);
-		state = dwe_dev->core->state;
-		mutex_unlock(&dwe_dev->core->mutex);
-		if (state <= 0) {
-			ctx = &dwe_dev->core->bctx[DWE_PAD_SINK];
-			spin_lock_irqsave(&ctx->irqlock, flags);
-			while (!list_empty(&ctx->dmaqueue)){
-				src_buf = list_first_entry(&ctx->dmaqueue,
-						  struct vb2_dc_buf, irqlist);
-				if (src_buf != NULL){
-					list_del(&src_buf->irqlist);
-					vvbuf_ready(ctx , src_buf->pad, src_buf);
-				}
-			}
-			spin_unlock_irqrestore(&ctx->irqlock, flags);
-		}
-
 		ctx = &dwe_dev->bctx[DWE_PAD_SOURCE];
 		spin_lock_irqsave(&ctx->irqlock, flags);
 		if (!list_empty(&ctx->dmaqueue))
@@ -203,11 +184,8 @@ static void dwe_src_buf_notify(struct vvbuf_ctx *ctx, struct vb2_dc_buf *buf)
 {
 	struct v4l2_subdev *sd;
 	struct dwe_device *dwe;
-	unsigned long flags;
-
 	if (unlikely(!ctx || !buf))
 		return;
-
 	sd = media_entity_to_v4l2_subdev(buf->pad->entity);
 	dwe = container_of(sd, struct dwe_device, sd);
 
@@ -217,12 +195,12 @@ static void dwe_src_buf_notify(struct vvbuf_ctx *ctx, struct vb2_dc_buf *buf)
 	}
 
 	ctx = &dwe->core->bctx[DWE_PAD_SINK];
-
-	spin_lock_irqsave(&ctx->irqlock, flags);
-	list_add_tail(&buf->irqlist, &ctx->dmaqueue);
-	spin_unlock_irqrestore(&ctx->irqlock, flags);
-
-	dwe_on_buf_update(&dwe->core->ic_dev);
+	vvbuf_push_buf(ctx,buf);
+	if ((dwe->core->ic_dev.hardware_status == HARDWARE_IDLE) &&
+	    (dwe->state == (STATE_DRIVER_STARTED | STATE_STREAM_STARTED))) {
+		dwe->core->ic_dev.hardware_status = HARDWARE_BUSY;
+		tasklet_schedule(&dwe->core->ic_dev.tasklet);
+	}
 }
 
 static const struct vvbuf_ops dwe_src_buf_ops = {
@@ -231,23 +209,9 @@ static const struct vvbuf_ops dwe_src_buf_ops = {
 
 static void dwe_dst_buf_notify(struct vvbuf_ctx *ctx, struct vb2_dc_buf *buf)
 {
-	struct v4l2_subdev *sd;
-	struct dwe_device *dwe;
-	unsigned long flags;
-
 	if (unlikely(!ctx || !buf))
 		return;
-
-	sd = media_entity_to_v4l2_subdev(buf->pad->entity);
-	dwe = container_of(sd, struct dwe_device, sd);
-
-	spin_lock_irqsave(&ctx->irqlock, flags);
-	list_add_tail(&buf->irqlist, &ctx->dmaqueue);
-	spin_unlock_irqrestore(&ctx->irqlock, flags);
-
-	if (!dwe || !(dwe->state & STATE_STREAM_STARTED))
-		return;
-	dwe_on_buf_update(&dwe->core->ic_dev);
+	vvbuf_push_buf(ctx,buf);
 }
 
 static const struct vvbuf_ops dwe_dst_buf_ops = {
@@ -308,12 +272,13 @@ static int dwe_close(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 {
 	struct dwe_device *dwe_dev = v4l2_get_subdevdata(sd);
 	struct vvbuf_ctx *ctx;
-	struct vb2_dc_buf *src_buf = NULL;
 	unsigned long flags;
 
 	mutex_lock(&dwe_dev->core->mutex);
 	dwe_dev->refcnt--;
 	if (dwe_dev->refcnt == 0){
+		if (dwe_dev->state | STATE_DRIVER_STARTED)
+			dwe_devcore_ioctl(dwe_dev, DWEIOC_STOP, NULL);
 		dwe_dev->state = 0;
 		ctx = &dwe_dev->bctx[DWE_PAD_SOURCE];
 		spin_lock_irqsave(&ctx->irqlock, flags);
@@ -321,27 +286,15 @@ static int dwe_close(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 			list_del_init(&ctx->dmaqueue);
 		spin_unlock_irqrestore(&ctx->irqlock, flags);
 	}
-		if (((pdwe_dev[0]->refcnt) != 0) || ((pdwe_dev[1]->refcnt) != 0)) {
-			goto exit;
-		}
-			devm_free_irq(pdwe_dev[0]->sd.dev, pdwe_dev[0]->irq, &pdwe_dev[0]->core->ic_dev);
-			dwe_clear_interrupts(&pdwe_dev[0]->core->ic_dev);
-			//	mutex_lock(&dwe_dev->core->mutex);
-			pdwe_dev[0]->core->state = 0;
-			//	mutex_unlock(&dwe_dev->core->mutex);
+	if (((pdwe_dev[0]->refcnt) != 0) || ((pdwe_dev[1]->refcnt) != 0)) {
+		goto exit;
+	}
+	devm_free_irq(pdwe_dev[0]->sd.dev, pdwe_dev[0]->irq, &pdwe_dev[0]->core->ic_dev);
+	dwe_clear_interrupts(&pdwe_dev[0]->core->ic_dev);
+	pdwe_dev[0]->core->state = 0;
+	dwe_clean_src_memory(&pdwe_dev[0]->core->ic_dev);
 
-			ctx = &dwe_dev->core->bctx[DWE_PAD_SINK];
-			spin_lock_irqsave(&ctx->irqlock, flags);
-			while (!list_empty(&ctx->dmaqueue)){
-				src_buf = list_first_entry(&ctx->dmaqueue,
-						struct vb2_dc_buf, irqlist);
-				if (src_buf != NULL){
-					list_del(&src_buf->irqlist);
-					vvbuf_ready(ctx , src_buf->pad, src_buf);
-				}
-			}
-			spin_unlock_irqrestore(&ctx->irqlock, flags);
-			msleep(5);
+	msleep(5);
 exit:
 	pm_runtime_put(pdwe_dev[0]->sd.dev);
 	mutex_unlock(&dwe_dev->core->mutex);
