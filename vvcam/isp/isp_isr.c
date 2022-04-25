@@ -175,7 +175,7 @@ void isp_isr_tasklet(unsigned long arg)
 int clean_dma_buffer(struct isp_ic_dev *dev)
 {
 #ifdef CONFIG_VIDEOBUF2_DMA_CONTIG
-	int i;
+	int i = 0;
 	struct vb2_dc_buf *buf = NULL;
 	struct isp_device *isp_dev;
 	struct media_pad *remote_pad;

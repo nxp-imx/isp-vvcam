@@ -307,7 +307,7 @@ static int isp_close(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 	}
 
 	if (isp_dev->refcnt == 0){
-		if (isp_dev->state | STATE_DRIVER_STARTED)
+		if (isp_dev->state & STATE_DRIVER_STARTED)
 			isp_mi_stop(&isp_dev->ic_dev);
 		isp_dev->state = STATE_STOPPED;
 		devm_free_irq(sd->dev, isp_dev->irq, &isp_dev->ic_dev);
