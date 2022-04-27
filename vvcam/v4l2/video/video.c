@@ -1794,31 +1794,14 @@ const struct v4l2_ctrl_config viv_video_ctrls[] = {
 static int viv_notifier_bound(struct v4l2_async_notifier *notifier,
 		    struct v4l2_subdev *sd, struct v4l2_async_subdev *asd)
 {
-	int i;
 	struct viv_video_device *dev = container_of(notifier,
 			struct viv_video_device, subdev_notifier);
 
 	if (!dev)
 		return 0;
 
-	for (i = 0; i < dev->asdcount; ++i) {
-		if (dev->asd[i]->match_type == V4L2_ASYNC_MATCH_FWNODE) {
-			if (sd->dev && dev->asd[i]->match.fwnode ==
-				of_fwnode_handle(sd->dev->of_node)) {
-				dev->subdevs[dev->sdcount] = sd;
-				dev->sdcount++;
-				break;
-			}
-		} else if (dev->asd[i]->match_type ==
-					V4L2_ASYNC_MATCH_DEVNAME) {
-			if (sd->dev && !strcmp(dev->asd[i]->match.device_name,
-							dev_name(sd->dev))) {
-				dev->subdevs[dev->sdcount] = sd;
-				dev->sdcount++;
-				break;
-			}
-		}
-	}
+	dev->subdevs[dev->sdcount] = sd;
+	dev->sdcount++;
 	return 0;
 }
 
@@ -1967,11 +1950,6 @@ static inline int viv_find_compatible_nodes(struct dev_node *nodes, int size)
 				nodes[cnt].id = id;
 				nodes[cnt].match_type = V4L2_ASYNC_MATCH_FWNODE;
 				cnt++;
-
-				nodes[cnt].id = id;
-				nodes[cnt].match_type = V4L2_ASYNC_MATCH_DEVNAME;
-				nodes[cnt].name = dwe_dev_compat_name[id];
-				cnt++;
 			}
 		}
 	}
@@ -2014,6 +1992,7 @@ static struct reserved_mem * viv_find_isp_reserve_mem(int dev_id)
 	return NULL;
 }
 #endif
+extern struct v4l2_subdev *g_dwe_subdev[2];
 static int viv_video_probe(struct platform_device *pdev)
 {
 	struct viv_video_device *vdev;
@@ -2033,9 +2012,9 @@ static int viv_video_probe(struct platform_device *pdev)
 
 	memset(nodes, 0, sizeof(nodes));
 	nodecount = viv_find_compatible_nodes(nodes, MAX_SUBDEVS_NUM);
-	for (i = 0; i < VIDEO_NODE_NUM && i*2 < nodecount; i++) {
-		if(nodes[i*2].node) {
-			video_id = nodes[i*2].id ;
+	for (i = 0; i < VIDEO_NODE_NUM; i++) {
+		if(nodes[i].node) {
+			video_id = nodes[i].id ;
 			if(video_id >= VIDEO_NODE_NUM) {
 				pr_err("%s: id %d is too large (id > %d) \n",
 						__func__, video_id, VIDEO_NODE_NUM);
@@ -2146,12 +2125,6 @@ static int viv_video_probe(struct platform_device *pdev)
 							sizeof(struct v4l2_async_subdev));
 #endif
 						break;
-					case V4L2_ASYNC_MATCH_DEVNAME:
-						asd = v4l2_async_notifier_add_devname_subdev(
-							&vdev->subdev_notifier,
-							nodes[j].name,
-							sizeof(struct v4l2_async_subdev));
-						break;
 					default:
 						asd = NULL;
 						break;
@@ -2160,9 +2133,31 @@ static int viv_video_probe(struct platform_device *pdev)
 						vdev->asd[vdev->asdcount] = asd;
 						vdev->asdcount++;
 					}
+
 				}
 			}
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 16, 0)
+			asd = __v4l2_async_nf_add_fwnode(
+					&vdev->subdev_notifier,
+					g_dwe_subdev[video_id]->fwnode,
+					sizeof(struct v4l2_async_subdev));
+#elif LINUX_VERSION_CODE > KERNEL_VERSION(5, 12, 0)
+			asd = __v4l2_async_notifier_add_fwnode_subdev(
+					&vdev->subdev_notifier,
+					g_dwe_subdev[video_id]->fwnode,
+					sizeof(struct v4l2_async_subdev));
+#else
+			asd = v4l2_async_notifier_add_fwnode_subdev(
+					&vdev->subdev_notifier,
+					g_dwe_subdev[video_id]->fwnode,
+					sizeof(struct v4l2_async_subdev));
+#endif
+
+			if (asd) {
+				vdev->asd[vdev->asdcount] = asd;
+				vdev->asdcount++;
+			}
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 16, 0)
 			rc = v4l2_async_nf_register(vdev->v4l2_dev,
 					&vdev->subdev_notifier);

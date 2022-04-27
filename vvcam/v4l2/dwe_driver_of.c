@@ -61,6 +61,9 @@
 
 static struct dwe_device *pdwe_dev[DEWARP_NODE_NUM] = {NULL};
 
+struct v4l2_subdev *g_dwe_subdev[DEWARP_NODE_NUM];
+EXPORT_SYMBOL_GPL(g_dwe_subdev);
+
 int dwe_subscribe_event(struct v4l2_subdev *sd, struct v4l2_fh *fh,
 			struct v4l2_event_subscription *sub)
 {
@@ -424,11 +427,16 @@ int dwe_hw_probe(struct platform_device *pdev)
 		dwe_dev->irq = irq;
 
 		dwe_dev->core = dwe_devcore_init(dwe_dev, mem_res);
-		dwe_dev->sd.fwnode = of_fwnode_handle(pdev->dev.of_node);
+		if (dev_id) {
+			dwe_dev->sd.fwnode = of_fwnode_handle(pdev->dev.of_node);
+		} else {
+			dwe_dev->sd.fwnode = &dwe_dev->fwnode;
+		}
 
 		rc = v4l2_async_register_subdev(&dwe_dev->sd);
 		if (rc < 0)
 			goto dewarp_core_deinit;
+		g_dwe_subdev[dev_id] = &dwe_dev->sd;
 	}
 	pm_runtime_enable(&pdev->dev);
 	pr_info("vvcam dewarp driver probed\n");
@@ -469,6 +477,7 @@ int dwe_hw_remove(struct platform_device *pdev)
 		for (i = 0; i < DWE_PADS_NUM; i++)
 			vvbuf_ctx_deinit(&dwe_dev->bctx[i]);
 		media_entity_cleanup(&dwe_dev->sd.entity);
+		g_dwe_subdev[dev_id] = NULL;
 		v4l2_async_unregister_subdev(&dwe_dev->sd);
 		kfree(dwe_dev);
 	}

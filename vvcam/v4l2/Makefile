@@ -18,8 +18,6 @@ endif
 
 EXTRA_CFLAGS += -O2 -Werror
 
-obj-m += video/
-
 include $(PWD)/../version/ISP8000NANO_V1802.mk
 
 EXTRA_CFLAGS += -DISP_REG_SIZE=0x00010000
@@ -64,6 +62,7 @@ obj-m += vvcam-dwe.o
 #obj-m += csi/
 obj-m += sensor/
 obj-m += focus/
+obj-m += video/
 
 all:
 	make -C $(KERNEL_SRC) M=$(SRC) ENABLE_IRQ=$(ENABLE_IRQ)

@@ -76,6 +76,7 @@ struct dwe_device {
 	struct vvbuf_ctx bctx[DWE_PADS_NUM];
 	/* Driver private data */
 	struct v4l2_subdev sd;
+	struct fwnode_handle fwnode;
 #ifdef ENABLE_IRQ
 	struct dwe_devcore *core;
 	struct media_pad pads[DWE_PADS_NUM];
