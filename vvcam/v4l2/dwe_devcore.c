@@ -73,21 +73,18 @@ long dwe_devcore_ioctl(struct dwe_device *dwe, unsigned int cmd, void *args)
 	case DWEIOC_START:
 		if (dwe->state & STATE_DRIVER_STARTED)
 			break;
-		mutex_lock(&dwe->core->mutex);
 		if (dwe->core->state == 0) {
 			ret = dwe_priv_ioctl(&dwe->core->ic_dev,
 					DWEIOC_RESET, NULL);
 			ret |= dwe_priv_ioctl(&dwe->core->ic_dev, cmd, args);
 		}
 		dwe->core->state++;
-		mutex_unlock(&dwe->core->mutex);
 		dwe->state |= STATE_DRIVER_STARTED;
 		break;
 	case DWEIOC_STOP:
 		if (!(dwe->state & STATE_DRIVER_STARTED))
 			break;
 		dwe->state &= ~STATE_DRIVER_STARTED;
-		mutex_lock(&dwe->core->mutex);
 		dwe->core->state--;
 		if (dwe->core->state == 0) {
 			ret = dwe_priv_ioctl(&dwe->core->ic_dev, cmd, args);
@@ -95,7 +92,6 @@ long dwe_devcore_ioctl(struct dwe_device *dwe, unsigned int cmd, void *args)
 			dwe_clean_src_memory(&dwe->core->ic_dev);
 			dwe->core->ic_dev.hardware_status = HARDWARE_IDLE;
 		}
-		mutex_unlock(&dwe->core->mutex);
 		break;
 	case DWEIOC_SET_LUT: {
 		struct lut_info info;

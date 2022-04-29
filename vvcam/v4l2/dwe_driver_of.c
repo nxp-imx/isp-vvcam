@@ -82,12 +82,22 @@ static long dwe_ioctl_compat(struct v4l2_subdev *sd,
 
 long dwe_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 {
-	return dwe_ioctl_compat(sd, cmd, arg);
+	int ret = 0;
+	struct dwe_device *dwe_dev = v4l2_get_subdevdata(sd);
+	mutex_lock(&dwe_dev->core->mutex);
+	ret = dwe_ioctl_compat(sd, cmd, arg);
+	mutex_unlock(&dwe_dev->core->mutex);
+	return ret;
 }
 #else /* CONFIG_COMPAT */
 long dwe_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 {
-	return dwe_devcore_ioctl(v4l2_get_subdevdata(sd), cmd, arg);
+	int ret = 0;
+	struct dwe_device *dwe_dev = v4l2_get_subdevdata(sd);
+	mutex_lock(&dwe_dev->core->mutex);
+	ret = dwe_devcore_ioctl(v4l2_get_subdevdata(sd), cmd, arg);
+	mutex_unlock(&dwe_dev->core->mutex);
+	return ret;
 }
 #endif /* CONFIG_COMPAT */
 
@@ -277,7 +287,7 @@ static int dwe_close(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 	mutex_lock(&dwe_dev->core->mutex);
 	dwe_dev->refcnt--;
 	if (dwe_dev->refcnt == 0){
-		if (dwe_dev->state | STATE_DRIVER_STARTED)
+		if (dwe_dev->state & STATE_DRIVER_STARTED)
 			dwe_devcore_ioctl(dwe_dev, DWEIOC_STOP, NULL);
 		dwe_dev->state = 0;
 		ctx = &dwe_dev->bctx[DWE_PAD_SOURCE];
