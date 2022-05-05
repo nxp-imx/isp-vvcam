@@ -525,7 +525,7 @@ static int video_close(struct file *file)
 			set_stream(handle->vdev, 0);
 			viv_post_simple_event(VIV_VIDEO_EVENT_STOP_STREAM,
 						handle->streamid, &handle->vfh,
-						false);
+						true);
 			handle->state = 1;
 		}
 		if (handle->streamid >= 0 && handle->state == 1) {

@@ -76,6 +76,7 @@ struct isp_device {
 	int irq;
 
 	int id;
+	struct mutex mlock;
 };
 
 #endif /* _ISP_DRIVER_H_ */
