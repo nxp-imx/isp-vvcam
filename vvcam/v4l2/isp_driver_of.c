@@ -77,14 +77,24 @@ static long isp_ioctl_compat(struct v4l2_subdev *sd,
 
 long isp_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 {
-	return isp_ioctl_compat(sd, cmd, arg);
+	int ret = 0;
+	struct isp_device *isp_dev = v4l2_get_subdevdata(sd);
+	mutex_lock(&isp_dev->mlock);
+	ret = isp_ioctl_compat(sd, cmd, arg);
+	mutex_unlock(&isp_dev->mlock);
+	return ret;
 }
 #else /* CONFIG_COMPAT */
 long isp_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 {
+	int ret = 0;
 	struct isp_device *isp_dev = v4l2_get_subdevdata(sd);
 
-	return isp_priv_ioctl(&isp_dev->ic_dev, cmd, arg);
+	mutex_lock(&isp_dev->mlock);
+	ret = isp_priv_ioctl(&isp_dev->ic_dev, cmd, arg);
+	mutex_unlock(&isp_dev->mlock);
+
+	return ret;
 }
 #endif /* CONFIG_COMPAT */
 
@@ -279,8 +289,9 @@ static int isp_buf_free(struct isp_ic_dev *dev, struct vb2_dc_buf *buf)
 static int isp_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 {
 	struct isp_device *isp_dev = v4l2_get_subdevdata(sd);
-	pm_runtime_get_sync(sd->dev);
 
+	mutex_lock(&isp_dev->mlock);
+	pm_runtime_get_sync(sd->dev);
 	isp_dev->refcnt++;
 	if (isp_dev->refcnt == 1) {
 		msleep(1);
@@ -290,9 +301,11 @@ static int isp_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 			pr_err("failed to request irq.\n");
 			isp_dev->refcnt = 0;
 			pm_runtime_put_sync(sd->dev);
+			mutex_unlock(&isp_dev->mlock);
 			return -1;
 		}
 	}
+	mutex_unlock(&isp_dev->mlock);
 	return 0;
 }
 
@@ -305,7 +318,7 @@ static int isp_close(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 		isp_dev->refcnt = 0;
 		return 0;
 	}
-
+	mutex_lock(&isp_dev->mlock);
 	if (isp_dev->refcnt == 0){
 		if (isp_dev->state & STATE_DRIVER_STARTED)
 			isp_mi_stop(&isp_dev->ic_dev);
@@ -318,6 +331,7 @@ static int isp_close(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 	}
 
 	pm_runtime_put(sd->dev);
+	mutex_unlock(&isp_dev->mlock);
 	return 0;
 }
 
@@ -337,6 +351,8 @@ int isp_hw_probe(struct platform_device *pdev)
 	isp_dev = kzalloc(sizeof(struct isp_device), GFP_KERNEL);
 	if (!isp_dev)
 		return -ENOMEM;
+
+	mutex_init(&isp_dev->mlock);
 
 	rc = fwnode_property_read_u32(of_fwnode_handle(pdev->dev.of_node),
 			"id", &isp_dev->id);

@@ -175,7 +175,7 @@ void dwe_clean_src_memory(struct dwe_ic_dev *dev)
 
 	spin_lock_irqsave(&dev->irqlock, flags);
 	do {
-		buf = vvbuf_pull_buf(dev->src_bctx[dev->index]);
+		buf = vvbuf_pull_buf(dev->sink_bctx);
 		if (buf)
 			vvbuf_ready(dev->sink_bctx, buf->pad, buf);
 	} while(buf);
