@@ -56,6 +56,7 @@
 #include <linux/mfd/syscon.h>
 #include <linux/regmap.h>
 #include <linux/of_reserved_mem.h>
+#include <linux/pm_domain.h>
 
 #include "isp_driver.h"
 #include "isp_ioctl.h"
@@ -340,6 +341,97 @@ static struct v4l2_subdev_internal_ops isp_internal_ops = {
 	.close = isp_close,
 };
 
+/**
+ * isp_attach_pm_domains() - attach the power domains
+ * On i.MX8MP there is multiple power domains
+ * required, so need to link them.
+ */
+static int isp_attach_pm_domains(struct isp_device *isp_dev,
+		struct device *dev)
+{
+	int ret, i;
+	struct isp_pd *priv;
+
+	isp_dev->num_domains = of_count_phandle_with_args(dev->of_node,
+							"power-domains",
+							"#power-domain-cells");
+	if (isp_dev->num_domains <= 1)
+		return 0;
+
+	isp_dev->priv = devm_kzalloc(dev, sizeof(struct isp_pd),
+					GFP_KERNEL);
+	if (!isp_dev->priv) {
+		dev_err(dev, "failed alloc the priv\n");
+		return -ENOMEM;
+	}
+
+	priv = isp_dev->priv;
+	priv->num_domains = isp_dev->num_domains;
+	priv->pd_dev = devm_kmalloc_array(dev, priv->num_domains,
+					  sizeof(*priv->pd_dev),
+					  GFP_KERNEL);
+	if (!priv->pd_dev) {
+		ret = -ENOMEM;
+		goto end;
+	}
+
+	priv->pd_dev_link = devm_kmalloc_array(dev, priv->num_domains,
+					       sizeof(*priv->pd_dev_link),
+					       GFP_KERNEL);
+	if (!priv->pd_dev_link) {
+		ret = -ENOMEM;
+		goto end;
+	}
+
+	for (i = 0; i < priv->num_domains; i++) {
+		priv->pd_dev[i] = dev_pm_domain_attach_by_id(dev, i);
+		if (IS_ERR(priv->pd_dev[i])) {
+			ret = PTR_ERR(priv->pd_dev[i]);
+			goto detach_pm;
+		}
+
+		/*
+		 * device_link_add will check priv->pd_dev[i], if it is
+		 * NULL, then will break.
+		 */
+		priv->pd_dev_link[i] = device_link_add(dev,
+						       priv->pd_dev[i],
+						       DL_FLAG_STATELESS |
+						       DL_FLAG_PM_RUNTIME);
+		if (!priv->pd_dev_link[i]) {
+			dev_pm_domain_detach(priv->pd_dev[i], false);
+			ret = -EINVAL;
+			goto detach_pm;
+		}
+	}
+
+	return 0;
+
+detach_pm:
+	while (--i >= 0) {
+		device_link_del(priv->pd_dev_link[i]);
+		dev_pm_domain_detach(priv->pd_dev[i], false);
+	}
+
+end:
+	devm_kfree(dev, isp_dev->priv);
+	return ret;
+}
+
+static int isp_detach_pm_domains(struct isp_pd *priv)
+{
+        int i;
+
+        if (priv->num_domains <= 1)
+                return 0;
+
+        for (i = 0; i < priv->num_domains; i++) {
+                device_link_del(priv->pd_dev_link[i]);
+                dev_pm_domain_detach(priv->pd_dev[i], false);
+        }
+
+        return 0;
+}
 int isp_hw_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -362,32 +454,39 @@ int isp_hw_probe(struct platform_device *pdev)
 	}
 	isp_dev->ic_dev.id = isp_dev->id;
 
+	/* There are multiple power domains required by ISP on imx865 platform */
+	rc = isp_attach_pm_domains(isp_dev, dev);
+	if (rc) {
+		dev_err(dev, "isp_attach_pm_domains failed\n");
+		goto err_put_isp;
+	}
+
 	isp_dev->clk_core = devm_clk_get(dev, "core");
 	if (IS_ERR(isp_dev->clk_core)) {
 		rc = PTR_ERR(isp_dev->clk_core);
 		dev_err(dev, "can't get core clock: %d\n", rc);
-		return rc;
+		goto err_detach_domains;
 	}
 
 	isp_dev->clk_axi = devm_clk_get(dev, "axi");
 	if (IS_ERR(isp_dev->clk_axi)) {
 		rc = PTR_ERR(isp_dev->clk_axi);
 		dev_err(dev, "can't get axi clock: %d\n", rc);
-		return rc;
+		goto err_detach_domains;
 	}
 
 	isp_dev->clk_ahb = devm_clk_get(dev, "ahb");
 	if (IS_ERR(isp_dev->clk_ahb)) {
 		rc = PTR_ERR(isp_dev->clk_ahb);
 		dev_err(dev, "can't get ahb clock: %d\n", rc);
-		return rc;
+		goto err_detach_domains;
 	}
 
 	isp_dev->clk_sensor = devm_clk_get(dev, "sensor");
 	if (IS_ERR(isp_dev->clk_sensor)) {
 		rc = PTR_ERR(isp_dev->clk_sensor);
 		dev_err(dev, "can't get sensor clock: %d\n", rc);
-		return rc;
+		goto err_detach_domains;
 	}
 
 	isp_dev->sd.internal_ops = &isp_internal_ops;
@@ -398,7 +497,8 @@ int isp_hw_probe(struct platform_device *pdev)
 	if (IS_ERR(isp_dev->ic_dev.mix_gpr)) {
 		pr_warn("failed to get mix gpr\n");
 		isp_dev->ic_dev.mix_gpr = NULL;
-		return -ENOMEM;
+		rc = -ENOMEM;
+		goto err_detach_domains;
 	}
 #endif
 	v4l2_subdev_init(&isp_dev->sd, &isp_v4l2_subdev_ops);
@@ -464,10 +564,16 @@ int isp_hw_probe(struct platform_device *pdev)
 	pr_info("vvcam isp driver registered\n");
 	return 0;
 end:
-	vvbuf_ctx_deinit(&isp_dev->bctx);
-	kfree(isp_dev);
-	pm_runtime_put(&pdev->dev);
 	pm_runtime_disable(&pdev->dev);
+
+err_detach_domains:
+	vvbuf_ctx_deinit(&isp_dev->bctx);
+	isp_detach_pm_domains(isp_dev->priv);
+
+err_put_isp:
+	devm_kfree(dev, isp_dev->priv);
+	kfree(isp_dev);
+
 	return rc;
 }
 
@@ -484,8 +590,9 @@ int isp_hw_remove(struct platform_device *pdev)
 	media_entity_cleanup(&isp->sd.entity);
 	v4l2_async_unregister_subdev(&isp->sd);
 
-	kfree(isp);
+	isp_detach_pm_domains(isp->priv);
 	pm_runtime_disable(&pdev->dev);
+	kfree(isp);
 	pr_info("vvcam isp driver removed\n");
 	return 0;
 }

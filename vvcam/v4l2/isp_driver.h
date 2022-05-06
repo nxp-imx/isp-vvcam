@@ -68,15 +68,20 @@ struct isp_device {
 	struct clk *clk_axi;
 	struct clk *clk_ahb;
 	struct clk *clk_sensor;
+	struct isp_pd *priv;
 	int refcnt;
 #ifdef ENABLE_IRQ
 	struct media_pad pads[ISP_PADS_NUM];
 	int state;
 #endif
 	int irq;
-
+	int num_domains;
 	int id;
 	struct mutex mlock;
 };
-
+struct isp_pd {
+        struct device    **pd_dev;
+        struct device_link  **pd_dev_link;
+        int    num_domains;
+};
 #endif /* _ISP_DRIVER_H_ */
