@@ -49,6 +49,32 @@
 #define client_to_os08a20(client)\
 	container_of(i2c_get_clientdata(client), struct os08a20, subdev)
 
+/*
+Use USER_TO_KERNEL/KERNEL_TO_USER to fix "uaccess" exception on run time.
+Also, use "copy_ret" to fix the build issue as below.
+error: ignoring return value of function declared with 'warn_unused_result' attribute.
+*/
+
+#ifdef CONFIG_HARDENED_USERCOPY
+#define USER_TO_KERNEL(TYPE) \
+	do {\
+		TYPE tmp; \
+		unsigned long copy_ret; \
+		arg = (void *)(&tmp); \
+		copy_ret = copy_from_user(arg, arg_user, sizeof(TYPE));\
+	} while (0)
+
+#define KERNEL_TO_USER(TYPE) \
+	do {\
+		unsigned long copy_ret; \
+		copy_ret = copy_to_user(arg_user, arg, sizeof(TYPE));\
+	} while (0)
+#else
+#define USER_TO_KERNEL(TYPE)
+#define KERNEL_TO_USER(TYPE)
+#endif
+
+
 struct os08a20_capture_properties {
 	__u64 max_lane_frequency;
 	__u64 max_pixel_frequency;
@@ -439,20 +465,18 @@ static int os08a20_query_capability(struct os08a20 *sensor, void *arg)
 	} else {
 		pcap->bus_info[VVCAM_CAP_BUS_INFO_I2C_ADAPTER_NR_POS] = 0xFF;
 	}
+
 	return 0;
 }
 
 static int os08a20_query_supports(struct os08a20 *sensor, void* parry)
 {
-	int ret = 0;
 	struct vvcam_mode_info_array_s *psensor_mode_arry = parry;
-	psensor_mode_arry->count = ARRAY_SIZE(pos08a20_mode_info);
-	ret = copy_to_user(&psensor_mode_arry->modes, pos08a20_mode_info,
-			   sizeof(pos08a20_mode_info));
-	if (ret != 0)
-		ret = -ENOMEM;
-	return ret;
 
+	psensor_mode_arry->count = ARRAY_SIZE(pos08a20_mode_info);
+	memcpy((void *)&psensor_mode_arry->modes, (void *)pos08a20_mode_info, sizeof(pos08a20_mode_info));
+
+	return 0;
 }
 
 static int os08a20_get_sensor_id(struct os08a20 *sensor, void* pchip_id)
@@ -839,12 +863,13 @@ static int os08a20_get_fmt(struct v4l2_subdev *sd,
 
 static long os08a20_priv_ioctl(struct v4l2_subdev *sd,
                               unsigned int cmd,
-                              void *arg)
+                              void *arg_user)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct os08a20 *sensor = client_to_os08a20(client);
 	long ret = 0;
 	struct vvcam_sccb_data_s sensor_reg;
+	void *arg = arg_user;
 
 	mutex_lock(&sensor->lock);
 	switch (cmd){
@@ -864,7 +889,9 @@ static long os08a20_priv_ioctl(struct v4l2_subdev *sd,
 		ret = os08a20_query_capability(sensor, arg);
 		break;
 	case VVSENSORIOC_QUERY:
+		USER_TO_KERNEL(struct vvcam_mode_info_array_s);
 		ret = os08a20_query_supports(sensor, arg);
+		KERNEL_TO_USER(struct vvcam_mode_info_array_s);
 		break;
 	case VVSENSORIOC_G_CHIP_ID:
 		ret = os08a20_get_sensor_id(sensor, arg);
@@ -879,6 +906,7 @@ static long os08a20_priv_ioctl(struct v4l2_subdev *sd,
 		ret = os08a20_set_sensor_mode(sensor, arg);
 		break;
 	case VVSENSORIOC_S_STREAM:
+		USER_TO_KERNEL(int);
 		ret = os08a20_s_stream(&sensor->subdev, *(int *)arg);
 		break;
 	case VVSENSORIOC_WRITE_REG:
@@ -896,22 +924,29 @@ static long os08a20_priv_ioctl(struct v4l2_subdev *sd,
 			sizeof(struct vvcam_sccb_data_s));
 		break;
 	case VVSENSORIOC_S_EXP:
+		USER_TO_KERNEL(u32);
 		ret = os08a20_set_exp(sensor, *(u32 *)arg);
 		break;
 	case VVSENSORIOC_S_VSEXP:
+		USER_TO_KERNEL(u32);
 		ret = os08a20_set_vsexp(sensor, *(u32 *)arg);
 		break;
 	case VVSENSORIOC_S_GAIN:
+		USER_TO_KERNEL(u32);
 		ret = os08a20_set_gain(sensor, *(u32 *)arg);
 		break;
 	case VVSENSORIOC_S_VSGAIN:
+		USER_TO_KERNEL(u32);
 		ret = os08a20_set_vsgain(sensor, *(u32 *)arg);
 		break;
 	case VVSENSORIOC_S_FPS:
+		USER_TO_KERNEL(u32);
 		ret = os08a20_set_fps(sensor, *(u32 *)arg);
 		break;
 	case VVSENSORIOC_G_FPS:
+		USER_TO_KERNEL(u32);
 		ret = os08a20_get_fps(sensor, (u32 *)arg);
+		KERNEL_TO_USER(u32);
 		break;
 	case VVSENSORIOC_S_HDR_RADIO:
 		ret = os08a20_set_ratio(sensor, arg);
