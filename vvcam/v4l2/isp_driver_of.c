@@ -418,20 +418,27 @@ end:
 	return ret;
 }
 
-static int isp_detach_pm_domains(struct isp_pd *priv)
+static int isp_detach_pm_domains(struct isp_device *isp_dev)
 {
-        int i;
+	int i;
+	struct isp_pd *priv = isp_dev->priv;
 
-        if (priv->num_domains <= 1)
-                return 0;
+	if (isp_dev->num_domains <= 1)
+		return 0;
 
-        for (i = 0; i < priv->num_domains; i++) {
-                device_link_del(priv->pd_dev_link[i]);
-                dev_pm_domain_detach(priv->pd_dev[i], false);
-        }
+	if (priv == NULL) {
+		pr_err("isp device priv is null!\n");
+		return -ENOMEM;
+	}
 
-        return 0;
+	for (i = 0; i < priv->num_domains; i++) {
+		device_link_del(priv->pd_dev_link[i]);
+		dev_pm_domain_detach(priv->pd_dev[i], false);
+	}
+
+	return 0;
 }
+
 int isp_hw_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -568,7 +575,7 @@ end:
 
 err_detach_domains:
 	vvbuf_ctx_deinit(&isp_dev->bctx);
-	isp_detach_pm_domains(isp_dev->priv);
+	isp_detach_pm_domains(isp_dev);
 
 err_put_isp:
 	devm_kfree(dev, isp_dev->priv);
@@ -580,6 +587,7 @@ err_put_isp:
 int isp_hw_remove(struct platform_device *pdev)
 {
 	struct isp_device *isp = platform_get_drvdata(pdev);
+	int rc;
 
 	pr_info("enter %s\n", __func__);
 	if (!isp)
@@ -590,7 +598,13 @@ int isp_hw_remove(struct platform_device *pdev)
 	media_entity_cleanup(&isp->sd.entity);
 	v4l2_async_unregister_subdev(&isp->sd);
 
-	isp_detach_pm_domains(isp->priv);
+	rc = isp_detach_pm_domains(isp);
+
+	if (rc) {
+		pr_err("vvcam isp detach pm domain failed\n");
+		return rc;
+	}
+
 	pm_runtime_disable(&pdev->dev);
 	kfree(isp);
 	pr_info("vvcam isp driver removed\n");
