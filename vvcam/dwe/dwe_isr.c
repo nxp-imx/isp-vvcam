@@ -64,7 +64,9 @@ void dwe_isr_tasklet(unsigned long arg)
 	int which;
 	u32 dewarp_ctrl;
 	unsigned long flags;
+	unsigned long irq_flags;
 	struct dwe_ic_dev *dev = (struct dwe_ic_dev *)(arg);
+	struct vb2_dc_buf *sink_buf, *sink_next;
 
 	spin_lock_irqsave(&dev->irqlock, flags);
 	dwe_enable_bus(dev, 0);
@@ -80,6 +82,14 @@ void dwe_isr_tasklet(unsigned long arg)
 		if ( *dev->state[dev->index]  != (STATE_DRIVER_STARTED | STATE_STREAM_STARTED) ) {
 			vvbuf_ready(dev->sink_bctx, dev->src->pad, dev->src);
 			dev->src = NULL;
+			spin_lock_irqsave(&dev->sink_bctx->irqlock, irq_flags);
+			list_for_each_entry_safe(sink_buf, sink_next, &(dev->sink_bctx->dmaqueue), irqlist) {
+				if (dev->get_index(dev, sink_buf) == dev->index) {
+					list_del(&sink_buf->irqlist);
+					vvbuf_ready(dev->sink_bctx, sink_buf->pad, sink_buf);
+				}
+			}
+			spin_unlock_irqrestore(&dev->sink_bctx->irqlock, irq_flags);
 			continue;
 		}
 		if (dev->dist_map[dev->index] == NULL) {

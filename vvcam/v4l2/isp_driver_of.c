@@ -314,12 +314,11 @@ static int isp_close(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 {
 	struct isp_device *isp_dev = v4l2_get_subdevdata(sd);
 
-	isp_dev->refcnt--;
-	if (isp_dev->refcnt < 0) {
-		isp_dev->refcnt = 0;
+	if (isp_dev->refcnt == 0)
 		return 0;
-	}
+
 	mutex_lock(&isp_dev->mlock);
+	isp_dev->refcnt--;
 	if (isp_dev->refcnt == 0){
 		if (isp_dev->state & STATE_DRIVER_STARTED)
 			isp_mi_stop(&isp_dev->ic_dev);
