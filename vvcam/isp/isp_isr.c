@@ -128,7 +128,6 @@ int update_dma_buffer(struct isp_ic_dev *dev)
 		buf = vvbuf_pull_buf(dev->bctx);
 		if (buf == NULL)
 			continue;
-
 		dmabuf.path = i;
 		if (config_dma_buf(&mi->path[i], buf->dma, &dmabuf)){
 			vvbuf_push_buf(dev->bctx,buf);

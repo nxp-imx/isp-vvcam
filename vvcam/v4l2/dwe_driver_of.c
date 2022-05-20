@@ -284,12 +284,14 @@ static int dwe_close(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 	struct vvbuf_ctx *ctx;
 	unsigned long flags;
 
+	if (dwe_dev->refcnt == 0)
+		return 0;
+
 	mutex_lock(&dwe_dev->core->mutex);
 	dwe_dev->refcnt--;
 	if (dwe_dev->refcnt == 0){
-		if (dwe_dev->state & STATE_DRIVER_STARTED)
-			dwe_devcore_ioctl(dwe_dev, DWEIOC_STOP, NULL);
 		dwe_dev->state = 0;
+		msleep(10);
 		ctx = &dwe_dev->bctx[DWE_PAD_SOURCE];
 		spin_lock_irqsave(&ctx->irqlock, flags);
 		if (!list_empty(&ctx->dmaqueue))
@@ -302,9 +304,10 @@ static int dwe_close(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 	devm_free_irq(pdwe_dev[0]->sd.dev, pdwe_dev[0]->irq, &pdwe_dev[0]->core->ic_dev);
 	dwe_clear_interrupts(&pdwe_dev[0]->core->ic_dev);
 	pdwe_dev[0]->core->state = 0;
-	dwe_clean_src_memory(&pdwe_dev[0]->core->ic_dev);
 
 	msleep(5);
+
+	dwe_clean_src_memory(&pdwe_dev[0]->core->ic_dev);
 exit:
 	pm_runtime_put(pdwe_dev[0]->sd.dev);
 	mutex_unlock(&dwe_dev->core->mutex);
