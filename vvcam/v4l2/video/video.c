@@ -465,6 +465,16 @@ static int video_open(struct file *file)
 	struct viv_video_file *handle;
 	unsigned long flags;
 	int rc;
+	int retry_count = 0;
+
+	/* waiting for close operation finish */
+	while(atomic_read(&(dev->refcnt))) {
+		msleep(50);
+		retry_count++;
+		if (retry_count > 3) {
+			break;
+		}
+	}
 
 	pr_debug("enter %s\n", __func__);
 	handle = kzalloc(sizeof(*handle), GFP_KERNEL);
@@ -518,6 +528,7 @@ static int video_close(struct file *file)
 	spinlock_t *lock;
 	unsigned long flags;
 
+	atomic_inc(&(handle->vdev->refcnt));
 	pr_debug("enter %s\n", __func__);
 	if (handle) {
 		handle->req = false;
@@ -578,6 +589,7 @@ static int video_close(struct file *file)
 		kfree(handle->event_buf.va);
 		kfree(handle);
 	}
+	atomic_dec(&(handle->vdev->refcnt));
 	return 0;
 }
 
@@ -2196,6 +2208,7 @@ static int viv_video_probe(struct platform_device *pdev)
 			}
 			vdev->duration = 0;
 			vdev->last_ts = 0;
+			atomic_set(&(vdev->refcnt), 0);
 
 			continue;
 register_fail:

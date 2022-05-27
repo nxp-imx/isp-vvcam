@@ -103,6 +103,7 @@ struct viv_video_device {
 	struct viv_caps_mode_s caps_mode;
 	int event_result;
 	bool dweEnabled;
+	atomic_t refcnt;
 	struct viv_caps_supports caps_supports;
 	u64 duration, last_ts, frameCnt[VIDEO_NODE_NUM];
 	u32 loop_cnt[VIDEO_NODE_NUM];
