@@ -92,7 +92,8 @@ void dwe_isr_tasklet(unsigned long arg)
 			spin_unlock_irqrestore(&dev->sink_bctx->irqlock, irq_flags);
 			continue;
 		}
-		if (dev->dist_map[dev->index] == NULL) {
+		which = dev->which[dev->index];
+		if (dev->dist_map[dev->index][which] == (dma_addr_t)NULL) {
 			vvbuf_ready(dev->sink_bctx, dev->src->pad, dev->src);
 			dev->src = NULL;
 			continue;
@@ -105,7 +106,6 @@ void dwe_isr_tasklet(unsigned long arg)
 		}
 	} while (dev->dst == NULL);
 
-	which = dev->which[dev->index];
 	dwe_s_params(dev, &dev->info[dev->index][which]);
 	dwe_set_buffer(dev, &dev->info[dev->index][which], dev->dst->dma);
 	dwe_set_lut(dev, dev->dist_map[dev->index][which]);
