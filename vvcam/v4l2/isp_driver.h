@@ -80,8 +80,8 @@ struct isp_device {
 	struct mutex mlock;
 };
 struct isp_pd {
-        struct device    **pd_dev;
-        struct device_link  **pd_dev_link;
-        int    num_domains;
+	struct device    **pd_dev;
+	struct device_link  **pd_dev_link;
+	int    num_domains;
 };
 #endif /* _ISP_DRIVER_H_ */

@@ -1377,8 +1377,8 @@ int isp_s_flt(struct isp_ic_dev *dev)
 		u32 thresh_bl0;
 		u32 thresh_bl1;
 		u32 stage_select;
-		u32 vmode;
-		u32 hmode;
+		//u32 vmode;
+		//u32 hmode;
 	};
 	
 	struct flt_sharpen_type {
@@ -1390,30 +1390,42 @@ int isp_s_flt(struct isp_ic_dev *dev)
 	};
 	
 	static struct flt_denoise_type denoise_tbl[] = {
-		{0, 0, 0, 0, 6, MRV_FILT_FILT_CHR_V_MODE_STATIC8,
-		 MRV_FILT_FILT_CHR_H_MODE_BYPASS},
-		{18, 33, 8, 2, 6, MRV_FILT_FILT_CHR_V_MODE_STATIC12,
-		 MRV_FILT_FILT_CHR_H_MODE_DYN_2},
-		{26, 44, 13, 5, 4, MRV_FILT_FILT_CHR_V_MODE_STATIC12,
-		 MRV_FILT_FILT_CHR_H_MODE_DYN_2},
-		{36, 51, 23, 10, 2, MRV_FILT_FILT_CHR_V_MODE_STATIC12,
-		 MRV_FILT_FILT_CHR_H_MODE_DYN_2},
-		{41, 67, 26, 15, 3, MRV_FILT_FILT_CHR_V_MODE_STATIC12,
-		 MRV_FILT_FILT_CHR_H_MODE_DYN_2},
-		{75, 10, 50, 20, 3, MRV_FILT_FILT_CHR_V_MODE_STATIC12,
-		 MRV_FILT_FILT_CHR_H_MODE_DYN_2},
-		{90, 120, 60, 26, 2, MRV_FILT_FILT_CHR_V_MODE_STATIC12,
-		 MRV_FILT_FILT_CHR_H_MODE_DYN_2},
-		{120, 150, 80, 51, 2, MRV_FILT_FILT_CHR_V_MODE_STATIC12,
-		 MRV_FILT_FILT_CHR_H_MODE_DYN_2},
-		{170, 200, 140, 100, 2, MRV_FILT_FILT_CHR_V_MODE_STATIC12,
-		 MRV_FILT_FILT_CHR_H_MODE_DYN_2},
-		{250, 300, 180, 150, 2, MRV_FILT_FILT_CHR_V_MODE_STATIC12,
-		 MRV_FILT_FILT_CHR_H_MODE_DYN_2},
-		{1023, 1023, 1023, 1023, 2, MRV_FILT_FILT_CHR_V_MODE_STATIC12,
-		 MRV_FILT_FILT_CHR_H_MODE_DYN_2},
-		{1023, 1023, 1023, 1023, 0, MRV_FILT_FILT_CHR_V_MODE_BYPASS,
-		 MRV_FILT_FILT_CHR_H_MODE_BYPASS},
+		//{0, 0, 0, 0, 6, MRV_FILT_FILT_CHR_V_MODE_STATIC8,
+		// MRV_FILT_FILT_CHR_H_MODE_BYPASS},
+		//{18, 33, 8, 2, 6, MRV_FILT_FILT_CHR_V_MODE_STATIC12,
+		// MRV_FILT_FILT_CHR_H_MODE_DYN_2},
+		//{26, 44, 13, 5, 4, MRV_FILT_FILT_CHR_V_MODE_STATIC12,
+		// MRV_FILT_FILT_CHR_H_MODE_DYN_2},
+		//{36, 51, 23, 10, 2, MRV_FILT_FILT_CHR_V_MODE_STATIC12,
+		// MRV_FILT_FILT_CHR_H_MODE_DYN_2},
+		//{41, 67, 26, 15, 3, MRV_FILT_FILT_CHR_V_MODE_STATIC12,
+		// MRV_FILT_FILT_CHR_H_MODE_DYN_2},
+		//{75, 10, 50, 20, 3, MRV_FILT_FILT_CHR_V_MODE_STATIC12,
+		// MRV_FILT_FILT_CHR_H_MODE_DYN_2},
+		//{90, 120, 60, 26, 2, MRV_FILT_FILT_CHR_V_MODE_STATIC12,
+		// MRV_FILT_FILT_CHR_H_MODE_DYN_2},
+		//{120, 150, 80, 51, 2, MRV_FILT_FILT_CHR_V_MODE_STATIC12,
+		// MRV_FILT_FILT_CHR_H_MODE_DYN_2},
+		//{170, 200, 140, 100, 2, MRV_FILT_FILT_CHR_V_MODE_STATIC12,
+		// MRV_FILT_FILT_CHR_H_MODE_DYN_2},
+		//{250, 300, 180, 150, 2, MRV_FILT_FILT_CHR_V_MODE_STATIC12,
+		// MRV_FILT_FILT_CHR_H_MODE_DYN_2},
+		//{1023, 1023, 1023, 1023, 2, MRV_FILT_FILT_CHR_V_MODE_STATIC12,
+		// MRV_FILT_FILT_CHR_H_MODE_DYN_2},
+		//{1023, 1023, 1023, 1023, 0, MRV_FILT_FILT_CHR_V_MODE_BYPASS,
+		// MRV_FILT_FILT_CHR_H_MODE_BYPASS},
+		{0, 0, 0, 0, 6},
+		{18,33,8,2,6},
+		{26,44,13,5,4},
+		{36,51,23,10,2},
+		{41,67,26,15,3},
+		{75,10,50,20,3},
+		{90, 120, 60, 26, 2},
+		{120, 150, 80, 51, 2},
+		{170, 200, 140, 100, 2},
+		{250, 300, 180, 150, 2},
+		{1023, 1023, 1023, 1023, 2},
+		{1023, 1023, 1023, 1023, 0},
 	};
 	
 	static struct flt_sharpen_type sharpen_tbl[] = {
@@ -1452,10 +1464,14 @@ int isp_s_flt(struct isp_ic_dev *dev)
 					  denoise_tbl[flt->denoise].thresh_bl1);
 			REG_SET_SLICE(isp_flt_mode, MRV_FILT_STAGE1_SELECT,
 					  denoise_tbl[flt->denoise].stage_select);
+			//REG_SET_SLICE(isp_flt_mode, MRV_FILT_FILT_CHR_V_MODE,
+			//		  denoise_tbl[flt->denoise].vmode);
+			//REG_SET_SLICE(isp_flt_mode, MRV_FILT_FILT_CHR_H_MODE,
+			//		  denoise_tbl[flt->denoise].hmode);
 			REG_SET_SLICE(isp_flt_mode, MRV_FILT_FILT_CHR_V_MODE,
-					  denoise_tbl[flt->denoise].vmode);
+					  flt->chrV);
 			REG_SET_SLICE(isp_flt_mode, MRV_FILT_FILT_CHR_H_MODE,
-					  denoise_tbl[flt->denoise].hmode);
+					  flt->chrH);
 		}
 
 		if (flt->sharpen >= 0) {

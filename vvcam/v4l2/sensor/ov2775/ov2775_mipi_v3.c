@@ -172,7 +172,7 @@ static struct vvcam_mode_info_s pov2775_mode_info[] = {
 			.min_short_again = 2 * 1024,
 			.max_short_dgain = 4 * 1024,
 			.min_short_dgain = 1.5 * 1024,
-			.start_exposure  = 3 * 400 * 1024,
+			.start_exposure  = 2 * 300 * 1024,
 
 			.gain_step       = 4,
 			.cur_fps         = 30 * 1024,

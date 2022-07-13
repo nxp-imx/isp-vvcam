@@ -12699,7 +12699,9 @@ typedef struct {
 #define MRV_STITCHING_VERSION           1
 #define MRV_EE_VERSION                  1
 #define MRV_2DNR_VERSION                1
+#ifdef ISP_3DNR
 #define MRV_3DNR_VERSION                1
+#endif
 #ifdef ISP_DEC
 #define MRV_DEC_VERSION                 1
 #endif

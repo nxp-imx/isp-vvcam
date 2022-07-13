@@ -186,6 +186,11 @@ struct viv_caps_mode_info_s{
 	unsigned int fps;
 };
 
+struct video_event_shm {
+	uint32_t complete;
+	int32_t  result;
+};
+
 #define VIV_CAPS_MODE_MAX_COUNT    20
 struct viv_caps_supports{
 	unsigned int count;

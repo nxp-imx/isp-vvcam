@@ -446,6 +446,8 @@ struct isp_flt_context {
 	bool changed;
 	u32 denoise;
 	u32 sharpen;
+	u32 chrV;
+	u32 chrH;
 };
 
 struct isp_cac_context {

@@ -319,6 +319,9 @@ static struct v4l2_subdev_internal_ops dwe_internal_ops = {
 	.close = dwe_close,
 };
 
+struct v4l2_subdev *g_dwe_subdev[DEWARP_NODE_NUM] = {NULL};
+EXPORT_SYMBOL_GPL(g_dwe_subdev);
+
 int dwe_hw_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -424,11 +427,15 @@ int dwe_hw_probe(struct platform_device *pdev)
 		dwe_dev->irq = irq;
 
 		dwe_dev->core = dwe_devcore_init(dwe_dev, mem_res);
-		dwe_dev->sd.fwnode = of_fwnode_handle(pdev->dev.of_node);
+		if (dev_id == 0)
+			dwe_dev->sd.fwnode = of_fwnode_handle(pdev->dev.of_node);
+		else
+			dwe_dev->sd.fwnode = &dwe_dev->fwnode;
 
 		rc = v4l2_async_register_subdev(&dwe_dev->sd);
 		if (rc < 0)
 			goto dewarp_core_deinit;
+		g_dwe_subdev[dev_id] = &dwe_dev->sd;
 	}
 	pm_runtime_enable(&pdev->dev);
 	pr_info("vvcam dewarp driver probed\n");

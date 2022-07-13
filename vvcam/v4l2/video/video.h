@@ -114,6 +114,8 @@ struct viv_video_device {
 	bool frame_flag;
 	int dumpbuf_status;
 	struct vb2_dc_buf* dumpbuf;
+	struct mutex event_lock;
+	struct video_event_shm event_shm;
 };
 
 struct viv_video_file {
@@ -124,7 +126,6 @@ struct viv_video_file {
 	bool req;
 	bool capsqueried;
 	struct vb2_queue queue;
-	struct mutex event_mutex;
 	struct mutex buffer_mutex;
 	struct completion wait;
 	struct list_head entry;

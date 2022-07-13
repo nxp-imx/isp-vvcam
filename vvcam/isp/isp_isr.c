@@ -187,8 +187,10 @@ int clean_dma_buffer(struct isp_ic_dev *dev)
 	remote_pad = media_entity_remote_pad(&isp_dev->pads[ISP_PAD_SOURCE]);
 	if (remote_pad && is_media_entity_v4l2_video_device(remote_pad->entity)) {
 		/*if isp connect to video, the buf free by video,isp maybe not access by isp,so just empty queue*/
-		dev->mi_buf[i] = NULL;
-		dev->mi_buf_shd[i] = NULL;
+		for (i = 0; i < MI_PATH_NUM; ++i) {
+			dev->mi_buf[i]     = NULL;
+			dev->mi_buf_shd[i] = NULL;
+		}
 
 		spin_lock_irqsave(&dev->bctx->irqlock, flags);
 		if (!list_empty(&dev->bctx->dmaqueue))
