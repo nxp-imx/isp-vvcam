@@ -220,10 +220,10 @@ static struct vvcam_mode_info_s pos08a20_mode_info[] = {
 		},
 		.bayer_pattern  = BAYER_BGGR,
 		.ae_info = {
-			.def_frm_len_lines     = 0xd92,
-			.curr_frm_len_lines    = 0xd92,
+			.def_frm_len_lines     = 0x90a,
+			.curr_frm_len_lines    = 0x90a,
 			.one_line_exp_time_ns  = 14389,
-			.max_integration_line  = 0xd92 - 8,
+			.max_integration_line  = 0x90a - 8,
 			.min_integration_line  = 8,
 
 			.max_again             = 15.5 * (1 << SENSOR_FIX_FRACBITS),
@@ -232,8 +232,8 @@ static struct vvcam_mode_info_s pos08a20_mode_info[] = {
 			.min_dgain             = 1    * (1 << SENSOR_FIX_FRACBITS),
 
 			.start_exposure        = 8 * 100 * (1 << SENSOR_FIX_FRACBITS),
-			.cur_fps               = 20 * (1 << SENSOR_FIX_FRACBITS),
-			.max_fps               = 20 * (1 << SENSOR_FIX_FRACBITS),
+			.cur_fps               = 30 * (1 << SENSOR_FIX_FRACBITS),
+			.max_fps               = 30 * (1 << SENSOR_FIX_FRACBITS),
 			.min_fps               = 1  * (1 << SENSOR_FIX_FRACBITS),
 			.min_afps              = 5  * (1 << SENSOR_FIX_FRACBITS),
 			.int_update_delay_frm  = 1,
