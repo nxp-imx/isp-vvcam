@@ -283,8 +283,8 @@ static struct vvcam_mode_info_s pos08a20_mode_info[] = {
 			.min_short_dgain       = 1    * (1 << SENSOR_FIX_FRACBITS),
 
 			.start_exposure        = 8 * 100 * (1 << SENSOR_FIX_FRACBITS),
-			.cur_fps               = 15 * (1 << SENSOR_FIX_FRACBITS),
-			.max_fps               = 15 * (1 << SENSOR_FIX_FRACBITS),
+			.cur_fps               = 30 * (1 << SENSOR_FIX_FRACBITS),
+			.max_fps               = 30 * (1 << SENSOR_FIX_FRACBITS),
 			.min_fps               = 1  * (1 << SENSOR_FIX_FRACBITS),
 			.min_afps              = 5  * (1 << SENSOR_FIX_FRACBITS),
 			.hdr_ratio             = {
