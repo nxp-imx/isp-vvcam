@@ -873,19 +873,26 @@ int isp_enable_wb(struct isp_ic_dev *dev, bool bEnable)
 int isp_enable_gamma_out(struct isp_ic_dev *dev, bool bEnable)
 {
 	u32 isp_ctrl;
-	struct isp_gamma_out_context *gamma = &dev->gamma_out;
+
 	isp_info("enter %s\n", __func__);
-	gamma->enableGamma = bEnable;
-	if(!is_isp_enable(dev)) {
-		isp_ctrl = isp_read_reg(dev, REG_ADDR(isp_ctrl));
-		REG_SET_SLICE(isp_ctrl, MRV_ISP_ISP_GAMMA_OUT_ENABLE, bEnable);
-		isp_write_reg(dev, REG_ADDR(isp_ctrl), isp_ctrl);
-		dev->update_gamma_en = false;
-	} else {
-		dev->update_gamma_en = true;
-	}
+
+	isp_ctrl = isp_read_reg(dev, REG_ADDR(isp_ctrl));
+	REG_SET_SLICE(isp_ctrl, MRV_ISP_ISP_GAMMA_OUT_ENABLE, bEnable);
+	isp_write_reg(dev, REG_ADDR(isp_ctrl), isp_ctrl);
+	dev->gamma_out.changed = false;
 
 	return 0;
+}
+
+int isp_enable_gamma_out_ctrl(struct isp_ic_dev *dev, bool bEnable)
+{
+	dev->gamma_out.enableGamma = bEnable;
+	if(!is_isp_enable(dev)) {
+		return isp_enable_gamma_out(dev, bEnable);
+	} else {
+		dev->gamma_out.changed = true;
+		return 0;
+	}
 }
 
 int isp_s_gamma_out(struct isp_ic_dev *dev)
@@ -893,21 +900,29 @@ int isp_s_gamma_out(struct isp_ic_dev *dev)
 	u32 isp_gamma_out_mode;
 	int i;
 	struct isp_gamma_out_context *gamma = &dev->gamma_out;
-	if(gamma->changed || !is_isp_enable(dev)) {
-		isp_gamma_out_mode = isp_read_reg(dev, REG_ADDR(isp_gamma_out_mode));
-		REG_SET_SLICE(isp_gamma_out_mode, MRV_ISP_EQU_SEGM, gamma->mode);
-		isp_write_reg(dev, REG_ADDR(isp_gamma_out_mode), isp_gamma_out_mode);
 
-		for (i = 0; i < 17; i++) {
-			isp_write_reg(dev, REG_ADDR(gamma_out_y_block_arr[i]),
-					  MRV_ISP_ISP_GAMMA_OUT_Y_MASK & gamma->curve[i]);
-		}
-		gamma->changed = false;
-	} else {
-		gamma->changed = true;
+	isp_gamma_out_mode = isp_read_reg(dev, REG_ADDR(isp_gamma_out_mode));
+	REG_SET_SLICE(isp_gamma_out_mode, MRV_ISP_EQU_SEGM, gamma->mode);
+	isp_write_reg(dev, REG_ADDR(isp_gamma_out_mode), isp_gamma_out_mode);
+
+	for (i = 0; i < 17; i++) {
+		isp_write_reg(dev, REG_ADDR(gamma_out_y_block_arr[i]),
+					MRV_ISP_ISP_GAMMA_OUT_Y_MASK & gamma->curve[i]);
 	}
 
+	gamma->changed = false;
+
 	return 0;
+}
+
+int isp_s_gamma_out_ctrl(struct isp_ic_dev *dev)
+{
+	if (!is_isp_enable(dev)) {
+		return isp_s_gamma_out(dev);
+	} else {
+		dev->gamma_out.changed = true;
+		return 0;
+	}
 }
 
 int isp_s_lsc_tbl(struct isp_ic_dev *dev)
@@ -1383,10 +1398,8 @@ int isp_s_flt(struct isp_ic_dev *dev)
 		u32 thresh_bl0;
 		u32 thresh_bl1;
 		u32 stage_select;
-		//u32 vmode;
-		//u32 hmode;
 	};
-	
+
 	struct flt_sharpen_type {
 		u32 fac_sh0;
 		u32 fac_sh1;
@@ -1394,32 +1407,8 @@ int isp_s_flt(struct isp_ic_dev *dev)
 		u32 fac_bl0;
 		u32 fac_bl1;
 	};
-	
+
 	static struct flt_denoise_type denoise_tbl[] = {
-		//{0, 0, 0, 0, 6, MRV_FILT_FILT_CHR_V_MODE_STATIC8,
-		// MRV_FILT_FILT_CHR_H_MODE_BYPASS},
-		//{18, 33, 8, 2, 6, MRV_FILT_FILT_CHR_V_MODE_STATIC12,
-		// MRV_FILT_FILT_CHR_H_MODE_DYN_2},
-		//{26, 44, 13, 5, 4, MRV_FILT_FILT_CHR_V_MODE_STATIC12,
-		// MRV_FILT_FILT_CHR_H_MODE_DYN_2},
-		//{36, 51, 23, 10, 2, MRV_FILT_FILT_CHR_V_MODE_STATIC12,
-		// MRV_FILT_FILT_CHR_H_MODE_DYN_2},
-		//{41, 67, 26, 15, 3, MRV_FILT_FILT_CHR_V_MODE_STATIC12,
-		// MRV_FILT_FILT_CHR_H_MODE_DYN_2},
-		//{75, 10, 50, 20, 3, MRV_FILT_FILT_CHR_V_MODE_STATIC12,
-		// MRV_FILT_FILT_CHR_H_MODE_DYN_2},
-		//{90, 120, 60, 26, 2, MRV_FILT_FILT_CHR_V_MODE_STATIC12,
-		// MRV_FILT_FILT_CHR_H_MODE_DYN_2},
-		//{120, 150, 80, 51, 2, MRV_FILT_FILT_CHR_V_MODE_STATIC12,
-		// MRV_FILT_FILT_CHR_H_MODE_DYN_2},
-		//{170, 200, 140, 100, 2, MRV_FILT_FILT_CHR_V_MODE_STATIC12,
-		// MRV_FILT_FILT_CHR_H_MODE_DYN_2},
-		//{250, 300, 180, 150, 2, MRV_FILT_FILT_CHR_V_MODE_STATIC12,
-		// MRV_FILT_FILT_CHR_H_MODE_DYN_2},
-		//{1023, 1023, 1023, 1023, 2, MRV_FILT_FILT_CHR_V_MODE_STATIC12,
-		// MRV_FILT_FILT_CHR_H_MODE_DYN_2},
-		//{1023, 1023, 1023, 1023, 0, MRV_FILT_FILT_CHR_V_MODE_BYPASS,
-		// MRV_FILT_FILT_CHR_H_MODE_BYPASS},
 		{0, 0, 0, 0, 6},
 		{18,33,8,2,6},
 		{26,44,13,5,4},
@@ -1433,7 +1422,7 @@ int isp_s_flt(struct isp_ic_dev *dev)
 		{1023, 1023, 1023, 1023, 2},
 		{1023, 1023, 1023, 1023, 0},
 	};
-	
+
 	static struct flt_sharpen_type sharpen_tbl[] = {
 		{0x4, 0x4, 0x4, 0x2, 0x0},
 		{0x7, 0x8, 0x6, 0x2, 0x0},
@@ -1449,61 +1438,63 @@ int isp_s_flt(struct isp_ic_dev *dev)
 	};
 
 	struct isp_flt_context *flt = &dev->flt;
-	if(flt->changed || !is_isp_enable(dev))
-	{
-		u32 isp_flt_mode = isp_read_reg(dev, REG_ADDR(isp_filt_mode));
-		if (!flt->enable) {
-			REG_SET_SLICE(isp_flt_mode, MRV_FILT_FILT_ENABLE, 0);
-			isp_write_reg(dev, REG_ADDR(isp_filt_mode), isp_flt_mode);
-			dev->flt.changed = false;
-			return 0;
-		}
-
-		if (flt->denoise >= 0) {
-			isp_write_reg(dev, REG_ADDR(isp_filt_thresh_sh0),
-					  denoise_tbl[flt->denoise].thresh_sh0);
-			isp_write_reg(dev, REG_ADDR(isp_filt_thresh_sh1),
-					  denoise_tbl[flt->denoise].thresh_sh1);
-			isp_write_reg(dev, REG_ADDR(isp_filt_thresh_bl0),
-					  denoise_tbl[flt->denoise].thresh_bl0);
-			isp_write_reg(dev, REG_ADDR(isp_filt_thresh_bl1),
-					  denoise_tbl[flt->denoise].thresh_bl1);
-			REG_SET_SLICE(isp_flt_mode, MRV_FILT_STAGE1_SELECT,
-					  denoise_tbl[flt->denoise].stage_select);
-			//REG_SET_SLICE(isp_flt_mode, MRV_FILT_FILT_CHR_V_MODE,
-			//		  denoise_tbl[flt->denoise].vmode);
-			//REG_SET_SLICE(isp_flt_mode, MRV_FILT_FILT_CHR_H_MODE,
-			//		  denoise_tbl[flt->denoise].hmode);
-			REG_SET_SLICE(isp_flt_mode, MRV_FILT_FILT_CHR_V_MODE,
-					  flt->chrV);
-			REG_SET_SLICE(isp_flt_mode, MRV_FILT_FILT_CHR_H_MODE,
-					  flt->chrH);
-		}
-
-		if (flt->sharpen >= 0) {
-			isp_write_reg(dev, REG_ADDR(isp_filt_fac_sh0),
-					  sharpen_tbl[flt->sharpen].fac_sh0);
-			isp_write_reg(dev, REG_ADDR(isp_filt_fac_sh1),
-					  sharpen_tbl[flt->sharpen].fac_sh1);
-			isp_write_reg(dev, REG_ADDR(isp_filt_fac_mid),
-					  sharpen_tbl[flt->sharpen].fac_mid);
-			isp_write_reg(dev, REG_ADDR(isp_filt_fac_bl0),
-					  sharpen_tbl[flt->sharpen].fac_bl0);
-			isp_write_reg(dev, REG_ADDR(isp_filt_fac_bl1),
-					  sharpen_tbl[flt->sharpen].fac_bl1);
-		}
-
-		REG_SET_SLICE(isp_flt_mode, MRV_FILT_FILT_MODE,
-				  MRV_FILT_FILT_MODE_DYNAMIC);
+	u32 isp_flt_mode = isp_read_reg(dev, REG_ADDR(isp_filt_mode));
+	if (!flt->enable) {
+		REG_SET_SLICE(isp_flt_mode, MRV_FILT_FILT_ENABLE, 0);
 		isp_write_reg(dev, REG_ADDR(isp_filt_mode), isp_flt_mode);
-		REG_SET_SLICE(isp_flt_mode, MRV_FILT_FILT_ENABLE, 1);
-		isp_write_reg(dev, REG_ADDR(isp_filt_mode), isp_flt_mode);
-		isp_write_reg(dev, REG_ADDR(isp_filt_lum_weight), 0x00032040);
-		flt->changed = false;
-	} else {
-		flt->changed = true;
+		dev->flt.changed = false;
+		return 0;
 	}
+
+	if (flt->denoise >= 0) {
+		isp_write_reg(dev, REG_ADDR(isp_filt_thresh_sh0),
+					denoise_tbl[flt->denoise].thresh_sh0);
+		isp_write_reg(dev, REG_ADDR(isp_filt_thresh_sh1),
+					denoise_tbl[flt->denoise].thresh_sh1);
+		isp_write_reg(dev, REG_ADDR(isp_filt_thresh_bl0),
+					denoise_tbl[flt->denoise].thresh_bl0);
+		isp_write_reg(dev, REG_ADDR(isp_filt_thresh_bl1),
+					denoise_tbl[flt->denoise].thresh_bl1);
+		REG_SET_SLICE(isp_flt_mode, MRV_FILT_STAGE1_SELECT,
+					denoise_tbl[flt->denoise].stage_select);
+		REG_SET_SLICE(isp_flt_mode, MRV_FILT_FILT_CHR_V_MODE,
+					flt->chrV);
+		REG_SET_SLICE(isp_flt_mode, MRV_FILT_FILT_CHR_H_MODE,
+					flt->chrH);
+	}
+
+	if (flt->sharpen >= 0) {
+		isp_write_reg(dev, REG_ADDR(isp_filt_fac_sh0),
+					sharpen_tbl[flt->sharpen].fac_sh0);
+		isp_write_reg(dev, REG_ADDR(isp_filt_fac_sh1),
+					sharpen_tbl[flt->sharpen].fac_sh1);
+		isp_write_reg(dev, REG_ADDR(isp_filt_fac_mid),
+					sharpen_tbl[flt->sharpen].fac_mid);
+		isp_write_reg(dev, REG_ADDR(isp_filt_fac_bl0),
+					sharpen_tbl[flt->sharpen].fac_bl0);
+		isp_write_reg(dev, REG_ADDR(isp_filt_fac_bl1),
+					sharpen_tbl[flt->sharpen].fac_bl1);
+	}
+
+	REG_SET_SLICE(isp_flt_mode, MRV_FILT_FILT_MODE,
+				MRV_FILT_FILT_MODE_DYNAMIC);
+	isp_write_reg(dev, REG_ADDR(isp_filt_mode), isp_flt_mode);
+	REG_SET_SLICE(isp_flt_mode, MRV_FILT_FILT_ENABLE, 1);
+	isp_write_reg(dev, REG_ADDR(isp_filt_mode), isp_flt_mode);
+	isp_write_reg(dev, REG_ADDR(isp_filt_lum_weight), 0x00032040);
+	flt->changed = false;
+
 	return 0;
+}
+
+int isp_s_flt_ctrl(struct isp_ic_dev *dev)
+{
+	if (!is_isp_enable(dev)) {
+		return isp_s_flt(dev);
+	} else {
+		dev->flt.changed = true;
+		return 0;
+	}
 }
 
 int isp_s_cac(struct isp_ic_dev *dev)
@@ -1972,50 +1963,39 @@ int isp_s_cproc(struct isp_ic_dev *dev)
 	u32 vi_iccl = isp_read_reg(dev, REG_ADDR(vi_iccl));
 	u32 cproc_ctrl = isp_read_reg(dev, REG_ADDR(cproc_ctrl));
 
-	//if there is no shd register. should update cporc register in isp frame end irq.
-#ifndef ISP_CPROC_SHD
-	if(dev->cproc.changed || !is_isp_enable(dev))
-	{
-#endif
-		//isp_info("enter %s %d\n", __func__, cproc->enable);
-		//REG_SET_SLICE(vi_ircl, MRV_VI_CP_SOFT_RST, 1);
-		//isp_write_reg(dev, REG_ADDR(vi_ircl), vi_ircl);
+	dev->cproc.changed = false;
 
-		if (!cproc->enable) {
-			REG_SET_SLICE(cproc_ctrl, MRV_CPROC_CPROC_ENABLE, 0);
-			/*		REG_SET_SLICE(vi_iccl, MRV_VI_CP_CLK_ENABLE, 0); */
-			/*		isp_write_reg(dev, REG_ADDR(vi_iccl), vi_iccl); */
-			isp_write_reg(dev, REG_ADDR(cproc_ctrl), cproc_ctrl);
-#ifndef ISP_CPROC_SHD
-			dev->cproc.changed = false;
-#endif
-			return 0;
-		}
-
-		//REG_SET_SLICE(vi_ircl, MRV_VI_CP_SOFT_RST, 0);
-		//isp_write_reg(dev, REG_ADDR(vi_ircl), vi_ircl);
-		isp_write_reg(dev, REG_ADDR(cproc_contrast), cproc->contrast);
-		isp_write_reg(dev, REG_ADDR(cproc_brightness), cproc->brightness);
-		isp_write_reg(dev, REG_ADDR(cproc_saturation), cproc->saturation);
-		isp_write_reg(dev, REG_ADDR(cproc_hue), cproc->hue);
-		REG_SET_SLICE(cproc_ctrl, MRV_CPROC_CPROC_ENABLE, 1);
-		REG_SET_SLICE(cproc_ctrl, MRV_CPROC_CPROC_C_OUT_RANGE,
-				  cproc->c_out_full);
-		REG_SET_SLICE(cproc_ctrl, MRV_CPROC_CPROC_Y_OUT_RANGE,
-				  cproc->y_out_full);
-		REG_SET_SLICE(cproc_ctrl, MRV_CPROC_CPROC_Y_IN_RANGE, cproc->y_in_full);
-		REG_SET_SLICE(vi_iccl, MRV_VI_CP_CLK_ENABLE, 1);
-		isp_write_reg(dev, REG_ADDR(vi_iccl), vi_iccl);
+	if (!cproc->enable) {
+		REG_SET_SLICE(cproc_ctrl, MRV_CPROC_CPROC_ENABLE, 0);
 		isp_write_reg(dev, REG_ADDR(cproc_ctrl), cproc_ctrl);
-
-#ifndef ISP_CPROC_SHD
-		dev->cproc.changed = false;
-	} else {
-		dev->cproc.changed = true;
+		return 0;
 	}
-#endif
+
+	isp_write_reg(dev, REG_ADDR(cproc_contrast), cproc->contrast);
+	isp_write_reg(dev, REG_ADDR(cproc_brightness), cproc->brightness);
+	isp_write_reg(dev, REG_ADDR(cproc_saturation), cproc->saturation);
+	isp_write_reg(dev, REG_ADDR(cproc_hue), cproc->hue);
+	REG_SET_SLICE(cproc_ctrl, MRV_CPROC_CPROC_ENABLE, 1);
+	REG_SET_SLICE(cproc_ctrl, MRV_CPROC_CPROC_C_OUT_RANGE,
+				cproc->c_out_full);
+	REG_SET_SLICE(cproc_ctrl, MRV_CPROC_CPROC_Y_OUT_RANGE,
+				cproc->y_out_full);
+	REG_SET_SLICE(cproc_ctrl, MRV_CPROC_CPROC_Y_IN_RANGE, cproc->y_in_full);
+	REG_SET_SLICE(vi_iccl, MRV_VI_CP_CLK_ENABLE, 1);
+	isp_write_reg(dev, REG_ADDR(vi_iccl), vi_iccl);
+	isp_write_reg(dev, REG_ADDR(cproc_ctrl), cproc_ctrl);
 
 	return 0;
+}
+
+int isp_cproc_control(struct isp_ic_dev *dev)
+{
+	if (!is_isp_enable(dev)) {
+		return isp_s_cproc(dev);
+	} else {
+		dev->cproc.changed = true;
+		return 0;
+	}
 }
 
 int isp_s_elawb(struct isp_ic_dev *dev)
@@ -2173,23 +2153,29 @@ int isp_s_wdr(struct isp_ic_dev *dev)
 	isp_wdr_context_t* wdr = &dev->wdr;
 
 	/*update wdr configuration	after frame end when isp enable*/
-	if (!is_isp_enable(dev) || wdr->changed) {
-		uint32_t isp_wdr_offset, isp_wdr_ctrl;
+	uint32_t isp_wdr_offset, isp_wdr_ctrl;
 
-		isp_wdr_offset = isp_read_reg(dev, REG_ADDR(isp_wdr_offset));
-		REG_SET_SLICE( isp_wdr_offset, MRV_WDR_LUM_OFFSET, wdr->LumOffset );
-		REG_SET_SLICE( isp_wdr_offset, MRV_WDR_RGB_OFFSET, wdr->RgbOffset );
-		isp_write_reg(dev, REG_ADDR(isp_wdr_offset), isp_wdr_offset);
+	isp_wdr_offset = isp_read_reg(dev, REG_ADDR(isp_wdr_offset));
+	REG_SET_SLICE( isp_wdr_offset, MRV_WDR_LUM_OFFSET, wdr->LumOffset );
+	REG_SET_SLICE( isp_wdr_offset, MRV_WDR_RGB_OFFSET, wdr->RgbOffset );
+	isp_write_reg(dev, REG_ADDR(isp_wdr_offset), isp_wdr_offset);
 
-		isp_wdr_ctrl = isp_read_reg(dev, REG_ADDR(isp_wdr_ctrl));
-		REG_SET_SLICE(isp_wdr_ctrl, MRV_WDR_ENABLE, wdr->enabled);
-		isp_write_reg(dev, REG_ADDR(isp_wdr_ctrl), isp_wdr_ctrl);
-		wdr->changed = false;
-	} else {
-		wdr->changed = true;
-	}
+	isp_wdr_ctrl = isp_read_reg(dev, REG_ADDR(isp_wdr_ctrl));
+	REG_SET_SLICE(isp_wdr_ctrl, MRV_WDR_ENABLE, wdr->enabled);
+	isp_write_reg(dev, REG_ADDR(isp_wdr_ctrl), isp_wdr_ctrl);
+	wdr->changed = false;
 
 	return 0;
+}
+
+int isp_s_wdr_ctrl(struct isp_ic_dev *dev)
+{
+	if (!is_isp_enable(dev)) {
+		return isp_s_wdr(dev);
+	} else {
+		dev->wdr.changed = true;
+		return 0;
+	}
 }
 
 static int isp_s_wdr_curve(struct isp_ic_dev *dev)
@@ -2259,7 +2245,7 @@ long isp_priv_ioctl(struct isp_ic_dev *dev, unsigned int cmd, void *args)
 		}
 		ret = isp_reset(dev);
 		break;
-		
+
 	case ISPIOC_WRITE_REG:
 		ret = isp_ioc_write_reg(dev, args);
 		break;
@@ -2367,10 +2353,10 @@ long isp_priv_ioctl(struct isp_ic_dev *dev, unsigned int cmd, void *args)
 		ret = isp_enable_wb(dev, 0);
 		break;
 	case ISPIOC_ENABLE_GAMMA_OUT:
-		ret = isp_enable_gamma_out(dev, 1);
+		ret = isp_enable_gamma_out_ctrl(dev, 1);
 		break;
 	case ISPIOC_DISABLE_GAMMA_OUT:
-		ret = isp_enable_gamma_out(dev, 0);
+		ret = isp_enable_gamma_out_ctrl(dev, 0);
 		break;
 	case ISPIOC_R_3DNR:
 		viv_check_retval(copy_from_user
@@ -2456,7 +2442,7 @@ long isp_priv_ioctl(struct isp_ic_dev *dev, unsigned int cmd, void *args)
 	{
 		viv_check_retval(copy_from_user
 				 (&dev->flt, args, sizeof(dev->flt)));
-		ret = isp_s_flt(dev);
+		ret = isp_s_flt_ctrl(dev);
 		break;
 	}
 	case ISPIOC_S_CAC:
@@ -2548,7 +2534,7 @@ long isp_priv_ioctl(struct isp_ic_dev *dev, unsigned int cmd, void *args)
 	case ISPIOC_S_CPROC:
 		viv_check_retval(copy_from_user
 				 (&dev->cproc, args, sizeof(dev->cproc)));
-		ret = isp_s_cproc(dev);
+		ret = isp_cproc_control(dev);
 		break;
 	case ISPIOC_S_XTALK:
 		viv_check_retval(copy_from_user
@@ -2594,7 +2580,7 @@ long isp_priv_ioctl(struct isp_ic_dev *dev, unsigned int cmd, void *args)
 			viv_check_retval(copy_from_user
 					 (&dev->gamma_out, args,
 					  sizeof(dev->gamma_out)));
-			ret = isp_s_gamma_out(dev);
+			ret = isp_s_gamma_out_ctrl(dev);
 			break;
 		}
 	case ISPIOC_SET_BUFFER:{
@@ -2692,7 +2678,7 @@ long isp_priv_ioctl(struct isp_ic_dev *dev, unsigned int cmd, void *args)
 	case ISPIOC_WDR_CONFIG:
 		viv_check_retval(copy_from_user
 				 (&dev->wdr, args, sizeof(dev->wdr)));
-		ret = isp_s_wdr(dev);
+		ret = isp_s_wdr_ctrl(dev);
 		break;
 	case ISPIOC_S_WDR_CURVE:
 		viv_check_retval(copy_from_user

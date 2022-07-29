@@ -212,8 +212,7 @@ static struct v4l2_subdev_video_ops isp_v4l2_subdev_video_ops = {
 
 irqreturn_t isp_hw_isr_reg_update(int irq, void *data)
 {
-	u32 isp_mis, isp_ctrl;
-
+	u32 isp_mis;
 	struct isp_irq_data irq_data;
 	struct isp_ic_dev *dev = (struct isp_ic_dev *)data;
 
@@ -242,12 +241,8 @@ irqreturn_t isp_hw_isr_reg_update(int irq, void *data)
 				isp_s_gamma_out(dev);
 			}
 
-			if(dev->update_gamma_en) {
-				isp_ctrl = isp_read_reg(dev, REG_ADDR(isp_ctrl));
-				REG_SET_SLICE(isp_ctrl, MRV_ISP_ISP_GAMMA_OUT_ENABLE,
-								dev->gamma_out.enableGamma);
-				isp_write_reg(dev, REG_ADDR(isp_ctrl), isp_ctrl);
-				dev->update_gamma_en = false;
+			if(dev->gamma_out.changed) {
+				isp_enable_gamma_out(dev, dev->gamma_out.enableGamma);
 			}
 
 		}
@@ -356,7 +351,7 @@ int isp_hw_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 	v4l2_subdev_init(&isp_dev->sd, &isp_v4l2_subdev_ops);
-	snprintf(isp_dev->sd.name, sizeof(isp_dev->sd.name), 
+	snprintf(isp_dev->sd.name, sizeof(isp_dev->sd.name),
 				"vvcam-isp.%d", isp_dev->ic_dev.id);
 	isp_dev->sd.flags |= V4L2_SUBDEV_FL_HAS_DEVNODE;
 	isp_dev->sd.flags |= V4L2_SUBDEV_FL_HAS_EVENTS;

@@ -715,8 +715,12 @@ struct isp_irq_data {
 typedef struct isp_wdr_context
 {
 	bool	enabled;
-	bool	changed;	//the wdr ctrl && reb shift does not have shandow 
-						//register,need to change after frame end irq.
+	/*
+	 * As the wdr ctrl & reb shift does not have shandow register,
+	 * so need to set wdr ctrl & reb shift register after frame end irq
+	 * which is used for the next frame.
+	 */ 
+	bool	changed;	
 	u16 	LumOffset;
 	u16 	RgbOffset;
 	u16 	Ym[33];
@@ -730,7 +734,7 @@ struct isp_ic_dev {
 	int id;
 #ifdef ISP8000NANO_V1802
 	struct regmap *mix_gpr;
-#endif 
+#endif
 #if defined(__KERNEL__) && defined(ENABLE_IRQ)
 	struct vvbuf_ctx *bctx;
 	struct vb2_dc_buf *mi_buf[MI_PATH_NUM];

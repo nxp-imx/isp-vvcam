@@ -211,7 +211,7 @@ int dwe_clear_irq(struct dwe_ic_dev *dev)
 
 	/* pr_debug("enter %s\n", __func__); */
 	reg_dewarp_ctrl = dwe_read_reg(dev, DEWARP_CTRL);
-	dwe_write_reg(dev, DEWARP_CTRL, reg_dewarp_ctrl | 2);
+	dwe_write_reg(dev, DEWARP_CTRL, reg_dewarp_ctrl | 4);
 	dwe_write_reg(dev, DEWARP_CTRL, reg_dewarp_ctrl);
 	dwe_write_reg(dev, INTERRUPT_STATUS, INT_CLR_MASK | INT_MSK_STATUS_MASK);
 

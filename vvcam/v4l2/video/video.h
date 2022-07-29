@@ -130,13 +130,10 @@ struct viv_video_file {
 	struct completion wait;
 	struct list_head entry;
 	struct viv_video_device *vdev;
+	int pipeline;
 #ifdef CONFIG_VIDEOBUF2_DMA_CONTIG
 	struct list_head extdmaqueue;
 #endif
-	struct {
-		uint64_t pa;
-		void *va;
-	} event_buf;
 };
 
 #define VIDEO_FRAME_MIN_WIDTH 176
