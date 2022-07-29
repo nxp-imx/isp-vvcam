@@ -301,6 +301,7 @@ static int dwe_close(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 	if (((pdwe_dev[0]->refcnt) != 0) || ((pdwe_dev[1]->refcnt) != 0)) {
 		goto exit;
 	}
+	dwe_priv_ioctl(&pdwe_dev[0]->core->ic_dev, DWEIOC_STOP, NULL);
 	devm_free_irq(pdwe_dev[0]->sd.dev, pdwe_dev[0]->irq, &pdwe_dev[0]->core->ic_dev);
 	dwe_clear_interrupts(&pdwe_dev[0]->core->ic_dev);
 	pdwe_dev[0]->core->state = 0;

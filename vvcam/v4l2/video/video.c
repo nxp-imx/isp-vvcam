@@ -529,9 +529,6 @@ static int video_open(struct file *file)
 	INIT_LIST_HEAD(&handle->extdmaqueue);
 #endif
 
-	handle->event_buf.va = kmalloc(VIV_EVENT_BUF_SIZE, GFP_KERNEL);
-	handle->event_buf.pa = __pa(handle->event_buf.va);
-
 	spin_lock_irqsave(&file_list_lock[handle->vdev->id], flags);
 	list_add_tail(&handle->entry, &file_list_head[handle->vdev->id]);
 	spin_unlock_irqrestore(&file_list_lock[handle->vdev->id], flags);
@@ -603,7 +600,6 @@ static int video_close(struct file *file)
 
 		vb2_queue_release(&handle->queue);
 		mutex_destroy(&handle->buffer_mutex);
-		kfree(handle->event_buf.va);
 		kfree(handle);
 	}
 
@@ -1119,7 +1115,7 @@ static int vidioc_s_fmt_vid_cap(struct file *file, void *priv,
 	int ret;
 	struct v4l2_event event;
 	struct viv_video_event *v_event;
-	struct viv_rect *rect = (struct viv_rect *)handle->event_buf.va;
+	struct viv_rect *rect = (struct viv_rect *)vdev->ctrls.buf_va;
 
 	pr_debug("enter %s\n", __func__);
 	if (f->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
@@ -1162,7 +1158,7 @@ static int vidioc_s_fmt_vid_cap(struct file *file, void *priv,
 	v_event->stream_id = handle->streamid;
 	v_event->file = &(handle->vfh);
 	v_event->sync = true;
-	v_event->addr = handle->event_buf.pa;
+	v_event->addr = vdev->ctrls.buf_pa;
 	event.type = VIV_VIDEO_EVENT_TYPE;
 	event.id = VIV_VIDEO_EVENT_SET_COMPOSE;
 	viv_post_event(&event, &handle->vfh, true);
@@ -1430,8 +1426,11 @@ static int vidioc_enum_frameintervals(struct file *filp, void *priv,
 	struct viv_video_file *handle = priv_to_handle(filp->private_data);
 	int i;
 
-	viv_post_simple_event(VIV_VIDEO_EVENT_CREATE_PIPELINE,
-		handle->streamid, &handle->vfh, true);
+	if (!handle->pipeline) {
+		viv_post_simple_event(VIV_VIDEO_EVENT_CREATE_PIPELINE,
+			handle->streamid, &handle->vfh, true);
+		handle->pipeline = 1;
+	}
 
 	for (i = 0; i < dev->formatscount; ++i)
 		if (dev->formats[i].fourcc == fival->pixel_format)
@@ -1545,7 +1544,7 @@ static int vidioc_s_selection(struct file *file, void *fh,
 		return -EINVAL;
 	}
 
-	rect = (struct viv_rect *)handle->event_buf.va;
+	rect = (struct viv_rect *)vdev->ctrls.buf_va;
 	if (!rect)
 		return -ENOMEM;
 	rect->left   = s->r.left;
@@ -1557,7 +1556,7 @@ static int vidioc_s_selection(struct file *file, void *fh,
 	v_event->stream_id = handle->streamid;
 	v_event->file = &(handle->vfh);
 	v_event->sync = true;
-	v_event->addr = handle->event_buf.pa;
+	v_event->addr = vdev->ctrls.buf_pa;
 	event.type = VIV_VIDEO_EVENT_TYPE;
 	if (s->target == V4L2_SEL_TGT_CROP)
 		event.id = VIV_VIDEO_EVENT_SET_CROP;
@@ -1612,8 +1611,20 @@ static const struct v4l2_ioctl_ops video_ioctl_ops = {
 static int viv_private_mmap(struct file *file, struct vm_area_struct *vma)
 {
 	/* Map reserved video memory. */
-	if (remap_pfn_range(vma, vma->vm_start, vma->vm_pgoff,
-			    vma->vm_end - vma->vm_start, vma->vm_page_prot))
+	struct viv_video_file *handle = priv_to_handle(file->private_data);
+	struct viv_video_device *vdev = video_drvdata(file);
+	int ret  = 0;
+
+	if(vma->vm_pgoff == vdev->ctrls.buf_pa >> PAGE_SHIFT) {
+		vma->vm_pgoff = 0;
+		vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
+		ret = dma_mmap_coherent(handle->queue.dev, vma, vdev->ctrls.buf_va,
+			vdev->ctrls.buf_pa, vma->vm_end - vma->vm_start);
+	} else {
+		ret = remap_pfn_range(vma, vma->vm_start, vma->vm_pgoff,
+			vma->vm_end - vma->vm_start,vma->vm_page_prot);
+	}
+	if (ret)
 		return -EAGAIN;
 	return 0;
 }
@@ -2114,8 +2125,12 @@ static int viv_video_probe(struct platform_device *pdev)
 			rc = v4l2_device_register_subdev_nodes(vdev->v4l2_dev);
 #endif
 
-			vdev->ctrls.buf_va = kmalloc(VIV_JSON_BUFFER_SIZE, GFP_KERNEL);
-			vdev->ctrls.buf_pa = __pa(vdev->ctrls.buf_va);
+			vdev->ctrls.buf_va = dma_alloc_coherent(&(pdev->dev),
+				VIV_JSON_BUFFER_SIZE, &(vdev->ctrls.buf_pa), GFP_KERNEL);
+			if (vdev->ctrls.buf_va == NULL) {
+				pr_err("%s: alloc v4l2 ctrls resourse failed \n", __func__);
+				goto register_fail;
+			}
 			init_completion(&vdev->ctrls.wait);
 
 			vdev->fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
@@ -2179,7 +2194,8 @@ static int viv_video_remove(struct platform_device *pdev)
 #endif
 
 		mutex_destroy(&vdev->event_lock);
-		kfree(vdev->ctrls.buf_va);
+		dma_free_coherent(&(pdev->dev), VIV_JSON_BUFFER_SIZE,
+			vdev->ctrls.buf_va, vdev->ctrls.buf_pa);
 		v4l2_ctrl_handler_free(&vdev->ctrls.handler);
 		kfree(vvdev[i]);
 		vvdev[i] = NULL;

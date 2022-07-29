@@ -297,8 +297,9 @@ static int isp_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 	if (isp_dev->refcnt == 1) {
 		msleep(1);
 		isp_clear_interrupts(&isp_dev->ic_dev);
-		if (devm_request_irq(sd->dev, isp_dev->irq, isp_hw_isr, IRQF_SHARED,
-			dev_name(sd->dev), &isp_dev->ic_dev) != 0) {
+		if (devm_request_irq(sd->dev, isp_dev->irq,
+				isp_hw_isr,IRQF_TRIGGER_HIGH | IRQF_SHARED,
+				dev_name(sd->dev), &isp_dev->ic_dev) != 0) {
 			pr_err("failed to request irq.\n");
 			isp_dev->refcnt = 0;
 			pm_runtime_put_sync(sd->dev);

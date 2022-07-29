@@ -111,8 +111,6 @@ struct viv_rect {
 	__u16 height;
 };
 
-#define VIV_EVENT_BUF_SIZE  (4*1024)
-
 #define VIV_JSON_BUFFER_SIZE  (64*1024)
 struct viv_control_event {
 	/* physical address of json request, fixed size 64K */
