@@ -117,7 +117,10 @@ void isp_write_reg(struct isp_ic_dev *dev, u32 offset, u32 val)
 {
 	if (offset >= ISP_REG_SIZE)
 		return;
-	__raw_writel(val, dev->base + offset);
+	writel(val, dev->base + offset);
+	if ((offset >= REG_ADDR(mi_mp_y_base_ad_init))
+		&& (offset <= REG_ADDR(mi_mp_y_pic_size)))
+		writel(val, dev->base + offset);
 //	  isp_info("%s	addr 0x%08x val 0x%08x\n", __func__, offset, val);
 }
 
@@ -127,7 +130,10 @@ u32 isp_read_reg(struct isp_ic_dev *dev, u32 offset)
 
 	if (offset >= ISP_REG_SIZE)
 		return 0;
-	val = __raw_readl(dev->base + offset);
+	val = readl(dev->base + offset);
+	if ((offset >= REG_ADDR(mi_mp_y_base_ad_init))
+		&& (offset <= REG_ADDR(mi_mp_y_pic_size)))
+		val = readl(dev->base + offset);
 //	  isp_info("%s	addr 0x%08x val 0x%08x\n", __func__, offset, val);
 	return val;
 }

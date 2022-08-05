@@ -16112,4 +16112,5 @@ typedef struct {
 #define ISP_VSYNC_DELAY_SEL
 #define ISP_VSYNC_DELAY_SEL_MASK 0x80000000U
 #define ISP_VSYNC_DELAY_SEL_SHIFT 31U
+
 #endif /* _MRV_ALL_REGS_H */
