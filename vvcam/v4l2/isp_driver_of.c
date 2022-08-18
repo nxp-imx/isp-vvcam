@@ -57,6 +57,7 @@
 #include <linux/regmap.h>
 #include <linux/of_reserved_mem.h>
 #include <linux/pm_domain.h>
+#include <linux/version.h>
 
 #include "isp_driver.h"
 #include "isp_ioctl.h"
@@ -256,7 +257,12 @@ static int isp_buf_alloc(struct isp_ic_dev *dev, struct isp_buffer_context *buf)
 		return -EINVAL;
 
 	isp_dev = container_of(dev, struct isp_device, ic_dev);
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 19, 0)
 	remote_pad = media_entity_remote_pad(&isp_dev->pads[ISP_PAD_SOURCE]);
+#else
+	remote_pad = media_pad_remote_pad_first(&isp_dev->pads[ISP_PAD_SOURCE]);
+#endif
 	if (remote_pad) {
 		if (is_media_entity_v4l2_video_device(remote_pad->entity)) {
 			// isp connect to video, so no need allo buf for isp

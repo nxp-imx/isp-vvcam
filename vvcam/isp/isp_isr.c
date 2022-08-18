@@ -52,6 +52,7 @@
  *****************************************************************************/
 #ifdef ENABLE_IRQ
 
+#include <linux/version.h>
 #include "isp_ioctl.h"
 #include "isp_types.h"
 #include "mrv_all_bits.h"
@@ -184,7 +185,12 @@ int clean_dma_buffer(struct isp_ic_dev *dev)
 		return 0;
 
 	isp_dev = container_of(dev, struct isp_device, ic_dev);
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 19, 0)
 	remote_pad = media_entity_remote_pad(&isp_dev->pads[ISP_PAD_SOURCE]);
+#else
+	remote_pad = media_pad_remote_pad_first(&isp_dev->pads[ISP_PAD_SOURCE]);
+#endif
 	if (remote_pad && is_media_entity_v4l2_video_device(remote_pad->entity)) {
 		/*if isp connect to video, the buf free by video,isp maybe not access by isp,so just empty queue*/
 		for (i = 0; i < MI_PATH_NUM; ++i) {
