@@ -50,6 +50,7 @@
  * version of this file.
  *
  *****************************************************************************/
+#include <linux/version.h>
 #include <media/v4l2-subdev.h>
 
 #include "vvbuf.h"
@@ -153,7 +154,11 @@ void vvbuf_ready(struct vvbuf_ctx *ctx, struct media_pad *pad,
 	if (unlikely(!pad || !buf))
 		return;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 19, 0)
 	pad = media_entity_remote_pad(pad);
+#else
+	pad = media_pad_remote_pad_first(pad);
+#endif
 	if (!pad)
 		return;
 

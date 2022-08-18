@@ -52,6 +52,7 @@
  *****************************************************************************/
 #include <linux/module.h>
 #include <linux/pm_runtime.h>
+#include <linux/version.h>
 #include <media/v4l2-event.h>
 
 #include "dwe_driver.h"
@@ -146,7 +147,12 @@ int dwe_set_stream(struct v4l2_subdev *sd, int enable)
 		dwe_dev->state |= STATE_STREAM_STARTED;
 
 	pad = &dwe_dev->pads[DWE_PAD_SINK];
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 19, 0)
 	pad = media_entity_remote_pad(pad);
+#else
+	pad = media_pad_remote_pad_first(pad);
+#endif
 
 	if (pad && is_media_entity_v4l2_subdev(pad->entity)) {
 		sd = media_entity_to_v4l2_subdev(pad->entity);

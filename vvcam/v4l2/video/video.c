@@ -321,8 +321,11 @@ static int set_stream(struct viv_video_device *vdev, int enable)
 
 	pad = &vdev->video->entity.pads[0];
 	if (pad)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 19, 0)
 		pad = media_entity_remote_pad(pad);
-
+#else
+		pad = media_pad_remote_pad_first(pad);
+#endif
 	if (pad && is_media_entity_v4l2_subdev(pad->entity)) {
 		sd = media_entity_to_v4l2_subdev(pad->entity);
 		v4l2_subdev_call(sd, video, s_stream, enable);
