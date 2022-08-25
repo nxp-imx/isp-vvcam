@@ -220,10 +220,10 @@ static struct vvcam_mode_info_s pos08a20_mode_info[] = {
 		},
 		.bayer_pattern  = BAYER_BGGR,
 		.ae_info = {
-			.def_frm_len_lines     = 0x90a,
-			.curr_frm_len_lines    = 0x90a,
-			.one_line_exp_time_ns  = 14389,
-			.max_integration_line  = 0x90a - 8,
+			.def_frm_len_lines     = 0x8d2,
+			.curr_frm_len_lines    = 0x8d2,
+			.one_line_exp_time_ns  = 14768,
+			.max_integration_line  = 0x8d2 - 8,
 			.min_integration_line  = 8,
 
 			.max_again             = 15.5 * (1 << SENSOR_FIX_FRACBITS),
