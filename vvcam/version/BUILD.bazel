@@ -1,0 +1,7 @@
+filegroup(
+    name = "version_sources",
+    srcs = glob(["**"]),
+    visibility = [
+        "//verisilicon_sw_isp_vvcam/vvcam/v4l2:__subpackages__",
+    ],
+)
