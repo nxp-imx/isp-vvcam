@@ -1,0 +1,10 @@
+filegroup(
+    name = "dwe_sources",
+    srcs = glob([
+        "*.c",
+        "*.h",
+    ]),
+    visibility = [
+        "//verisilicon_sw_isp_vvcam/vvcam/v4l2:__subpackages__",
+    ],
+)
