@@ -7,7 +7,8 @@ SRC := $(shell pwd)
 
 ANDROID ?= no
 ifeq ($(ANDROID), yes)
-PWD := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
+  M ?= $(shell pwd)
+  PWD := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 endif
 
 EXTRA_CFLAGS += -I$(PWD)/../common/
@@ -74,13 +75,13 @@ V := 1
 
 build_target := modules
 
-ifeq ($(BUILD_FOR_GKI), yes)
-build_target += modules_install
-ARCH_TYPE := arm64
-endif
+ARCH_TYPE ?= arm64
 
 all:
-	@$(MAKE) V=$(V) -C $(KERNEL_SRC) ARCH=$(ARCH_TYPE) M=$(PWD) ENABLE_IRQ=$(ENABLE_IRQ) $(build_target)
+	@$(MAKE) V=1 -C $(KERNEL_SRC) ARCH=$(ARCH_TYPE) M=$(M) ENABLE_IRQ=$(ENABLE_IRQ)
+
+modules_install:
+	@$(MAKE) V=1 -C $(KERNEL_SRC) ARCH=$(ARCH_TYPE) M=$(M) ENABLE_IRQ=$(ENABLE_IRQ) modules_install
 
 clean:
 	@rm -rf modules.order Module.symvers
