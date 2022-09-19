@@ -5,6 +5,11 @@ endif
 
 SRC := $(shell pwd)
 
+ANDROID ?= no
+ifeq ($(ANDROID), yes)
+PWD := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
+endif
+
 EXTRA_CFLAGS += -I$(PWD)/../common/
 EXTRA_CFLAGS += -I$(PWD)/../isp/
 EXTRA_CFLAGS += -I$(PWD)/../v4l2/
@@ -64,6 +69,24 @@ obj-m += sensor/
 obj-m += focus/
 obj-m += video/
 
+ifeq ($(ANDROID), yes)
+V := 1
+
+build_target := modules
+
+ifeq ($(BUILD_FOR_GKI), yes)
+build_target += modules_install
+ARCH_TYPE := arm64
+endif
+
+all:
+	@$(MAKE) V=$(V) -C $(KERNEL_SRC) ARCH=$(ARCH_TYPE) M=$(PWD) ENABLE_IRQ=$(ENABLE_IRQ) $(build_target)
+
+clean:
+	@rm -rf modules.order Module.symvers
+	@find ../ -name "*.o" | xargs rm -f
+	@find ../ -name "*.ko" | xargs rm -f
+else
 all:
 	make -C $(KERNEL_SRC) M=$(SRC) ENABLE_IRQ=$(ENABLE_IRQ)
 
@@ -78,3 +101,4 @@ clean:
 	find ../ -name 'Module.symvers' -delete
 	find ../ -name '*.mod.c' -delete
 	find ../ -name '*.cmd' -delete
+endif

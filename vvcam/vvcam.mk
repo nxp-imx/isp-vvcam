@@ -20,10 +20,10 @@ $(VVCAM_KERNELENVSH):
 
 vvcam: $(VVCAM_KERNELENVSH) $(VVCAM_SRC_PATH)
 	$(hide) if [ ${clean_build} = 1 ]; then \
-		PATH=$$PATH $(MAKE) -f Kbuild -C $(VVCAM_SRC_PATH) ANDROID=yes clean; \
+		PATH=$$PATH $(MAKE) -C $(VVCAM_SRC_PATH) ANDROID=yes clean; \
 	fi
 	@ . $(VVCAM_KERNELENVSH); $(kernel_build_shell_env) \
-	$(MAKE) -f Kbuild -C $(VVCAM_SRC_PATH) ANDROID=yes \
+	$(MAKE) -C $(VVCAM_SRC_PATH) ANDROID=yes \
 		PWD=$(ANDROID_BUILD_TOP)/vendor/nxp-opensource/verisilicon_sw_isp_vvcam/vvcam/v4l2 \
 		$(CLANG_TO_COMPILE) \
 		$(KERNEL_CFLAGS) \
