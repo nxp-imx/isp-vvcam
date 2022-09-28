@@ -1724,7 +1724,11 @@ probe_err_regulator_disable:
 	return retval;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
 static int ov2775_remove(struct i2c_client *client)
+#else
+static void ov2775_remove(struct i2c_client *client)
+#endif
 {
 	struct v4l2_subdev *sd = i2c_get_clientdata(client);
 	struct ov2775 *sensor = client_to_ov2775(client);
@@ -1737,7 +1741,10 @@ static int ov2775_remove(struct i2c_client *client)
 	ov2775_regulator_disable(sensor);
 	mutex_destroy(&sensor->lock);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
 	return 0;
+#else
+#endif
 }
 
 static int __maybe_unused ov2775_suspend(struct device *dev)
