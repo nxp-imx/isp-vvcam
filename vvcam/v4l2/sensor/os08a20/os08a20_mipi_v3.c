@@ -1319,7 +1319,11 @@ probe_err_regulator_disable:
 	return retval;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
 static int os08a20_remove(struct i2c_client *client)
+#else
+static void os08a20_remove(struct i2c_client *client)
+#endif
 {
 	struct v4l2_subdev *sd = i2c_get_clientdata(client);
 	struct os08a20 *sensor = client_to_os08a20(client);
@@ -1332,7 +1336,10 @@ static int os08a20_remove(struct i2c_client *client)
 	os08a20_regulator_disable(sensor);
 	mutex_destroy(&sensor->lock);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
 	return 0;
+#else
+#endif
 }
 
 static int __maybe_unused os08a20_suspend(struct device *dev)
