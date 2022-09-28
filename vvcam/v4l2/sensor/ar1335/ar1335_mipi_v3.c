@@ -1166,7 +1166,11 @@ probe_err_regulator_disable:
 	return retval;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
 static int ar1335_remove(struct i2c_client *client)
+#else
+static void ar1335_remove(struct i2c_client *client)
+#endif
 {
 	struct v4l2_subdev *sd = i2c_get_clientdata(client);
 	struct ar1335 *sensor = client_to_ar1335(client);
@@ -1179,7 +1183,10 @@ static int ar1335_remove(struct i2c_client *client)
 	ar1335_regulator_disable(sensor);
 	mutex_destroy(&sensor->lock);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
 	return 0;
+#else
+#endif
 }
 
 static int __maybe_unused ar1335_suspend(struct device *dev)
