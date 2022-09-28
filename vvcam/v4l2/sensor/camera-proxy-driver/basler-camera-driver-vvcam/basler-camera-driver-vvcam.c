@@ -77,7 +77,12 @@ static int basler_read_register_chunk(struct i2c_client* client, __u8* buffer, _
 static int basler_camera_s_ctrl(struct v4l2_ctrl *ctrl);
 static int basler_camera_g_volatile_ctrl(struct v4l2_ctrl *ctrl);
 static int basler_camera_validate(const struct v4l2_ctrl *ctrl, u32 idx, union v4l2_ctrl_ptr ptr);
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
 static void basler_camera_init(const struct v4l2_ctrl *ctrl, u32 idx, union v4l2_ctrl_ptr ptr);
+#else
+static void basler_camera_init(const struct v4l2_ctrl *ctrl, u32 idx, u32 tot_elems, union v4l2_ctrl_ptr ptr);
+#endif
 static bool basler_camera_equal(const struct v4l2_ctrl *ctrl, u32 idx, union v4l2_ctrl_ptr ptr1, union v4l2_ctrl_ptr ptr2);
 
 struct basler_camera_dev {
@@ -741,10 +746,14 @@ static int basler_camera_validate(const struct v4l2_ctrl *ctrl, u32 idx, union v
  * Note: Not needed by access-register control
  *
  */
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
 static void basler_camera_init(const struct v4l2_ctrl *ctrl, u32 idx, union v4l2_ctrl_ptr ptr )
+#else
+static void basler_camera_init(const struct v4l2_ctrl *ctrl, u32 idx, u32 tot_elems, union v4l2_ctrl_ptr ptr )
+#endif
 {
 }
-
 /**
  * basler_camera_equal
  *
@@ -1046,7 +1055,11 @@ entity_cleanup:
 	return ret;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
 static int basler_camera_remove(struct i2c_client *client)
+#else
+static void basler_camera_remove(struct i2c_client *client)
+#endif
 {
 	struct v4l2_subdev *sd = i2c_get_clientdata(client);
 	struct basler_camera_dev *sensor = to_basler_camera_dev(sd);
@@ -1057,7 +1070,10 @@ static int basler_camera_remove(struct i2c_client *client)
 	mutex_destroy(&sensor->lock);
 	media_entity_cleanup(&sensor->sd.entity);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
 	return 0;
+#else
+#endif
 }
 
 static const struct i2c_device_id basler_camera_id[] = {
