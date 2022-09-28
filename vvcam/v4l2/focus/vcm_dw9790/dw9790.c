@@ -55,6 +55,7 @@
 #include <linux/i2c.h>
 #include <linux/module.h>
 #include <linux/pm_runtime.h>
+#include <linux/version.h>
 #include <media/v4l2-ctrls.h>
 #include <media/v4l2-device.h>
 #include "vvfocus.h"
@@ -361,7 +362,11 @@ err_cleanup:
     return ret;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
 static int dw9790_remove(struct i2c_client *client) 
+#else
+static void dw9790_remove(struct i2c_client *client)
+#endif
 {
     struct v4l2_subdev *sd = i2c_get_clientdata(client);
     struct dw9790_device *dw9790_dev = sd_to_dw9790_device(sd);
@@ -372,7 +377,10 @@ static int dw9790_remove(struct i2c_client *client)
 
     pm_runtime_disable(&client->dev);
     mutex_destroy(&dw9790_dev->lock);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
     return 0;
+#else
+#endif
 }
 
 static int __maybe_unused dw9790_vcm_suspend(struct device *dev) 
