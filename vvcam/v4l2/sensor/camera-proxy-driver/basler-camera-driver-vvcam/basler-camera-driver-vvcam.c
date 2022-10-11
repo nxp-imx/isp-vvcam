@@ -76,14 +76,25 @@ static int basler_read_register_chunk(struct i2c_client* client, __u8* buffer, _
 
 static int basler_camera_s_ctrl(struct v4l2_ctrl *ctrl);
 static int basler_camera_g_volatile_ctrl(struct v4l2_ctrl *ctrl);
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
 static int basler_camera_validate(const struct v4l2_ctrl *ctrl, u32 idx, union v4l2_ctrl_ptr ptr);
+#else
+static int basler_camera_validate(const struct v4l2_ctrl *ctrl, union v4l2_ctrl_ptr ptr);
+#endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
 static void basler_camera_init(const struct v4l2_ctrl *ctrl, u32 idx, union v4l2_ctrl_ptr ptr);
 #else
-static void basler_camera_init(const struct v4l2_ctrl *ctrl, u32 idx, u32 tot_elems, union v4l2_ctrl_ptr ptr);
+static void basler_camera_init(const struct v4l2_ctrl *ctrl, u32 tot_elems, union v4l2_ctrl_ptr ptr);
 #endif
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
 static bool basler_camera_equal(const struct v4l2_ctrl *ctrl, u32 idx, union v4l2_ctrl_ptr ptr1, union v4l2_ctrl_ptr ptr2);
+#else
+static bool basler_camera_equal(const struct v4l2_ctrl *ctrl, union v4l2_ctrl_ptr ptr1, union v4l2_ctrl_ptr ptr2);
+#endif
+
 
 struct basler_camera_dev {
 	struct i2c_client *i2c_client;
@@ -735,7 +746,12 @@ static const struct v4l2_ctrl_type_ops basler_camera_ctrl_type_ops = {
  *
  * Returns always zero
  */
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
 static int basler_camera_validate(const struct v4l2_ctrl *ctrl, u32 idx, union v4l2_ctrl_ptr ptr )
+#else
+static int basler_camera_validate(const struct v4l2_ctrl *ctrl, union v4l2_ctrl_ptr ptr)
+#endif
 {
 	return 0;
 }
@@ -750,7 +766,7 @@ static int basler_camera_validate(const struct v4l2_ctrl *ctrl, u32 idx, union v
 #if LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
 static void basler_camera_init(const struct v4l2_ctrl *ctrl, u32 idx, union v4l2_ctrl_ptr ptr )
 #else
-static void basler_camera_init(const struct v4l2_ctrl *ctrl, u32 idx, u32 tot_elems, union v4l2_ctrl_ptr ptr )
+static void basler_camera_init(const struct v4l2_ctrl *ctrl, u32 tot_elems, union v4l2_ctrl_ptr ptr)
 #endif
 {
 }
@@ -761,7 +777,12 @@ static void basler_camera_init(const struct v4l2_ctrl *ctrl, u32 idx, u32 tot_el
  *
  * Returns always zero
  */
-static bool basler_camera_equal(const struct v4l2_ctrl *ctrl, u32 idx, union v4l2_ctrl_ptr ptr1, union v4l2_ctrl_ptr ptr2 )
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
+static bool basler_camera_equal(const struct v4l2_ctrl *ctrl, u32 idx, union v4l2_ctrl_ptr ptr1, union v4l2_ctrl_ptr ptr2)
+#else
+static bool basler_camera_equal(const struct v4l2_ctrl *ctrl, union v4l2_ctrl_ptr ptr1, union v4l2_ctrl_ptr ptr2)
+#endif
 {
 	return 0;
 }
