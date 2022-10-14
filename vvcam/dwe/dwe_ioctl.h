@@ -67,6 +67,7 @@ enum {
 	DWEIOC_START_DMA_READ,
 	DWEIOC_SET_BUFFER,
 	DWEIOC_SET_LUT,
+	DWEIOC_GET_LUT_STATUS,
 };
 
 struct lut_info {

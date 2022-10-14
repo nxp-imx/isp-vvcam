@@ -249,6 +249,7 @@ void isp_clear_interrupts(struct isp_ic_dev *dev)
 
 irqreturn_t isp_hw_isr(int irq, void *data)
 {
+	unsigned long flags;
 	struct isp_ic_dev *dev = (struct isp_ic_dev *)data;
 	static const u32 frameendmask = MRV_MI_MP_FRAME_END_MASK |
 #ifdef ISP_MI_BP
@@ -292,6 +293,9 @@ irqreturn_t isp_hw_isr(int irq, void *data)
 #else
 	mi_mis = 0;
 #endif
+	if ((isp_mis == 0) && (mi_mis == 0)) {
+		return IRQ_NONE;
+	}
 
 	mi_status = isp_read_reg(dev, REG_ADDR(mi_status));
 	if (mi_status & fifofullmask) {
@@ -300,11 +304,16 @@ irqreturn_t isp_hw_isr(int irq, void *data)
 	}
 
 	if (isp_mis & MRV_ISP_MIS_FRAME_MASK) {
+		spin_lock_irqsave(&dev->irqlock, flags);
+
 		if (dev->cproc.changed) {
 			isp_s_cproc(dev);
 		}
 
-		awb_set_gain(dev);
+		if (dev->awb.changed) {
+			isp_s_awb(dev);
+		}
+
 		if (dev->flt.changed) {
 			isp_s_flt(dev);
 		}
@@ -315,11 +324,11 @@ irqreturn_t isp_hw_isr(int irq, void *data)
 
 		if (dev->gamma_out.changed) {
 			isp_s_gamma_out(dev);
-		}
-
-		if(dev->gamma_out.changed) {
+		} else if (dev->gamma_out.enable_changed) {
 			isp_enable_gamma_out(dev, dev->gamma_out.enableGamma);
 		}
+
+		spin_unlock_irqrestore(&dev->irqlock, flags);
 	}
 
 	if (mi_mis & errormask)
@@ -339,9 +348,7 @@ irqreturn_t isp_hw_isr(int irq, void *data)
 		if (dev->post_event)
 			dev->post_event(dev, &irq_data, sizeof(irq_data));
 	}
-	if ((isp_mis == 0) && (mi_mis == 0)) {
-		return IRQ_NONE;
-	}
+
 	return IRQ_HANDLED;
 }
 

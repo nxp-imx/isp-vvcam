@@ -107,6 +107,7 @@ struct dwe_ic_dev {
 	struct vvbuf_ctx *sink_bctx;
 	struct vvbuf_ctx *src_bctx[MAX_DWE_NUM];
 	dma_addr_t dist_map[MAX_DWE_NUM][MAX_CFG_NUM];
+	dma_addr_t curmap[MAX_DWE_NUM][MAX_CFG_NUM];
 	int hardware_status;
 	int *state[MAX_DWE_NUM];
 	int index;

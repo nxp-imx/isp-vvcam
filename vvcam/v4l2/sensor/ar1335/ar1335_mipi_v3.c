@@ -193,11 +193,11 @@ static struct vvcam_mode_info_s par1335_mode_info[] = {
 		},
 		.bayer_pattern = BAYER_GRBG,
 		.ae_info = {
-			.def_frm_len_lines     = 0xC4E,
-			.curr_frm_len_lines    = 0xC4E - 1,
-			.one_line_exp_time_ns  = 10601,
+			.def_frm_len_lines     = 0xC90,
+			.curr_frm_len_lines    = 0xC90 - 1,
+			.one_line_exp_time_ns  = 12435,
 
-			.max_integration_line  = 0xC4E - 1,
+			.max_integration_line  = 0xC90 - 1,
 			.min_integration_line  = 8,
 
 			.max_again             = 7.75 * (1 << SENSOR_FIX_FRACBITS),
@@ -207,8 +207,8 @@ static struct vvcam_mode_info_s par1335_mode_info[] = {
 			.gain_step             = 2,
 
 			.start_exposure        = 3 * 100 * (1 << SENSOR_FIX_FRACBITS),
-			.cur_fps               = 30 * (1 << SENSOR_FIX_FRACBITS),
-			.max_fps               = 30 * (1 << SENSOR_FIX_FRACBITS),
+			.cur_fps               = 25 * (1 << SENSOR_FIX_FRACBITS),
+			.max_fps               = 25 * (1 << SENSOR_FIX_FRACBITS),
 			.min_fps               = 5 * (1 << SENSOR_FIX_FRACBITS),
 			.min_afps              = 5 * (1 << SENSOR_FIX_FRACBITS),
 			.int_update_delay_frm  = 1,

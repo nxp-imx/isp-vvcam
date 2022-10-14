@@ -115,6 +115,7 @@ void dwe_isr_tasklet(unsigned long arg)
 	dwe_write_reg(dev, DEWARP_CTRL, dewarp_ctrl);
 	dwe_write_reg(dev, INTERRUPT_STATUS, INT_MSK_STATUS_MASK);
 	dwe_enable_bus(dev, 1);
+	dev->curmap[dev->index][which] = dev->dist_map[dev->index][which];
 	spin_unlock_irqrestore(&dev->irqlock, flags);
 }
 

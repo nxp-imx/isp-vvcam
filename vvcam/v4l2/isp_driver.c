@@ -212,6 +212,7 @@ static struct v4l2_subdev_video_ops isp_v4l2_subdev_video_ops = {
 
 irqreturn_t isp_hw_isr_reg_update(int irq, void *data)
 {
+	unsigned long flags;
 	u32 isp_mis;
 	struct isp_irq_data irq_data;
 	struct isp_ic_dev *dev = (struct isp_ic_dev *)data;
@@ -224,7 +225,17 @@ irqreturn_t isp_hw_isr_reg_update(int irq, void *data)
 
 	if (isp_mis) {
 		if (isp_mis & MRV_ISP_MIS_FRAME_MASK) {
-			awb_set_gain(dev);
+
+			spin_lock_irqsave(&dev->irqlock, flags);
+
+			if (dev->cproc.changed) {
+				isp_s_cproc(dev);
+			}
+
+			if (dev->awb.changed) {
+				isp_s_awb(dev);
+			}
+
 			if (dev->flt.changed) {
 				isp_s_flt(dev);
 			}
@@ -233,18 +244,13 @@ irqreturn_t isp_hw_isr_reg_update(int irq, void *data)
 				isp_s_wdr(dev);
 			}
 
-			if (dev->cproc.changed) {
-				isp_s_cproc(dev);
-			}
-
 			if (dev->gamma_out.changed) {
 				isp_s_gamma_out(dev);
-			}
-
-			if(dev->gamma_out.changed) {
+			} else if (dev->gamma_out.enable_changed) {
 				isp_enable_gamma_out(dev, dev->gamma_out.enableGamma);
 			}
 
+			spin_unlock_irqrestore(&dev->irqlock, flags);
 		}
 
 		memset(&irq_data, 0, sizeof(irq_data));
@@ -401,6 +407,7 @@ int isp_hw_probe(struct platform_device *pdev)
 	}
 	isp_dev->irq = irq;
 	pr_debug("request_irq num:%d, rc:%d", irq, rc);
+	spin_lock_init(&isp_dev->ic_dev.irqlock);
 
 	platform_set_drvdata(pdev, isp_dev);
 	rc = v4l2_device_register_subdev_nodes(isp_dev->vd);
