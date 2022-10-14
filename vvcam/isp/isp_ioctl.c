@@ -592,9 +592,8 @@ int isp_s_awb(struct isp_ic_dev *dev)
 	u32 isp_awb_thresh = 0;
 	u32 isp_awb_ref = 0;
 	u32 isp_awb_prop = 0;
-#ifdef __KERNEL__
-	u32 isp_ctrl;
-#endif
+	u32 wb_gain_rb_reg = 0;
+	u32 wb_gain_g_reg = 0;
 
 	/* isp_info("enter %s\n", __func__); */
 	isp_awb_prop = isp_read_reg(dev, REG_ADDR(isp_awb_prop));
@@ -636,22 +635,7 @@ int isp_s_awb(struct isp_ic_dev *dev)
 			  (MRV_ISP_AWB_H_SIZE_MASK & awb.window.width));
 	isp_write_reg(dev, REG_ADDR(isp_awb_v_size),
 			  (MRV_ISP_AWB_V_SIZE_MASK & awb.window.height));
-#ifdef __KERNEL__
-	isp_ctrl = isp_read_reg(dev, REG_ADDR(isp_ctrl));
-	if (!(isp_ctrl & MRV_ISP_ISP_ENABLE_MASK)) {
-		awb_set_gain(dev);
-	}
-#else
-	awb_set_gain(dev);
-#endif
-	return 0;
-}
 
-int awb_set_gain(struct isp_ic_dev *dev)
-{
-	struct isp_awb_context awb = *(&dev->awb);
-	u32 wb_gain_rb_reg = 0;
-	u32 wb_gain_g_reg = 0;
 	REG_SET_SLICE(wb_gain_rb_reg, MRV_ISP_AWB_GAIN_R, awb.gain_r);
 	REG_SET_SLICE(wb_gain_rb_reg, MRV_ISP_AWB_GAIN_B, awb.gain_b);
 	isp_write_reg(dev, REG_ADDR(isp_awb_gain_rb), wb_gain_rb_reg);
@@ -659,7 +643,26 @@ int awb_set_gain(struct isp_ic_dev *dev)
 	REG_SET_SLICE(wb_gain_g_reg, MRV_ISP_AWB_GAIN_GR, awb.gain_gr);
 	REG_SET_SLICE(wb_gain_g_reg, MRV_ISP_AWB_GAIN_GB, awb.gain_gb);
 	isp_write_reg(dev, REG_ADDR(isp_awb_gain_g), wb_gain_g_reg);
+
 	return 0;
+}
+
+int isp_awb_control(struct isp_ic_dev *dev)
+{
+	unsigned long flags;
+	int ret = 0;
+
+	spin_lock_irqsave(&dev->irqlock, flags);
+
+	if(!is_isp_enable(dev)) {
+		ret = isp_s_awb(dev);
+	} else {
+		dev->awb.changed = true;
+	}
+
+	spin_unlock_irqrestore(&dev->irqlock, flags);
+
+	return ret;
 }
 
 int isp_s_is(struct isp_ic_dev *dev)
@@ -879,20 +882,27 @@ int isp_enable_gamma_out(struct isp_ic_dev *dev, bool bEnable)
 	isp_ctrl = isp_read_reg(dev, REG_ADDR(isp_ctrl));
 	REG_SET_SLICE(isp_ctrl, MRV_ISP_ISP_GAMMA_OUT_ENABLE, bEnable);
 	isp_write_reg(dev, REG_ADDR(isp_ctrl), isp_ctrl);
-	dev->gamma_out.changed = false;
+	dev->gamma_out.enable_changed = false;
 
 	return 0;
 }
 
 int isp_enable_gamma_out_ctrl(struct isp_ic_dev *dev, bool bEnable)
 {
+	unsigned long flags;
+	int ret = 0;
+
+	spin_lock_irqsave(&dev->irqlock, flags);
+
 	dev->gamma_out.enableGamma = bEnable;
 	if(!is_isp_enable(dev)) {
-		return isp_enable_gamma_out(dev, bEnable);
+		ret = isp_enable_gamma_out(dev, bEnable);
 	} else {
-		dev->gamma_out.changed = true;
-		return 0;
+		dev->gamma_out.enable_changed = true;
 	}
+
+	spin_unlock_irqrestore(&dev->irqlock, flags);
+	return ret;
 }
 
 int isp_s_gamma_out(struct isp_ic_dev *dev)
@@ -917,12 +927,19 @@ int isp_s_gamma_out(struct isp_ic_dev *dev)
 
 int isp_s_gamma_out_ctrl(struct isp_ic_dev *dev)
 {
+	unsigned long flags;
+	int ret = 0;
+
+	spin_lock_irqsave(&dev->irqlock, flags);
+
 	if (!is_isp_enable(dev)) {
-		return isp_s_gamma_out(dev);
+		ret = isp_s_gamma_out(dev);
 	} else {
 		dev->gamma_out.changed = true;
-		return 0;
 	}
+
+	spin_unlock_irqrestore(&dev->irqlock, flags);
+	return ret;
 }
 
 int isp_s_lsc_tbl(struct isp_ic_dev *dev)
@@ -1489,12 +1506,17 @@ int isp_s_flt(struct isp_ic_dev *dev)
 
 int isp_s_flt_ctrl(struct isp_ic_dev *dev)
 {
+	unsigned long flags;
+	int ret = 0;
+	spin_lock_irqsave(&dev->irqlock, flags);
 	if (!is_isp_enable(dev)) {
-		return isp_s_flt(dev);
+		ret =  isp_s_flt(dev);
 	} else {
 		dev->flt.changed = true;
-		return 0;
 	}
+	spin_unlock_irqrestore(&dev->irqlock, flags);
+
+	return ret;
 }
 
 int isp_s_cac(struct isp_ic_dev *dev)
@@ -1990,12 +2012,19 @@ int isp_s_cproc(struct isp_ic_dev *dev)
 
 int isp_cproc_control(struct isp_ic_dev *dev)
 {
+	unsigned long flags;
+	int ret = 0;
+
+	spin_lock_irqsave(&dev->irqlock, flags);
 	if (!is_isp_enable(dev)) {
-		return isp_s_cproc(dev);
+		ret = isp_s_cproc(dev);
 	} else {
 		dev->cproc.changed = true;
-		return 0;
 	}
+
+	spin_unlock_irqrestore(&dev->irqlock, flags);
+
+	return ret;
 }
 
 int isp_s_elawb(struct isp_ic_dev *dev)
@@ -2170,12 +2199,20 @@ int isp_s_wdr(struct isp_ic_dev *dev)
 
 int isp_s_wdr_ctrl(struct isp_ic_dev *dev)
 {
+	unsigned long flags;
+	int ret = 0;
+
+	spin_lock_irqsave(&dev->irqlock, flags);
+
 	if (!is_isp_enable(dev)) {
-		return isp_s_wdr(dev);
+		ret = isp_s_wdr(dev);
 	} else {
 		dev->wdr.changed = true;
-		return 0;
 	}
+
+	spin_unlock_irqrestore(&dev->irqlock, flags);
+
+	return ret;
 }
 
 static int isp_s_wdr_curve(struct isp_ic_dev *dev)
@@ -2411,7 +2448,7 @@ long isp_priv_ioctl(struct isp_ic_dev *dev, unsigned int cmd, void *args)
 	case ISPIOC_S_AWB:
 		viv_check_retval(copy_from_user
 				 (&dev->awb, args, sizeof(dev->awb)));
-		ret = isp_s_awb(dev);
+		ret = isp_awb_control(dev);
 		break;
 	case ISPIOC_S_LSC_TBL:
 		viv_check_retval(copy_from_user

@@ -552,6 +552,7 @@ int isp_hw_probe(struct platform_device *pdev)
 	isp_dev->irq = irq;
 	pr_debug("request_irq num:%d, rc:%d", irq, rc);
 	spin_lock_init(&isp_dev->ic_dev.lock);
+	spin_lock_init(&isp_dev->ic_dev.irqlock);
 	tasklet_init(&isp_dev->ic_dev.tasklet, isp_isr_tasklet, (unsigned long)(&isp_dev->ic_dev));
 
 	platform_set_drvdata(pdev, isp_dev);

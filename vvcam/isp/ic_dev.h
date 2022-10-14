@@ -199,6 +199,7 @@ struct isp_awb_context {
 	u16 max_c_sum;
 	u16 min_y_max_g;
 	u16 min_c;
+	bool changed;
 };
 
 struct isp_awb_mean {
@@ -227,6 +228,7 @@ struct isp_xtalk_context {
 struct isp_gamma_out_context {
 	bool enableWB, enableGamma;
 	bool changed;
+	bool enable_changed;
 	u32 mode;
 	u32 curve[17];
 };
@@ -715,12 +717,8 @@ struct isp_irq_data {
 typedef struct isp_wdr_context
 {
 	bool	enabled;
-	/*
-	 * As the wdr ctrl & reb shift does not have shandow register,
-	 * so need to set wdr ctrl & reb shift register after frame end irq
-	 * which is used for the next frame.
-	 */ 
-	bool	changed;	
+	bool	changed; /*the wdr ctrl && reb shift does not have shandow
+			  register,need to change after frame end irq.*/
 	u16 	LumOffset;
 	u16 	RgbOffset;
 	u16 	Ym[33];
@@ -745,6 +743,9 @@ struct isp_ic_dev {
 	struct tasklet_struct tasklet;
 	spinlock_t lock;
 #endif
+
+	spinlock_t irqlock;
+
 	void (*post_event)(struct isp_ic_dev *dev, void *data, size_t size);
 
 	struct isp_context ctx;

@@ -345,6 +345,7 @@ static int start_streaming(struct vb2_queue *vq, unsigned int count)
 		set_stream(handle->vdev, 1);
 		viv_post_simple_event(VIV_VIDEO_EVENT_START_STREAM,
 				      handle->streamid, fh, true);
+		handle->vdev->pipeline_status = PIPELINE_STREAMON;
 	} else {
 		pr_err("can't start streaming, device busy!\n");
 		return -EBUSY;
@@ -363,6 +364,7 @@ static void stop_streaming(struct vb2_queue *vq)
 		return;
 
 	handle->state = 1;
+	handle->vdev->pipeline_status = PIPELINE_STREAMOFF;
 	set_stream(handle->vdev, 0);
 	viv_post_simple_event(VIV_VIDEO_EVENT_STOP_STREAM, handle->streamid,
 			      &handle->vfh, false);
@@ -556,12 +558,14 @@ static int video_close(struct file *file)
 						handle->streamid, &handle->vfh,
 						true);
 			handle->state = 1;
+			handle->vdev->pipeline_status = PIPELINE_STREAMOFF;
 		}
 		if (handle->streamid >= 0 && handle->state == 1) {
 			viv_post_simple_event(VIV_VIDEO_EVENT_DEL_STREAM,
 						handle->streamid, &handle->vfh,
 						true);
 			handle->vdev->frame_flag = false;
+			handle->vdev->pipeline_status = PIPELINE_INIT;
 		}
 
 		if (handle->state > 0)
@@ -1110,6 +1114,43 @@ static int vidioc_try_fmt_vid_cap(struct file *file, void *priv,
 	return 0;
 }
 
+static int viv_post_fmt_event(struct file *file)
+{
+	int ret = 0;
+	struct viv_video_file *handle = priv_to_handle(file->private_data);
+	struct viv_video_device *vdev = handle->vdev;
+
+	struct v4l2_event event;
+	struct viv_video_event *v_event;
+
+	if (vdev->pipeline_status == PIPELINE_INIT) {
+		ret = viv_post_simple_event(VIV_VIDEO_EVENT_NEW_STREAM,
+			handle->streamid, &handle->vfh, true);
+		if (ret)
+			return ret;
+
+		vdev->pipeline_status = PIPELINE_CREATED;
+		handle->state = 1;
+	}
+
+	v_event = (struct viv_video_event *)&event.u.data[0];
+	v_event->stream_id = handle->streamid;
+	v_event->file = &handle->vfh;
+	v_event->addr = handle->vdev->fmt.fmt.pix.width;
+	v_event->response = handle->vdev->fmt.fmt.pix.height;
+	v_event->buf_index = handle->vdev->fmt.fmt.pix.pixelformat;
+	v_event->sync = true;
+	event.type = VIV_VIDEO_EVENT_TYPE;
+	event.id = VIV_VIDEO_EVENT_SET_FMT;
+	ret = viv_post_event(&event, &handle->vfh, true);
+	if (ret)
+		return ret;
+
+	vdev->pipeline_status = PIPELINE_FMTSETTED;
+
+	return ret;
+}
+
 static int vidioc_s_fmt_vid_cap(struct file *file, void *priv,
 				struct v4l2_format *f)
 {
@@ -1166,6 +1207,8 @@ static int vidioc_s_fmt_vid_cap(struct file *file, void *priv,
 	event.id = VIV_VIDEO_EVENT_SET_COMPOSE;
 	viv_post_event(&event, &handle->vfh, true);
 
+	viv_post_fmt_event(file);
+
 	return ret;
 }
 
@@ -1175,8 +1218,6 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 	struct viv_video_file *handle = priv_to_handle(file->private_data);
 	struct viv_video_file *ph;
 	struct viv_video_device *vdev = handle->vdev;
-	struct v4l2_event event;
-	struct viv_video_event *v_event;
 	unsigned long flags;
 	int ret = 0;
 
@@ -1201,36 +1242,12 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 	else
 		handle->req = true;
 
+	if ((p->count) && (vdev->pipeline_status != PIPELINE_FMTSETTED))
+		viv_post_fmt_event(file);
+
 	mutex_lock(&handle->buffer_mutex);
 	ret = vb2_reqbufs(&handle->queue, p);
 	mutex_unlock(&handle->buffer_mutex);
-
-	if (p->count == 0) {
-		memset(p, 0, sizeof(*p));
-		return ret;
-	}
-	if (ret < 0)
-		return ret;
-
-	if (handle->streamid < 0 || handle->state > 0)
-		return ret;
-	handle->state = 1;
-	ret =
-	    viv_post_simple_event(VIV_VIDEO_EVENT_NEW_STREAM, handle->streamid,
-				  &handle->vfh, true);
-	if (ret)
-		return ret;
-
-	v_event = (struct viv_video_event *)&event.u.data[0];
-	v_event->stream_id = handle->streamid;
-	v_event->file = &handle->vfh;
-	v_event->addr = handle->vdev->fmt.fmt.pix.width;
-	v_event->response = handle->vdev->fmt.fmt.pix.height;
-	v_event->buf_index = handle->vdev->fmt.fmt.pix.pixelformat;
-	v_event->sync = true;
-	event.type = VIV_VIDEO_EVENT_TYPE;
-	event.id = VIV_VIDEO_EVENT_SET_FMT;
-	ret = viv_post_event(&event, &handle->vfh, true);
 
 	return ret;
 }

@@ -944,6 +944,8 @@ static int ov2775_set_wb(struct ov2775 *sensor, void *pwb_cfg)
 	ret = copy_from_user(&wb, pwb_cfg, sizeof(wb));
 	if (ret != 0)
 		return -ENOMEM;
+	ret |= ov2775_write_reg(sensor, 0x3467, 0x00);
+	ret |= ov2775_write_reg(sensor, 0x3464, 0x04);
 	if (wb.r_gain != sensor->wb.r_gain) {
 		ret |= ov2775_write_reg(sensor, 0x3360, (wb.r_gain >> 8) & 0xff);
 		ret |= ov2775_write_reg(sensor, 0x3361,  wb.r_gain & 0xff);
@@ -983,14 +985,16 @@ static int ov2775_set_wb(struct ov2775 *sensor, void *pwb_cfg)
 		ret |= ov2775_write_reg(sensor, 0x3377,  wb.b_gain & 0xff);
 		update_flag = true;
 	}
-	if (ret != 0)
-		return ret;
 
 	memcpy (&sensor->wb, &wb, sizeof(struct sensor_white_balance_s));
 
 	if (update_flag) {
 		ret = ov2775_set_blc(sensor, &sensor->blc);
 	}
+
+	ret |= ov2775_write_reg(sensor, 0x3464, 0x14);
+	ret |= ov2775_write_reg(sensor, 0x3467, 0x01);
+
 	return ret;
 }
 

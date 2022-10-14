@@ -180,7 +180,6 @@ int isp_s_bls(struct isp_ic_dev *dev);
 int isp_enable_awb(struct isp_ic_dev *dev);
 int isp_disable_awb(struct isp_ic_dev *dev);
 int isp_s_awb(struct isp_ic_dev *dev);
-int awb_set_gain(struct isp_ic_dev *dev);
 int isp_g_awbmean(struct isp_ic_dev *dev, struct isp_awb_mean *mean);
 int isp_s_is(struct isp_ic_dev *dev);
 int isp_s_raw_is(struct isp_ic_dev *dev);

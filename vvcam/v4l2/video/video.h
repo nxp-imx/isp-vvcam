@@ -80,6 +80,14 @@ struct viv_video_fmt {
 	int bpp;
 };
 
+enum vsi_pipeline_status {
+	PIPELINE_INIT = 0,
+	PIPELINE_CREATED,
+	PIPELINE_FMTSETTED,
+	PIPELINE_STREAMON,
+	PIPELINE_STREAMOFF,
+};
+
 struct viv_video_device {
 	struct vvbuf_ctx bctx;
 	struct video_device *video;
@@ -116,6 +124,7 @@ struct viv_video_device {
 	struct vb2_dc_buf* dumpbuf;
 	struct mutex event_lock;
 	struct video_event_shm event_shm;
+	int pipeline_status;
 };
 
 struct viv_video_file {

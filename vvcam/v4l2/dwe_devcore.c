@@ -103,6 +103,23 @@ long dwe_devcore_ioctl(struct dwe_device *dwe, unsigned int cmd, void *args)
 			pr_err("map num exceeds the max cfg num.\n");
 		break;
 	}
+	case DWEIOC_GET_LUT_STATUS: {
+		uint32_t lut_status;
+		which = dev->which[dwe->id];
+		if (dwe->state & STATE_DRIVER_STARTED) {
+			if (dev->dist_map[dwe->id][which] ==
+					dev->curmap[dwe->id][which]) {
+				lut_status = 0;
+			} else {
+				lut_status = 1;
+			}
+		} else {
+			lut_status = 0;
+		}
+		viv_check_retval(copy_to_user(args, &lut_status, sizeof(lut_status)));
+
+		break;
+	}
 	case VIDIOC_QUERYCAP: {
 		struct v4l2_capability *cap = (struct v4l2_capability *)args;
 
