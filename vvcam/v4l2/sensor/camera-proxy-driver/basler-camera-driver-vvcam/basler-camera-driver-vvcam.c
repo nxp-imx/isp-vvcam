@@ -704,6 +704,7 @@ static long basler_camera_priv_ioctl(struct v4l2_subdev *sd, unsigned int cmd, v
 
 
 	default:
+		ret = -EINVAL;
 		break;
 	}
 	return ret;
