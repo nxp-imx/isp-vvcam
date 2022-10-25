@@ -1368,6 +1368,7 @@ static long ov2775_priv_ioctl(struct v4l2_subdev *sd,
 		ret= ov2775_set_test_pattern(sensor, arg);
 		break;
 	default:
+		ret = -EINVAL;
 		break;
 	}
 

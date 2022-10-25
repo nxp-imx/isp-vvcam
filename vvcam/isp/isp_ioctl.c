@@ -2810,6 +2810,7 @@ long isp_priv_ioctl(struct isp_ic_dev *dev, unsigned int cmd, void *args)
 		break;
 	default:
 		isp_err("unsupported command %d", cmd);
+		ret = -EINVAL;
 		break;
 	}
 

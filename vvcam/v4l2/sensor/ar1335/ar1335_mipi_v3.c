@@ -797,6 +797,7 @@ static long ar1335_priv_ioctl(struct v4l2_subdev *sd,
 		ret = ar1335_get_lens(sensor, arg);
 		break;
 	default:
+		ret = -EINVAL;
 		break;
 	}
 

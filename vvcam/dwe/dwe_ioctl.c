@@ -373,6 +373,7 @@ long dwe_priv_ioctl(struct dwe_ic_dev *dev, unsigned int cmd, void *args)
 #endif
 	default:
 		pr_err("unsupported dwe command %d", cmd);
+		ret = -EINVAL;
 		break;
 	}
 
