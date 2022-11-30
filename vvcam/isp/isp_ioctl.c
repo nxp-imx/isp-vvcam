@@ -55,10 +55,8 @@
 #include "mrv_all_bits.h"
 #include "isp_ioctl.h"
 #include "isp_types.h"
-#ifdef __KERNEL__
 #include <linux/regmap.h>
 #include <linux/of_reserved_mem.h>
-#endif
 
 #ifdef __clang__
 #pragma clang diagnostic push
@@ -83,36 +81,7 @@
 
 volatile MrvAllRegister_t *all_regs = NULL;
 
-#ifndef __KERNEL__
-#define ISP_REG_SIZE 0x10000
-static HalHandle_t hal_handle;
 
-void isp_ic_set_hal(HalHandle_t hal)
-{
-	hal_handle = hal;
-}
-
-void isp_write_reg(struct isp_ic_dev *dev, u32 offset, u32 val)
-{
-	if (offset >= ISP_REG_SIZE)
-		return;
-	HalWriteReg(hal_handle, offset, val);
-}
-
-u32 isp_read_reg(struct isp_ic_dev *dev, u32 offset)
-{
-	if (offset >= ISP_REG_SIZE)
-		return 0;
-	return HalReadReg(hal_handle, offset);
-}
-
-long isp_copy_data(void *dst, void *src, int size)
-{
-	if (dst != src)
-		memcpy(dst, src, size);
-	return 0;
-}
-#else
 void isp_write_reg(struct isp_ic_dev *dev, u32 offset, u32 val)
 {
 	if (offset >= ISP_REG_SIZE)
@@ -121,7 +90,6 @@ void isp_write_reg(struct isp_ic_dev *dev, u32 offset, u32 val)
 	if ((offset >= REG_ADDR(mi_mp_y_base_ad_init))
 		&& (offset <= REG_ADDR(mi_mp_y_pic_size)))
 		writel(val, dev->base + offset);
-//	  isp_info("%s	addr 0x%08x val 0x%08x\n", __func__, offset, val);
 }
 
 u32 isp_read_reg(struct isp_ic_dev *dev, u32 offset)
@@ -134,18 +102,14 @@ u32 isp_read_reg(struct isp_ic_dev *dev, u32 offset)
 	if ((offset >= REG_ADDR(mi_mp_y_base_ad_init))
 		&& (offset <= REG_ADDR(mi_mp_y_pic_size)))
 		val = readl(dev->base + offset);
-//	  isp_info("%s	addr 0x%08x val 0x%08x\n", __func__, offset, val);
 	return val;
 }
-#endif
 
 int isp_reset(struct isp_ic_dev *dev)
 {
 	isp_info("enter %s\n", __func__);
 	isp_write_reg(dev, REG_ADDR(vi_ircl), 0xFFFFFFBF);
-#ifdef __KERNEL__
 	mdelay(2);
-#endif
 	isp_write_reg(dev, REG_ADDR(vi_ircl), 0x0);
 	return 0;
 }
@@ -177,7 +141,6 @@ int isp_disable_tpg(struct isp_ic_dev *dev)
 int isp_enable_bls(struct isp_ic_dev *dev)
 {
 #ifndef ISP_BLS
-	//isp_err("unsupported function %s", __func__);
 	return -1;
 #else
 	u32 isp_bls_ctrl = isp_read_reg(dev, REG_ADDR(isp_bls_ctrl));
@@ -193,7 +156,6 @@ int isp_enable_bls(struct isp_ic_dev *dev)
 int isp_disable_bls(struct isp_ic_dev *dev)
 {
 #ifndef ISP_BLS
-	//isp_err("unsupported function %s", __func__);
 	return -1;
 #else
 	u32 isp_bls_ctrl = isp_read_reg(dev, REG_ADDR(isp_bls_ctrl));
@@ -257,7 +219,6 @@ int isp_disable(struct isp_ic_dev *dev)
 
 bool is_isp_enable(struct isp_ic_dev *dev)
 {
-//	  isp_info("enter %s\n", __func__);
 	return isp_read_reg(dev, REG_ADDR(isp_ctrl)) & 0x01;
 }
 
@@ -295,7 +256,7 @@ int isp_disable_lsc(struct isp_ic_dev *dev)
 	return 0;
 }
 
-#if defined(__KERNEL__) && defined(ISP8000NANO_V1802)
+#if defined(ISP8000NANO_V1802)
 static int isp_gpr_input_control(struct isp_ic_dev *dev)
 {
 	struct isp_context isp_ctx = *(&dev->ctx);
@@ -401,7 +362,7 @@ int isp_s_input(struct isp_ic_dev *dev)
 	isp_write_reg(dev, REG_ADDR(isp_stitching_ctrl), isp_stitching_ctrl);
 	isp_write_reg(dev, REG_ADDR(isp_ctrl), isp_ctrl);
 
-#if defined(__KERNEL__) && defined(ISP8000NANO_V1802)
+#if defined(ISP8000NANO_V1802)
 	isp_gpr_input_control(dev);
 #endif
 	return 0;
@@ -543,7 +504,6 @@ int isp_s_mux(struct isp_ic_dev *dev)
 int isp_s_bls(struct isp_ic_dev *dev)
 {
 #ifndef ISP_BLS
-	//isp_err("unsupported function %s", __func__);
 	return -1;
 #else
 	struct isp_bls_context bls = *(&dev->bls);
@@ -708,7 +668,6 @@ int isp_s_is(struct isp_ic_dev *dev)
 int isp_s_raw_is(struct isp_ic_dev *dev)
 {
 #ifndef ISP_RAWIS
-	//isp_err("unsupported funciton: %s\n", __func__);
 	return -EINVAL;
 #else
 	struct isp_is_context rawis = *(&dev->rawis);
@@ -746,14 +705,6 @@ int isp_s_raw_is(struct isp_ic_dev *dev)
 	isp_write_reg(dev, REG_ADDR(isp_raw_is_displace), isp_raw_is_displace);
 	isp_write_reg(dev, REG_ADDR(isp_raw_is_ctrl), isp_raw_is_ctrl);
 	/*dont update the configuration at the sub module function*/
-#if 0
-	if (rawis.update) {
-		isp_ctrl = isp_read_reg(dev, REG_ADDR(isp_ctrl));
-		REG_SET_SLICE(isp_ctrl, MRV_ISP_ISP_CFG_UPD, 1);
-		isp_write_reg(dev, REG_ADDR(isp_ctrl), isp_ctrl);
-		rawis.update = false;
-	}
-#endif
 	return 0;
 #endif
 }
@@ -792,7 +743,7 @@ int isp_start_stream(struct isp_ic_dev *dev, u32 numFrames)
 	isp_imsc |=
 		(MRV_ISP_IMSC_ISP_OFF_MASK | MRV_ISP_IMSC_FRAME_MASK |
 		 MRV_ISP_IMSC_FRAME_IN_MASK);
-	/* isp_imsc |= (MRV_ISP_IMSC_FRAME_MASK | MRV_ISP_IMSC_DATA_LOSS_MASK | MRV_ISP_IMSC_FRAME_IN_MASK); */
+
 	isp_write_reg(dev, REG_ADDR(isp_icr), 0xFFFFFFFF);
 	isp_write_reg(dev, REG_ADDR(isp_imsc), isp_imsc);
 	isp_ctrl = isp_read_reg(dev, REG_ADDR(isp_ctrl));
@@ -847,7 +798,6 @@ int isp_s_xtalk(struct isp_ic_dev *dev)
 	struct isp_xtalk_context xtalk = *(&dev->xtalk);
 	int i;
 
-	/* isp_info("enter %s\n", __func__); */
 
 	for (i = 0; i < 9; i++) {
 		isp_write_reg(dev, REG_ADDR(cross_talk_coef_block_arr[i]),
@@ -1008,7 +958,6 @@ int isp_s_lsc_sec(struct isp_ic_dev *dev)
 {
 	int i;
 	struct isp_lsc_context *lsc = (&dev->lsc);
-	/* isp_info("enter %s\n", __func__); */
 
 	for (i = 0; i < CAEMRIC_GRAD_TBL_SIZE; i += 2) {
 		isp_write_reg(dev, REG_ADDR(isp_lsc_xsize_01) + i * 2,
@@ -1071,7 +1020,6 @@ int isp_g_awbmean(struct isp_ic_dev *dev, struct isp_awb_mean *mean)
 {
 	u32 reg = isp_read_reg(dev, REG_ADDR(isp_awb_mean));
 
-	/* isp_info("enter %s\n", __func__); */
 	mean->g = REG_GET_SLICE(reg, MRV_ISP_AWB_MEAN_Y__G);
 	mean->b = REG_GET_SLICE(reg, MRV_ISP_AWB_MEAN_CB__B);
 	mean->r = REG_GET_SLICE(reg, MRV_ISP_AWB_MEAN_CR__R);
@@ -1083,7 +1031,6 @@ int isp_g_awbmean(struct isp_ic_dev *dev, struct isp_awb_mean *mean)
 int isp_s_ee(struct isp_ic_dev *dev)
 {
 #ifndef ISP_EE
-	//isp_err("unsupported function: %s\n", __func__);
 	return -EINVAL;
 #else
 	struct isp_ee_context *ee = &dev->ee;
@@ -1158,7 +1105,6 @@ int isp_g_expmean(struct isp_ic_dev *dev, u8 *mean)
 {
 	int i = 0;
 
-	/* isp_info("enter %s\n", __func__); */
 	if (!dev || !mean)
 		return -EINVAL;
 	for (; i < 25; i++) {
@@ -1265,7 +1211,6 @@ int isp_g_histmean(struct isp_ic_dev *dev, u32 *mean)
 {
 	int i = 0;
 
-	/* isp_info("enter %s\n", __func__); */
 	if (!dev || !mean)
 		return -EINVAL;
 #ifdef ISP_HIST256
@@ -1285,7 +1230,6 @@ int isp_g_histmean(struct isp_ic_dev *dev, u32 *mean)
 int isp_s_ge(struct isp_ic_dev *dev)
 {
 #ifndef ISP_GREENEQUILIBRATE
-	//isp_err("unsupported function %s\n", __func__);
 	return -1;
 #else
 	struct isp_ge_context *ge = &dev->ge;
@@ -1321,16 +1265,10 @@ int isp_s_ge(struct isp_ic_dev *dev)
 int isp_s_ca(struct isp_ic_dev *dev)
 {
 #ifndef ISP_CA
-	//isp_err("unsupported function %s\n", __func__);
 	return -1;
 #else
 	struct isp_ca_context *ca = &dev->ca;
 	u32 isp_curve_ctrl = isp_read_reg(dev, REG_ADDR(isp_curve_ctrl));
-	// u32 isp_curve_lut_x_addr = isp_read_reg(dev, REG_ADDR(isp_curve_lut_x_addr));
-	// u32 isp_curve_lut_luma_addr = isp_read_reg(dev, REG_ADDR(isp_curve_lut_luma_addr));
-	// u32 isp_curve_lut_chroma_addr = isp_read_reg(dev, REG_ADDR(isp_curve_lut_chroma_addr));
-	// u32 isp_curve_lut_shift_addr = isp_read_reg(dev, REG_ADDR(isp_curve_lut_shift_addr));
-
 	int i = 0;
 	isp_info("enter %s\n", __func__);
 	if (!ca->enable) {
@@ -1457,6 +1395,17 @@ int isp_s_flt(struct isp_ic_dev *dev)
 	struct isp_flt_context *flt = &dev->flt;
 	u32 isp_flt_mode = isp_read_reg(dev, REG_ADDR(isp_filt_mode));
 	if (!flt->enable) {
+		isp_write_reg(dev, REG_ADDR(isp_filt_thresh_sh0), 0);
+		isp_write_reg(dev, REG_ADDR(isp_filt_thresh_sh1), 0);
+		isp_write_reg(dev, REG_ADDR(isp_filt_thresh_bl0), 0);
+		isp_write_reg(dev, REG_ADDR(isp_filt_thresh_bl1), 0);
+
+		isp_write_reg(dev, REG_ADDR(isp_filt_fac_sh0), 0);
+		isp_write_reg(dev, REG_ADDR(isp_filt_fac_sh1), 0);
+		isp_write_reg(dev, REG_ADDR(isp_filt_fac_mid), 0);
+		isp_write_reg(dev, REG_ADDR(isp_filt_fac_bl0), 0);
+		isp_write_reg(dev, REG_ADDR(isp_filt_fac_bl1), 0);
+
 		REG_SET_SLICE(isp_flt_mode, MRV_FILT_FILT_ENABLE, 0);
 		isp_write_reg(dev, REG_ADDR(isp_filt_mode), isp_flt_mode);
 		dev->flt.changed = false;
@@ -1474,6 +1423,7 @@ int isp_s_flt(struct isp_ic_dev *dev)
 					denoise_tbl[flt->denoise].thresh_bl1);
 		REG_SET_SLICE(isp_flt_mode, MRV_FILT_STAGE1_SELECT,
 					denoise_tbl[flt->denoise].stage_select);
+
 		REG_SET_SLICE(isp_flt_mode, MRV_FILT_FILT_CHR_V_MODE,
 					flt->chrV);
 		REG_SET_SLICE(isp_flt_mode, MRV_FILT_FILT_CHR_H_MODE,
@@ -1816,7 +1766,6 @@ int isp_g_afm(struct isp_ic_dev *dev, struct isp_afm_result *afm)
 int isp_s_exp2(struct isp_ic_dev *dev)
 {
 #ifndef ISP_AEV2
-	//isp_err("unsupported function: %s\n", __func__);
 	return -EINVAL;
 #else
 	struct isp_exp2_context *exp2 = &dev->exp2;
@@ -1876,7 +1825,6 @@ int isp_s_exp2(struct isp_ic_dev *dev)
 int isp_s_2dnr(struct isp_ic_dev *dev)
 {
 #ifndef ISP_2DNR
-	//isp_err("unsupported function: %s\n", __func__);
 	return -EINVAL;
 #else
 	struct isp_2dnr_context *dnr2 = &dev->dnr2;
@@ -1932,7 +1880,7 @@ int isp_s_2dnr(struct isp_ic_dev *dev)
 	isp_write_reg(dev, REG_ADDR(isp_denoise2d_weight_mul_factor_shd),
 			  dnr2->weight);
 	/* refer to HW spec for HBLANK */
-	//isp_write_reg(dev, REG_ADDR(isp_denoise2d_dummy_hblank), 0);
+	/* isp_write_reg(dev, REG_ADDR(isp_denoise2d_dummy_hblank), 0); */
 
 	isp_write_reg(dev, REG_ADDR(isp_denoise2d_strength_shd), strength);
 	isp_write_reg(dev, REG_ADDR(isp_denoise2d_control_shd),
@@ -1986,6 +1934,7 @@ int isp_s_cproc(struct isp_ic_dev *dev)
 	u32 cproc_ctrl = isp_read_reg(dev, REG_ADDR(cproc_ctrl));
 
 	dev->cproc.changed = false;
+
 
 	if (!cproc->enable) {
 		REG_SET_SLICE(cproc_ctrl, MRV_CPROC_CPROC_ENABLE, 0);
@@ -2088,19 +2037,17 @@ int isp_ioc_qcap(struct isp_ic_dev *dev, void *args)
 {
 
 	/* use public VIDIOC_QUERYCAP to query the type of v4l-subdevs. */
-#ifdef __KERNEL__
 #ifndef USE_FPGA
 	struct v4l2_capability *cap = (struct v4l2_capability *)args;
 	strcpy((char *)cap->driver, "viv_isp_subdev");
-	cap->bus_info[0] = (__u8)dev->id;//isp channel id
+	cap->bus_info[0] = (__u8)dev->id;
 #else
 	struct v4l2_capability cap;
 	strcpy((char *)cap.driver, "viv_isp_subdev");
-	cap->bus_info[0] = (__u8)dev->id;//isp channel id
+	cap->bus_info[0] = (__u8)dev->id;
 	isp_info("enter %s viv_isp_subdev\n", __func__);
 	viv_check_retval(copy_to_user
 			 ((struct v4l2_capability *)args, &cap, sizeof(cap)));
-#endif
 #endif
 	return 0;
 }
@@ -2108,7 +2055,6 @@ int isp_ioc_qcap(struct isp_ic_dev *dev, void *args)
 int isp_ioc_g_status(struct isp_ic_dev *dev, void *args)
 {
 	u32 val = 0;
-	/* val = isp_read_reg(REG_ADDR(isp_feature_version)); */
 	viv_check_retval(copy_to_user(args, &val, sizeof(val)));
 	return 0;
 }
@@ -2150,7 +2096,6 @@ int isp_ioc_g_feature_veresion(struct isp_ic_dev *dev, void *args)
 {
 	u32 val = 0;
 
-	/* val = isp_read_reg(REG_ADDR(isp_feature_version)); */
 	viv_check_retval(copy_to_user(args, &val, sizeof(val)));
 
 	return 0;
@@ -2159,9 +2104,8 @@ int isp_ioc_g_feature_veresion(struct isp_ic_dev *dev, void *args)
 static long isp_get_extmem(struct isp_ic_dev *dev, void *args)
 {
 	long ret = 0;
-
-#ifdef __KERNEL__
 	struct isp_extmem_info ext_mem;
+
 	struct reserved_mem *rmem = (struct reserved_mem *)dev->rmem;
 	if (rmem) {
 		ext_mem.addr = rmem->base;
@@ -2172,7 +2116,6 @@ static long isp_get_extmem(struct isp_ic_dev *dev, void *args)
 		pr_err("%s:isp cannot get reserve mem\n",__func__);
 	}
 	ret = copy_to_user(args, &ext_mem, sizeof(struct isp_extmem_info));
-#endif
 
 	return ret;
 }
@@ -2611,7 +2554,6 @@ long isp_priv_ioctl(struct isp_ic_dev *dev, unsigned int cmd, void *args)
 	case ISPIOC_S_HDR_DIGITAL_GAIN:
 		viv_check_retval(copy_from_user
 				 (&dev->hdr, args, sizeof(dev->hdr)));
-		//		 ret = isp_s_hdr_digal_gain(dev);
 		break;
 	case ISPIOC_S_GAMMA_OUT:{
 			viv_check_retval(copy_from_user
@@ -2624,7 +2566,7 @@ long isp_priv_ioctl(struct isp_ic_dev *dev, unsigned int cmd, void *args)
 			struct isp_buffer_context buf;
 			viv_check_retval(copy_from_user
 					 (&buf, args, sizeof(buf)));
-#if defined(__KERNEL__) && defined(ENABLE_IRQ)
+#if defined(ENABLE_IRQ)
 			if (dev->alloc)
 				ret = dev->alloc(dev, &buf);
 #else
@@ -2732,13 +2674,9 @@ long isp_priv_ioctl(struct isp_ic_dev *dev, unsigned int cmd, void *args)
 		break;
 	case ISPIOC_S_GCMONO:{
 			struct isp_gcmono_data *data;
-#ifdef __KERNEL__
 			data = (struct isp_gcmono_data *)
 				kmalloc(sizeof(struct isp_gcmono_data), GFP_KERNEL);
-#else
-			data = (struct isp_gcmono_data *)
-				malloc(sizeof(struct isp_gcmono_data));
-#endif
+
 			if (data == NULL) {
 				isp_err("malloc mem for rgb gamma failed.");
 				ret = -1;
@@ -2748,12 +2686,7 @@ long isp_priv_ioctl(struct isp_ic_dev *dev, unsigned int cmd, void *args)
 						  sizeof(struct
 							 isp_gcmono_data)));
 				ret = isp_s_gcmono(dev, data);
-#ifdef __KERNEL__
 				kfree(data);
-#else
-				free(data);
-#endif
-
 			}
 			break;
 		}
@@ -2765,14 +2698,9 @@ long isp_priv_ioctl(struct isp_ic_dev *dev, unsigned int cmd, void *args)
 		break;
 	case ISPIOC_S_RGBGAMMA:{
 			struct isp_rgbgamma_data *data;
-#ifdef __KERNEL__
 			data = (struct isp_rgbgamma_data *)
 				kmalloc(sizeof(struct isp_rgbgamma_data),
 					GFP_KERNEL);
-#else
-			data = (struct isp_rgbgamma_data *)
-				malloc(sizeof(struct isp_rgbgamma_data));
-#endif
 			if (data == NULL) {
 				isp_err("malloc mem for rgb gamma failed.");
 				ret = -1;
@@ -2782,11 +2710,7 @@ long isp_priv_ioctl(struct isp_ic_dev *dev, unsigned int cmd, void *args)
 						  sizeof(struct
 							 isp_rgbgamma_data)));
 				ret = isp_s_rgbgamma(dev, data);
-#ifdef __KERNEL__
 				kfree(data);
-#else
-				free(data);
-#endif
 			}
 			break;
 		}
@@ -2800,11 +2724,9 @@ long isp_priv_ioctl(struct isp_ic_dev *dev, unsigned int cmd, void *args)
 				 (&dev->ca, args, sizeof(dev->ca)));
 		ret = isp_s_ca(dev);
 		break;
-#ifdef __KERNEL__
 	case VIDIOC_QUERYCAP:
 		ret = isp_ioc_qcap(dev, args);
 		break;
-#endif
 	case ISPIOC_G_QUERY_EXTMEM:
 		ret = isp_get_extmem(dev, args);
 		break;

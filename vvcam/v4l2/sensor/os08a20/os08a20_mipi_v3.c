@@ -632,7 +632,6 @@ static int os08a20_set_vsgain(struct os08a20 *sensor, u32 total_gain)
 static int os08a20_set_fps(struct os08a20 *sensor, u32 fps)
 {
 	u32 vts;
-	//struct sensor_hdr_artio_s *phdr_ratio;
 	int ret = 0;
 
 	if (fps > sensor->cur_mode.ae_info.max_fps) {

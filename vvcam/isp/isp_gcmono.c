@@ -50,11 +50,9 @@
  * version of this file.
  *
  *****************************************************************************/
-#ifdef __KERNEL__
+
 #include <linux/io.h>
 #include <linux/module.h>
-#else
-#endif
 #include "mrv_all_bits.h"
 #include "isp_ioctl.h"
 #include "isp_types.h"

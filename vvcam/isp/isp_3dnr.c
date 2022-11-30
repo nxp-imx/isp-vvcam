@@ -50,10 +50,9 @@
  * version of this file.
  *
  *****************************************************************************/
-#ifdef __KERNEL__
+
 #include <linux/io.h>
 #include <linux/module.h>
-#endif
 #include "mrv_all_bits.h"
 #include "isp_ioctl.h"
 #include "isp_types.h"
@@ -86,7 +85,7 @@ void dnr3_hw_init(struct isp_ic_dev *dev)
 	u32 strength = dnr3->strength;
 	strength = MIN(MAX(strength, 0), 128);
 
-	if (dnr3->init) {  //for 3dnr init
+	if (dnr3->init) {
 		u32 isp_denoise3d_ctrl = isp_read_reg(dev, REG_ADDR(isp_denoise3d_ctrl));
 		REG_SET_SLICE(isp_denoise3d_ctrl, DENOISE3D_HORIZONTAL_EN,
 			dnr3->enable_h);
@@ -173,13 +172,12 @@ int isp_s_3dnr_cmp(struct isp_ic_dev *dev) {
 #ifndef ISP_3DNR
 	return -1;
 #elif !defined(ISP_3DNR_DDR_LESS)
-	//pr_err("Not supported 3dnr ddr less\n");
 	return -1;
 #else
 	struct isp_3dnr_compress_context *compress = &dev->dnr3.compress;
 
-	u32 isp_denoise3d_weight1 = 0; // isp_read_reg(dev, REG_ADDR(isp_denoise3d_weight1));
-	u32 isp_denoise3d_weight2 = 0; // isp_read_reg(dev, REG_ADDR(isp_denoise3d_weight2));
+	u32 isp_denoise3d_weight1 = 0;
+	u32 isp_denoise3d_weight2 = 0;
 	int i = 0;
 	for (i = 0; i < 4; i++) {
 	    isp_denoise3d_weight1 |= (compress->weight_down[i] & DENOISE3D_WEIGHT_MASK) << (3 - i) * 4;
@@ -200,7 +198,6 @@ int isp_s_3dnr_cmp(struct isp_ic_dev *dev) {
 int isp_s_3dnr(struct isp_ic_dev *dev)
 {
 #ifndef ISP_3DNR
-	//pr_err("Not supported 3dnr\n");
 	return -1;
 #else
 	struct isp_3dnr_context *dnr3 = &dev->dnr3;
@@ -356,7 +353,7 @@ int isp_r_3dnr(struct isp_ic_dev *dev)
 	isp_write_reg(dev, REG_ADDR(miv2_sp2_dma_raw_pic_size), size);
 	REG_SET_SLICE(miv2_sp2_ctrl, SP2_RD_RAW_CFG_UPDATE, 1);
 	REG_SET_SLICE(miv2_sp2_ctrl, SP2_RD_RAW_AUTO_UPDATE, 1);
-#if 1//ndef ISP8000_V1901
+#if 1	/* ndef ISP8000_V1901 */
 	REG_SET_SLICE(miv2_sp2_ctrl, SP2_MI_CFG_UPD, 1);
 #endif
 	miv2_imsc |= SP2_DMA_RAW_READY_MASK;

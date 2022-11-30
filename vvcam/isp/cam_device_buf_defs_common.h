@@ -68,22 +68,22 @@ typedef enum _ISPCORE_BUFIO_ID_ {
 	ISPCORE_BUFIO_MP        = 0,
 	ISPCORE_BUFIO_SP1       = 1,
 	ISPCORE_BUFIO_SP2       = 2,
-	ISPCORE_BUFIO_RDI       = 3, //RAW dump interface
-	ISPCORE_BUFIO_META      = 4, //meta sw delivery port
+	ISPCORE_BUFIO_RDI       = 3, /* RAW dump interface */
+	ISPCORE_BUFIO_META      = 4, /* meta sw delivery port */
 	ISPCORE_BUFIO_WRITEMAX  = 5,
 	ISPCORE_BUFIO_READ      = 6,
 	ISPCORE_BUFIO_MAX       = 7,
 } ISPCORE_BUFIO_ID;
 
 typedef struct __BufIdentity__ {
-	uint64_t address_usr;    //address in V4l2 application space
-	uint64_t address_daemon; //address in native stack space
-	uint64_t address_kernel; //address in kernel space
-	uint32_t address_reg;    //address set to ispcore register
-	uint32_t buffer_idx;     //buffer index
-	uint32_t buff_size;      //biffer size
+	uint64_t address_usr;    /* address in V4l2 application space */
+	uint64_t address_daemon; /* address in native stack space */
+	uint64_t address_kernel; /* address in kernel space */
+	uint32_t address_reg;    /* address set to ispcore register */ 
+	uint32_t buffer_idx;     /* buffer index */
+	uint32_t buff_size;      /* buffer size */
 	uint32_t filled;
-	void   *ctx;              //memory handle
+	void   *ctx;
 	int width;
 	int height;
 	int format;
@@ -107,4 +107,4 @@ typedef struct ispcore_meta_s {
 	ispcore_meta_user_t       user_meta;
 } ispcore_meta_t;
 
-#endif  // _CAMERA_DEVICE_BUF_DEFS_COMMON_H_
+#endif  /* _CAMERA_DEVICE_BUF_DEFS_COMMON_H_*/

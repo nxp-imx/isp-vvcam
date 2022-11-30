@@ -53,22 +53,6 @@
 #ifndef _ISP_DEV_H_
 #define _ISP_DEV_H_
 
-#ifndef __KERNEL__
-#include <stdlib.h>
-#include <stdint.h>
-#include <stdbool.h>
-#include <errno.h>
-
-#define copy_from_user(a, b, c) isp_copy_data(a, b, c)
-#define copy_to_user(a, b, c) isp_copy_data(a, b, c)
-
-#if defined(HAL_CMODEL) || defined(HAL_ALTERA)
-#include <hal/hal_api.h>
-
-void isp_ic_set_hal(HalHandle_t hal);
-#endif
-#endif
-
 #include "isp_version.h"
 #include "vvdefs.h"
 
@@ -717,8 +701,8 @@ struct isp_irq_data {
 typedef struct isp_wdr_context
 {
 	bool	enabled;
-	bool	changed; /*the wdr ctrl && reb shift does not have shandow
-			  register,need to change after frame end irq.*/
+	bool	changed;	/* the wdr ctrl && reb shift does not have shandow
+						egister,need to change after frame end irq. */
 	u16 	LumOffset;
 	u16 	RgbOffset;
 	u16 	Ym[33];
@@ -744,7 +728,9 @@ struct isp_ic_dev {
 	spinlock_t lock;
 #endif
 
+#ifdef __KERNEL__
 	spinlock_t irqlock;
+#endif
 
 	void (*post_event)(struct isp_ic_dev *dev, void *data, size_t size);
 

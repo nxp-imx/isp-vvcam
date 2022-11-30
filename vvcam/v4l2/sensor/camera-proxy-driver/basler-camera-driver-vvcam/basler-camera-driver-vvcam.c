@@ -575,10 +575,10 @@ static int basler_ioc_qcap(struct basler_camera_dev *sensor, void *args)
 	struct v4l2_capability *cap = (struct v4l2_capability *)args;
 	strcpy((char *)cap->driver, SENSOR_NAME);
 
-	sprintf((char *)cap->bus_info, "csi%d",sensor->csi); //bus_info[0:7]-csi number
+	sprintf((char *)cap->bus_info, "csi%d",sensor->csi); /* bus_info[0:7]-csi number */
 	if(sensor->i2c_client->adapter)
 	{
-		//bus_info[8]-i2c bus dev number
+		/* bus_info[8]-i2c bus dev number */
 		cap->bus_info[VVCAM_CAP_BUS_INFO_I2C_ADAPTER_NR_POS] = (__u8)sensor->i2c_client->adapter->nr;
 	}
 	else

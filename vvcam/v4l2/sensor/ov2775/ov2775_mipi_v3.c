@@ -881,7 +881,7 @@ static int ov2775_set_blc(struct ov2775 *sensor, sensor_blc_t *pblc)
 	gr_offset = (gr_gain - 0x100) * pblc->gr;
 	gb_offset = (gb_gain - 0X100) * pblc->gb;
 	b_offset  = (b_gain  - 0X100) * pblc->blue;
-	//R,Gr,Gb,B HCG Offset
+	/* R,Gr,Gb,B HCG Offset */
 	ret |= ov2775_write_reg(sensor, 0x3378, (r_offset >> 16) & 0xff);
 	ret |= ov2775_write_reg(sensor, 0x3379, (r_offset >> 8)  & 0xff);
 	ret |= ov2775_write_reg(sensor, 0x337a,  r_offset        & 0xff);
@@ -898,7 +898,7 @@ static int ov2775_set_blc(struct ov2775 *sensor, sensor_blc_t *pblc)
 	ret |= ov2775_write_reg(sensor, 0x3382, (b_offset >> 8)  & 0xff);
 	ret |= ov2775_write_reg(sensor, 0x3383,  b_offset        & 0xff);
 
-	//R,Gr,Gb,B LCG Offset
+	/* R,Gr,Gb,B LCG Offset */
 	ret |= ov2775_write_reg(sensor, 0x3384, (r_offset >> 16) & 0xff);
 	ret |= ov2775_write_reg(sensor, 0x3385, (r_offset >> 8)  & 0xff);
 	ret |= ov2775_write_reg(sensor, 0x3386,  r_offset        & 0xff);
@@ -915,7 +915,7 @@ static int ov2775_set_blc(struct ov2775 *sensor, sensor_blc_t *pblc)
 	ret |= ov2775_write_reg(sensor, 0x338e, (b_offset >> 8)  & 0xff);
 	ret |= ov2775_write_reg(sensor, 0x338f,  b_offset        & 0xff);
 
-	//R,Gr,Gb,B VS Offset
+	/* R,Gr,Gb,B VS Offset */
 	ret |= ov2775_write_reg(sensor, 0x3390, (r_offset >> 16) & 0xff);
 	ret |= ov2775_write_reg(sensor, 0x3391, (r_offset >> 8)  & 0xff);
 	ret |= ov2775_write_reg(sensor, 0x3392,  r_offset        & 0xff);

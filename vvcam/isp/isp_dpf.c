@@ -50,11 +50,9 @@
  * version of this file.
  *
  *****************************************************************************/
-#ifdef __KERNEL__
+
 #include <linux/io.h>
 #include <linux/module.h>
-#else
-#endif
 #include "mrv_all_bits.h"
 #include "isp_ioctl.h"
 #include "isp_types.h"
@@ -68,8 +66,6 @@ int isp_s_dpf(struct isp_ic_dev *dev)
 	int i = 0;
 	u32 isp_ctrl = isp_read_reg(dev, REG_ADDR(isp_ctrl));
 	u32 isp_dpf_mode = isp_read_reg(dev, REG_ADDR(isp_dpf_mode));
-
-	//pr_info("enter %s\n", __func__);
 
 	if (!dpf->enable) {
 		isp_write_reg(dev, REG_ADDR(isp_dpf_mode),

@@ -50,10 +50,9 @@
  * version of this file.
  *
  *****************************************************************************/
-#ifdef __KERNEL__
+
 #include <linux/io.h>
 #include <linux/module.h>
-#endif
 #include "mrv_all_bits.h"
 #include "isp_ioctl.h"
 #include "isp_types.h"
@@ -79,7 +78,7 @@ int isp_enable_dmsc(struct isp_ic_dev *dev)
 int isp_disable_dmsc(struct isp_ic_dev *dev)
 {
 	u32 isp_dmsc_ctrl = isp_read_reg(dev, REG_ADDR(isp_dmsc_ctrl));
-	isp_dmsc_ctrl = 0;	//clear fpga default bit 3 and 13 to keep the same value with cmodel.
+	isp_dmsc_ctrl = 0;	/* clear fpga default bit 3 and 13 to keep the same value with cmodel. */
 
 	pr_info("enter %s\n", __func__);
 	REG_SET_SLICE(isp_dmsc_ctrl, ISP_DEMOSAIC_BYPASS, 1U);

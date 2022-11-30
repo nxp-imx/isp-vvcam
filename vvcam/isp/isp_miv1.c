@@ -66,27 +66,12 @@ int getRawBit(u32 type, u32 *bit, u32 *len)
 		*bit = 0;
 		*len = 8;
 		break;
-#if 0				/* normal process,  need pass type from engine. */
-	case ISP_PICBUF_TYPE_RAW10:
-		*bit = 1;
-		break;
-	case ISP_PICBUF_TYPE_RAW12:
-		*bit = 2;
-		break;
-	case ISP_PICBUF_TYPE_RAW14:
-		*bit = 3;
-		break;
-	case ISP_PICBUF_TYPE_RAW16:
-		*bit = 4;
-		break;
-#else /* WA */
 	case ISP_PICBUF_TYPE_RAW10:
 	case ISP_PICBUF_TYPE_RAW12:
 	case ISP_PICBUF_TYPE_RAW14:
 	case ISP_PICBUF_TYPE_RAW16:
 		*bit = 4;
 		break;
-#endif
 	default:
 		pr_err("unsupport raw formt: %d\n", type);
 		return -1;
@@ -516,7 +501,7 @@ int isp_mi_start(struct isp_ic_dev *dev)
 		     MRV_MI_WRAP_SP_CB_MASK | MRV_MI_WRAP_SP_CR_MASK);
 	}
 
-#if defined(__KERNEL__) && defined(ENABLE_IRQ)
+#if defined(ENABLE_IRQ)
 		*dev->state |= STATE_DRIVER_STARTED;
 #endif
 
@@ -535,14 +520,14 @@ int isp_mi_start(struct isp_ic_dev *dev)
 	isp_bppath_start(dev);
 #endif
 
-#if defined(__KERNEL__) && defined(ENABLE_IRQ)
+#if defined(ENABLE_IRQ)
 	/*set memory for first frame, need set MRV_MI_MI_CFG_UPD bit to update memory to mi shadow address*/
 	update_dma_buffer(dev);
 #endif
 
 	isp_write_reg(dev, REG_ADDR(mi_init), mi_init);
 
-#if defined(__KERNEL__) && defined(ENABLE_IRQ)
+#if defined(ENABLE_IRQ)
 	/*prepare  memory for next frame */
 	update_dma_buffer(dev);
 #endif
@@ -568,7 +553,7 @@ int isp_mi_stop(struct isp_ic_dev *dev)
 	REG_SET_SLICE(mi_init, MRV_MI_MI_CFG_UPD, 1);
 	isp_write_reg(dev, REG_ADDR(mi_init), mi_init);
 
-#if defined(__KERNEL__) && defined(ENABLE_IRQ)
+#if defined(ENABLE_IRQ)
 	if (*dev->state & STATE_DRIVER_STARTED) {
 		*dev->state &= ~STATE_DRIVER_STARTED;
 		clean_dma_buffer(dev);

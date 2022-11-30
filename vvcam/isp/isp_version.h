@@ -383,16 +383,16 @@
  * @brief   HDR module version type
  */
 /*****************************************************************************/
-#define VSI_ISP_HDR_NOTSUPPORT  0   //!< Not support HDR
-#define VSI_ISP_HDR_V10         1   //!< Version V10
-#define VSI_ISP_HDR_V11         2   //!< Version V11
-#define VSI_ISP_HDR_V12         3   //!< Version V12
-#define VSI_ISP_HDR_V13         4   //!< Version V13
+#define VSI_ISP_HDR_NOTSUPPORT  0   /*!< Not support HDR */
+#define VSI_ISP_HDR_V10         1   /*!< Version V10 */
+#define VSI_ISP_HDR_V11         2   /*!< Version V11 */
+#define VSI_ISP_HDR_V12         3   /*!< Version V12 */
+#define VSI_ISP_HDR_V13         4   /*!< Version V13 */
 
 
-/////////////////////////////////////////
-//add Version defines
-/////////////////////////////////////////
+/***************************************
+    add Version defines
+***************************************/
 #ifdef ISP8000NANO_V1801
 #ifdef ISP_EE
 #define MRV_EE_VERSION                  1
@@ -436,7 +436,7 @@
 #define MRV_CMPD_VERSION                1
 #ifdef ISP_HDR_STITCH
 #undef MRV_STITCHING_VERSION
-#define MRV_STITCHING_VERSION           1    //1--V11, 2--V12
+#define MRV_STITCHING_VERSION           1    /* 1--V11, 2--V12 */
 #endif
 #define MRV_WDR3_VERSION                1
 #ifdef ISP_GCMONO
@@ -482,7 +482,7 @@
 #define MRV_CMPD_VERSION                1
 #ifdef ISP_HDR_STITCH
 #undef MRV_STITCHING_VERSION
-#define MRV_STITCHING_VERSION           1    //1--V11, 2--V12
+#define MRV_STITCHING_VERSION           1    /* 1--V11, 2--V12  */
 #endif
 #define MRV_AEV2_VERSION                1
 #define MRV_WDR3_VERSION                1
@@ -529,7 +529,7 @@
 #define MRV_CMPD_VERSION                1
 #ifdef ISP_HDR_STITCH
 #undef MRV_STITCHING_VERSION
-#define MRV_STITCHING_VERSION           1    //1--V11, 2--V12
+#define MRV_STITCHING_VERSION           1    /* 1--V11, 2--V12 */
 #endif
 #define MRV_SP2_VERSION                 1
 #define MRV_AEV2_VERSION                1
@@ -586,7 +586,7 @@
 #define MRV_CMPD_VERSION                1
 #ifdef ISP_HDR_STITCH
 #undef MRV_STITCHING_VERSION
-#define MRV_STITCHING_VERSION           1    //1--V11, 2--V12
+#define MRV_STITCHING_VERSION           1    /* 1--V11, 2--V12 */
 #endif
 #define MRV_SP2_VERSION                 1
 #define MRV_AEV2_VERSION                1
@@ -639,7 +639,7 @@
 #define MRV_CMPD_VERSION                1
 #ifdef ISP_HDR_STITCH
 #undef MRV_STITCHING_VERSION
-#define MRV_STITCHING_VERSION           2    //1--V11, 2--V12
+#define MRV_STITCHING_VERSION           2    /* 1--V11, 2--V12 */
 #endif
 #define MRV_SP2_VERSION                 1
 #define MRV_AEV2_VERSION                1
@@ -695,7 +695,7 @@
 #define MRV_CMPD_VERSION                1
 #ifdef ISP_HDR_STITCH
 #undef MRV_STITCHING_VERSION
-#define MRV_STITCHING_VERSION           2    //1--V11, 2--V12
+#define MRV_STITCHING_VERSION           2    /* 1--V11, 2--V12 */
 #endif
 #define MRV_SP2_VERSION                 1
 #define MRV_AEV2_VERSION                1
@@ -751,7 +751,7 @@
 #define MRV_CMPD_VERSION                1
 #ifdef ISP_HDR_STITCH
 #undef MRV_STITCHING_VERSION
-#define MRV_STITCHING_VERSION           2    //1--V11, 2--V12
+#define MRV_STITCHING_VERSION           2    /* 1--V11, 2--V12 */
 #endif
 #define MRV_SP2_VERSION                 1
 #define MRV_AEV2_VERSION                1
@@ -808,7 +808,7 @@
 #define MRV_CMPD_VERSION                1
 #ifdef ISP_HDR_STITCH
 #undef MRV_STITCHING_VERSION
-#define MRV_STITCHING_VERSION           2    //1--V11, 2--V12
+#define MRV_STITCHING_VERSION           2    /* 1--V11, 2--V12 */
 #endif
 #define MRV_SP2_VERSION                 1
 #define MRV_AEV2_VERSION                1
@@ -863,7 +863,7 @@
 #endif
 #ifdef ISP_HDR_STITCH
 #undef MRV_STITCHING_VERSION
-#define MRV_STITCHING_VERSION           1    //1--V11, 2--V12
+#define MRV_STITCHING_VERSION           1    /* 1--V11, 2--V12 */
 #endif
 
 #define MRV_WDR3_VERSION                1
@@ -900,7 +900,7 @@
 #elif defined(ISP8000L_V2006)
 #ifdef ISP_HDR_STITCH
 #undef MRV_STITCHING_VERSION
-#define MRV_STITCHING_VERSION           1    //1--V11, 2--V12
+#define MRV_STITCHING_VERSION           1    /* 1--V11, 2--V12 */
 #endif
 
 #endif

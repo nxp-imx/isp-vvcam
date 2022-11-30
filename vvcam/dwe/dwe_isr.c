@@ -50,14 +50,13 @@
  * version of this file.
  *
  *****************************************************************************/
-#ifdef __KERNEL__
-# include "dwe_driver.h"
-# include "video/vvbuf.h"
-#endif
+
+#include "dwe_driver.h"
+#include "video/vvbuf.h"
 #include "dwe_ioctl.h"
 #include "dwe_regs.h"
 
-#if defined(__KERNEL__) && defined(ENABLE_IRQ)
+#if defined(ENABLE_IRQ)
 
 void dwe_isr_tasklet(unsigned long arg)
 {

@@ -50,10 +50,9 @@
  * version of this file.
  *
  *****************************************************************************/
-#ifdef __KERNEL__
+
 #include <linux/io.h>
 #include <linux/module.h>
-#endif
 #include "mrv_all_bits.h"
 #include "isp_ioctl.h"
 #include "isp_types.h"
@@ -70,27 +69,12 @@ int getRawBit(u32 type, u32 *bit, u32 *len)
 		*bit = 0;
 		*len = 8;
 		break;
-#if 0				/* normal process,  need pass type from engine. */
-	case ISP_PICBUF_TYPE_RAW10:
-		*bit = 1;
-		break;
-	case ISP_PICBUF_TYPE_RAW12:
-		*bit = 2;
-		break;
-	case ISP_PICBUF_TYPE_RAW14:
-		*bit = 3;
-		break;
-	case ISP_PICBUF_TYPE_RAW16:
-		*bit = 4;
-		break;
-#else /* WA */
 	case ISP_PICBUF_TYPE_RAW10:
 	case ISP_PICBUF_TYPE_RAW12:
 	case ISP_PICBUF_TYPE_RAW14:
 	case ISP_PICBUF_TYPE_RAW16:
 		*bit = 4;
 		break;
-#endif
 	default:
 		pr_err("unsupport raw formt: %d\n", type);
 		return -1;
@@ -213,8 +197,7 @@ int isp_ioc_start_dma_read(struct isp_ic_dev *dev, void *args)
 	mcm_bus_cfg = isp_read_reg(dev, REG_ADDR(miv2_mcm_bus_cfg));
 
 	getRawBit(dma.type, &mcm_rd_fmt_bit, &llength);
-/*	if (llength != 8)
-		REG_SET_SLICE(mcm_bus_cfg, MCM_RD_SWAP_RAW, 1);*/
+
 	llength = dma.width * llength / 8;
 	REG_SET_SLICE(mcm_fmt, MCM_RD_RAW_BIT, mcm_rd_fmt_bit);
 	REG_SET_SLICE(mcm_ctrl, MCM_RD_CFG_UPD, 1);
@@ -286,7 +269,7 @@ int set_scaling(int id, struct isp_ic_dev *dev, bool stabilization)
 		oh = outputHeight;
 		break;
 	case IC_MI_DATAMODE_YUV420:
-		oh = outputHeight / 2;	/*  scale cbcr */
+		oh = outputHeight / 2;	/* scale cbcr */
 		break;
 	default:
 		return -EFAULT;
@@ -370,10 +353,10 @@ int calc_raw_lval(int width, int out_mode, int align_mode)
 	return lval;
 }
 
-#define PATHNUM 3  // hw related
+#define PATHNUM 3  /* hw related */
 
-// only config write bits,  SP2 read bit at 3dnr.c
-// read defined is same as write
+/* only config write bits,  SP2 read bit at 3dnr.c
+ read defined is same as write */
 struct miv2_format_bit {
 	u32 nyv, nv12;
 	u32 raw_aligned, yuv_aligned;
@@ -423,7 +406,7 @@ u32 bit_shift(u32 i) {
 
 void mi_set_slice(u32* val, u32 mask, u32 slice)
 {
-	// mp, sp1, sp2 have different masks.
+	/* mp, sp1, sp2 have different masks. */
 	if (mask) {
 		*val &= ~mask;
 		*val |= (slice << bit_shift(mask));
@@ -457,14 +440,7 @@ void set_data_path(int id, struct isp_mi_data_path_context *path,
 	u32 conv_format_ctrl;
 	u32 y_length_addr;
 
-	// please take care the register order
-#if 0
-    struct miv2_path_address  path_list[PATHNUM] = {
-		{ 0x1318, 0x131c, 0x1310, 0x1314, 0x1330, 0x13a0, 0x13a4, 0x13a8, 0x13ac, 1, 0x0c6c },
-		{ 0x1434, 0x1438, 0x142c, 0x1430, 0x144c, 0, 0, 0, 8, 0x106c },
-		{ 0x14ec, 0x14f0, 0x14e4, 0x14e8, 0x1504, 0x1574, 0x1578, 0x157c, 0x1580, 0x10, 0x116c },
-	};
-#else
+	/* please take care the register order */
 	struct miv2_path_address  path_list[PATHNUM] = {
 		{
 			REG_ADDR(miv2_mp_bus_cfg), REG_ADDR(miv2_mp_bus_id), REG_ADDR(miv2_mp_ctrl),
@@ -485,7 +461,6 @@ void set_data_path(int id, struct isp_mi_data_path_context *path,
 			SP2_YCBCR_PATH_ENABLE_MASK, REG_ADDR(srsz2_phase_format_conv_ctr),
 		},
 	};
-#endif
 
 	if (!path->enable)
 		return;
@@ -596,7 +571,7 @@ void set_data_path(int id, struct isp_mi_data_path_context *path,
 		isp_write_reg(dev, path_list[id].raw_pic_size, path->out_height * lval);
 	}
 
-	// aev2, 3dnr
+	/* aev2, 3dnr */
 	if (id == 0) {
 		if (dev->exp2.enable) {
 			REG_SET_SLICE(miv2_ctrl, MP_JDP_PATH_ENABLE, 1);

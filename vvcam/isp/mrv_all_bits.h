@@ -9414,8 +9414,8 @@
 /*! Slice: AWB_meas_chrom_switch:*/
 /*! Accumulates Q1 and Q2 chromaticies instead of R, G, B color signals. Results are written on AWB_ACCU registers as well.*/
 #ifdef ISP_AWB_MEAS_CHROM_SWITCH
-#define ISP_AWB_MEAS_CHROM_SWITCH_ON              1	/* 1: accumulates Q1 and Q2 chromaticies */
-#define ISP_AWB_MEAS_CHROM_SWITCH_OFF             0	/* 0: accumulates R, G, B color signals */
+#define ISP_AWB_MEAS_CHROM_SWITCH_ON            1	/* 1: accumulates Q1 and Q2 chromaticies */
+#define ISP_AWB_MEAS_CHROM_SWITCH_OFF           0	/* 0: accumulates R, G, B color signals */
 #endif /* ISP_AWB_MEAS_CHROM_SWITCH */
 /* Slice: AWB_meas_irq_enable:*/
 /* AWB measure done IRQ enable.*/
@@ -10307,95 +10307,95 @@
  * register: miv2_mp_fmt: main path pixel format control register (0x1314)
  *
  *****************************************************************************/
-// Slice: MP_WR_JDP_FMT
-// 1: JPEG
-// 0: DPCC
+/* Slice: MP_WR_JDP_FMT */
+/* 1: JPEG */
+/* 0: DPCC */
 #ifdef MP_WR_JDP_FMT
-#define MIV2_MP_WRITE_FORMAT_DPCC			0	//DPCC
-#define MIV2_MP_WRITE_FORMAT_JPEG			1	//JPEG
+#define MIV2_MP_WRITE_FORMAT_DPCC	    0	/* DPCC */
+#define MIV2_MP_WRITE_FORMAT_JPEG	    1	/* JPEG */
 #endif /* MP_WR_JDP_FMT */
-// Slice: MP_WR_YUV_BIT:
-// 1: 10bit YUV/RGB
-// 0: 8bit YUV/RGB
+/* Slice: MP_WR_YUV_BIT: */
+/* 1: 10bit YUV/RGB */
+/* 0: 8bit YUV/RGB */
 #ifdef MP_WR_YUV_BIT
-#define MIV2_MP_WRITE_FORMAT_8BIT			0	//8bit YUV/RGB
-#define MIV2_MP_WRITE_FORMAT_10BIT			1	//10bit YUV/RGB
+#define MIV2_MP_WRITE_FORMAT_8BIT	    0	/* 8bit YUV/RGB */
+#define MIV2_MP_WRITE_FORMAT_10BIT	    1	/* 10bit YUV/RGB */
 #endif /* MP_WR_YUV_BIT */
-// Slice: MP_WR_YUV_FMT:
+/* Slice: MP_WR_YUV_FMT: */
 #ifdef MP_WR_YUV_FMT
-#define MIV2_MP_WRITE_FORMAT_YUV420         0	// 00: YUV420
-#define MIV2_MP_WRITE_FORMAT_YUV422         1	// 01: YUV422
-#define MIV2_MP_WRITE_FORMAT_YUV444         2	// 10: YUV444
+#define MIV2_MP_WRITE_FORMAT_YUV420         0	/* 00: YUV420 */
+#define MIV2_MP_WRITE_FORMAT_YUV422         1	/* 01: YUV422 */
+#define MIV2_MP_WRITE_FORMAT_YUV444         2	/* 10: YUV444 */
 #endif /* MP_WR_YUV_FMT */
-// Slice: MP_WR_YUV_STR:
+/* Slice: MP_WR_YUV_STR: */
 #ifdef MP_WR_YUV_STR
-#define MIV2_MP_WRITE_STRIDE_SEMIPLANAR     0	// 00: YUV/RGB SemiPlanar
-#define MIV2_MP_WRITE_STRIDE_INTERLEAVE     1	// 01: YUV Interleave, RGB Raster
-#define MIV2_MP_WRITE_STRIDE_PLANAR         2	// 10: YUV/RGB Planar
+#define MIV2_MP_WRITE_STRIDE_SEMIPLANAR     0	/* 00: YUV/RGB SemiPlanar */
+#define MIV2_MP_WRITE_STRIDE_INTERLEAVE     1	/* 01: YUV Interleave, RGB Raster */
+#define MIV2_MP_WRITE_STRIDE_PLANAR         2	/* 10: YUV/RGB Planar */
 #endif /* MP_WR_YUV_STR */
-// Slice: MP_WR_RAW_BIT:
+/* Slice: MP_WR_RAW_BIT: */
 #ifdef MP_WR_RAW_BIT
-#define MIV2_MP_WRITE_FORMAT_RAW8          	0	// 000: RAW8
-#define MIV2_MP_WRITE_FORMAT_RAW10         	1	// 001: RAW10
-#define MIV2_MP_WRITE_FORMAT_RAW12          2	// 010: RAW12
-#define MIV2_MP_WRITE_FORMAT_RAW14         	3	// 011: RAW14
-#define MIV2_MP_WRITE_FORMAT_RAW16          4	// 100: RAW16
-#define MIV2_MP_WRITE_FORMAT_RAW20         	5	// 101: RAW20
+#define MIV2_MP_WRITE_FORMAT_RAW8           0	/* 000: RAW8 */
+#define MIV2_MP_WRITE_FORMAT_RAW10          1	/* 001: RAW10 */
+#define MIV2_MP_WRITE_FORMAT_RAW12          2	/* 010: RAW12 */
+#define MIV2_MP_WRITE_FORMAT_RAW14          3	/* 011: RAW14 */
+#define MIV2_MP_WRITE_FORMAT_RAW16          4	/* 100: RAW16 */
+#define MIV2_MP_WRITE_FORMAT_RAW20          5	/* 101: RAW20 */
 #endif /* MP_WR_RAW_BIT */
-// Slice: MP_WR_YUV_ALIGNED
-// 1: aligned
-// 0: unaligned
+/* Slice: MP_WR_YUV_ALIGNED */
+/* 1: aligned */
+/* 0: unaligned */
 #ifdef MP_WR_YUV_ALIGNED
-#define MIV2_MP_WRITE_YUV_UNALIGNED			0	//unaligned
-#define MIV2_MP_WRITE_YUV_ALIGNED			1	//aligned
+#define MIV2_MP_WRITE_YUV_UNALIGNED	    0	/* unaligned */
+#define MIV2_MP_WRITE_YUV_ALIGNED	    1	/* aligned */
 #endif /* MP_WR_YUV_ALIGNED */
-// Slice: MP_WR_RAW_ALIGNED:
+/* Slice: MP_WR_RAW_ALIGNED: */
 #ifdef MP_WR_RAW_ALIGNED
-#define MIV2_MP_WRITE_RAW_UNALIGNED     	0	// 00: unaligned
-#define MIV2_MP_WRITE_RAW_ALIGNED_MODE1     1	// 01: aligned mode1
-#define MIV2_MP_WRITE_RAW_ALIGNED_MODE2     2	// 10: aligned mode2
+#define MIV2_MP_WRITE_RAW_UNALIGNED         0	/* 00: unaligned */
+#define MIV2_MP_WRITE_RAW_ALIGNED_MODE1     1	/* 01: aligned mode1 */
+#define MIV2_MP_WRITE_RAW_ALIGNED_MODE2     2	/* 10: aligned mode2 */
 #endif /* MP_WR_RAW_ALIGNED */
-// Slice: MP_WR_YUV_NV21
-// 1: Put U before V
-// 0: Put V before U
+/* Slice: MP_WR_YUV_NV21 */
+/* 1: Put U before V */
+/* 0: Put V before U */
 #ifdef MP_WR_YUV_NV21
-#define MIV2_MP_WRITE_YUV_NV21_UV			0	//Put U before V
-#define MIV2_MP_WRITE_YUV_NV21_VU			1	//Put V before U
+#define MIV2_MP_WRITE_YUV_NV21_UV           0	/* Put U before V */
+#define MIV2_MP_WRITE_YUV_NV21_VU           1	/* Put V before U */
 #endif /* MP_WR_YUV_NV21 */
-// Slice: MP_WR_YUV_NVY:
+/* Slice: MP_WR_YUV_NVY: */
 #ifdef MP_WR_YUV_NVY
-#define MIV2_MP_WRITE_YUV_NVY_YC1C2     	0	// 00: Put Y first => YC1C2
-#define MIV2_MP_WRITE_YUV_NVY_C1YC2     	1	// 01: Put Y second => C1YC2
-#define MIV2_MP_WRITE_YUV_NVY_C1C2Y	     	2	// 10: Put Y Third => C1C2Y
+#define MIV2_MP_WRITE_YUV_NVY_YC1C2         0	/* 00: Put Y first => YC1C2 */
+#define MIV2_MP_WRITE_YUV_NVY_C1YC2         1	/* 01: Put Y second => C1YC2 */
+#define MIV2_MP_WRITE_YUV_NVY_C1C2Y	    2	/* 10: Put Y Third => C1C2Y */
 #endif /* MP_WR_YUV_NVY */
-// =========================================================================================
+/* ========================================================================================= */
 #ifdef ISP_DEMOSAIC_DENOISE_STRENGTH
 #define ISP_DEMOSAIC_DENOISE_STRENGTH_MIN   0
-#define ISP_DEMOSAIC_DENOISE_STRENGTH_MAX 32
+#define ISP_DEMOSAIC_DENOISE_STRENGTH_MAX   32
 #endif
 #ifdef ISP_DEMOSAIC_SHARPEN_SIZE
-#define ISP_DEMOSAIC_SHARPEN_SIZE_MIN   0
-#define ISP_DEMOSAIC_SHARPEN_SIZE_MAX 16
+#define ISP_DEMOSAIC_SHARPEN_SIZE_MIN       0
+#define ISP_DEMOSAIC_SHARPEN_SIZE_MAX       16
 #endif
 #ifdef ISP_DMSC_DEMOIRE_AREA_THR
-#define ISP_DMSC_DEMOIRE_AREA_THR_MIN   0
-#define ISP_DMSC_DEMOIRE_AREA_THR_MAX 32
+#define ISP_DMSC_DEMOIRE_AREA_THR_MIN       0
+#define ISP_DMSC_DEMOIRE_AREA_THR_MAX       32
 #endif
 #ifdef ISP_DMSC_DEMOIRE_SAT_SHRINK
-#define ISP_DMSC_DEMOIRE_SAT_SHRINK_MIN   0
-#define ISP_DMSC_DEMOIRE_SAT_SHRINK_MAX 32
+#define ISP_DMSC_DEMOIRE_SAT_SHRINK_MIN     0
+#define ISP_DMSC_DEMOIRE_SAT_SHRINK_MAX     32
 #endif
 #ifdef ISP_DMSC_SHARPEN_T4_SHIFT
-#define ISP_DMSC_SHARPEN_SHIFT_MIN   0
-#define ISP_DMSC_SHARPEN_SHIFT_MAX 11
+#define ISP_DMSC_SHARPEN_SHIFT_MIN          0
+#define ISP_DMSC_SHARPEN_SHIFT_MAX          11
 #endif
 #ifdef ISP_DMSC_SHARPEN_LINE_SHIFT1
-#define ISP_DMSC_SHARPEN_LINE_SHIFT1_MIN   0
-#define ISP_DMSC_SHARPEN_LINE_SHIFT1_MAX   10
+#define ISP_DMSC_SHARPEN_LINE_SHIFT1_MIN    0
+#define ISP_DMSC_SHARPEN_LINE_SHIFT1_MAX    10
 #endif
 #ifdef ISP_DMSC_HF_FILT_00
-#define ISP_DMSC_HF_FILT_MIN   0
-#define ISP_DMSC_HF_FILT_MAX 34
+#define ISP_DMSC_HF_FILT_MIN                0
+#define ISP_DMSC_HF_FILT_MAX                34
 #endif
 #ifdef ISP_DMSC_CBCR_MODE
 #define ISP_DMSC_CBCR_MODE_MIN   0

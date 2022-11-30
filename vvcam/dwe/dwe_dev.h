@@ -55,17 +55,6 @@
 
 #include "vvdefs.h"
 
-#ifndef __KERNEL__
-#define copy_from_user(a, b, c) dwe_copy_data(a, b, c)
-#define copy_to_user(a, b, c) dwe_copy_data(a, b, c)
-
-typedef bool(*pReadBar) (uint32_t bar, uint32_t *data);
-typedef bool(*pWriteBar) (uint32_t bar, uint32_t data);
-
-extern void dwe_set_func(pReadBar read_func, pWriteBar write_func);
-extern long dwe_copy_data(void *dst, void *src, int size);
-#endif
-
 #define MAX_DWE_NUM (2)
 #define MAX_CFG_NUM (2)
 

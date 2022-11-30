@@ -356,7 +356,7 @@ static int start_streaming(struct vb2_queue *vq, unsigned int count)
 static void stop_streaming(struct vb2_queue *vq)
 {
 	struct viv_video_file *handle = queue_to_handle(vq);
-	struct vb2_buffer *vb;
+	int i;
 
 	pr_debug("enter %s\n", __func__);
 
@@ -369,9 +369,9 @@ static void stop_streaming(struct vb2_queue *vq)
 	viv_post_simple_event(VIV_VIDEO_EVENT_STOP_STREAM, handle->streamid,
 			      &handle->vfh, false);
 	handle->sequence = 0;
-	list_for_each_entry(vb, &vq->queued_list, queued_entry) {
-		if (vb->state == VB2_BUF_STATE_ACTIVE)
-			vb2_buffer_done(vb, VB2_BUF_STATE_ERROR);
+	for(i = 0; i < vq->num_buffers; i++) {
+		if(vq->bufs[i]->state == VB2_BUF_STATE_ACTIVE)
+			vb2_buffer_done(vq->bufs[i], VB2_BUF_STATE_ERROR);
 	}
 }
 
@@ -469,7 +469,6 @@ static void buffer_queue(struct vb2_buffer *vb)
 	if (handle->streamid < 0)
 		return;
 
-	/* pr_debug("buffer_queue %d", vb->index); */
 	v_event = (struct viv_video_event *)&event.u.data[0];
 	v_event->stream_id = handle->streamid;
 	v_event->file = &handle->vfh;
@@ -1548,15 +1547,15 @@ static int vidioc_s_selection(struct file *file, void *fh,
 	switch (s->target) {
 	case V4L2_SEL_TGT_CROP:
 		if (((s->r.left + s->r.width) < VIDEO_FRAME_MIN_WIDTH) ||
-		    ((s->r.top + s->r.width) > vdev->camera_mode.size.width) ||
-			((s->r.left + s->r.height) < VIDEO_FRAME_MIN_HEIGHT) ||
+		    ((s->r.left + s->r.width) > vdev->camera_mode.size.width) ||
+			((s->r.top + s->r.height) < VIDEO_FRAME_MIN_HEIGHT) ||
 		    ((s->r.top + s->r.height) > vdev->camera_mode.size.height))
 			return -EINVAL;
 		break;
 	case V4L2_SEL_TGT_COMPOSE:
 		if (((s->r.left + s->r.width) < VIDEO_FRAME_MIN_WIDTH) ||
-		    ((s->r.top + s->r.width) > VIDEO_FRAME_MAX_WIDTH) ||
-			((s->r.left + s->r.height) < VIDEO_FRAME_MIN_HEIGHT) ||
+		    ((s->r.left + s->r.width) > VIDEO_FRAME_MAX_WIDTH) ||
+			((s->r.top + s->r.height) < VIDEO_FRAME_MIN_HEIGHT) ||
 		    ((s->r.top + s->r.height) > VIDEO_FRAME_MAX_HEIGHT))
 			return -EINVAL;
 		break;

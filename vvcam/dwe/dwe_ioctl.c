@@ -52,66 +52,10 @@
  *****************************************************************************/
 #include "dwe_ioctl.h"
 #include "dwe_regs.h"
-#ifndef __KERNEL__
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
 #ifdef USE_V4L2
 #include <linux/videodev2.h>
 #endif
-#endif
 
-#ifndef __KERNEL__
-#ifdef HAL_CMODEL
-#define DEWARP_REGISTER_OFFSET  0
-#else
-#define DEWARP_REGISTER_OFFSET  0x380000
-#endif
-
-#define DEWARP_REGISTER_CTL	 0x308250
-
-pReadBar g_read_func;
-pWriteBar g_write_func;
-
-void dwe_set_func(pReadBar read_func, pWriteBar write_func)
-{
-	g_read_func = read_func;
-	g_write_func = write_func;
-}
-
-void dwe_write_reg(struct dwe_ic_dev *dev, u32 offset, u32 val)
-{
-	g_write_func(DEWARP_REGISTER_OFFSET + offset, val);
-}
-
-u32 dwe_read_reg(struct dwe_ic_dev *dev, u32 offset)
-{
-	u32 data;
-
-	g_read_func(DEWARP_REGISTER_OFFSET + offset, &data);
-	return data;
-}
-
-void dwe_write_extreg(u32 offset, u32 val)
-{
-	g_write_func(DEWARP_REGISTER_CTL + offset, val);
-}
-
-u32 dwe_read_extreg(u32 offset)
-{
-	u32 data;
-
-	g_read_func(DEWARP_REGISTER_CTL + offset, &data);
-	return data;
-}
-
-long dwe_copy_data(void *dst, void *src, int size)
-{
-	if (dst != src)
-		memcpy(dst, src, size);
-	return 0;
-}
-#else
 void dwe_write_reg(struct dwe_ic_dev *dev, u32 offset, u32 val)
 {
 	__raw_writel(val, dev->base + offset);
@@ -121,7 +65,6 @@ u32 dwe_read_reg(struct dwe_ic_dev *dev, u32 offset)
 {
 	return __raw_readl(dev->base + offset);
 }
-#endif
 
 int dwe_reset(struct dwe_ic_dev *dev)
 {
@@ -186,8 +129,6 @@ int dwe_enable_bus(struct dwe_ic_dev *dev, bool enable)
 {
 	u32 reg = dwe_read_reg(dev, BUS_CTRL);
 
-	/* pr_debug("enter %s\n", __func__); */
-
 	if (enable) {
 		dwe_write_reg(dev, BUS_CTRL, reg | DEWRAP_BUS_CTRL_ENABLE_MASK);
 	} else {
@@ -200,7 +141,6 @@ int dwe_enable_bus(struct dwe_ic_dev *dev, bool enable)
 
 int dwe_disable_irq(struct dwe_ic_dev *dev)
 {
-	/* pr_debug("enter %s\n", __func__); */
 	dwe_write_reg(dev, INTERRUPT_STATUS, INT_CLR_MASK);
 	return 0;
 }
@@ -209,7 +149,6 @@ int dwe_clear_irq(struct dwe_ic_dev *dev)
 {
 	u32 reg_dewarp_ctrl;
 
-	/* pr_debug("enter %s\n", __func__); */
 	reg_dewarp_ctrl = dwe_read_reg(dev, DEWARP_CTRL);
 	dwe_write_reg(dev, DEWARP_CTRL, reg_dewarp_ctrl | 4);
 	dwe_write_reg(dev, DEWARP_CTRL, reg_dewarp_ctrl);
@@ -230,7 +169,7 @@ int dwe_read_irq(struct dwe_ic_dev *dev, u32 *ret)
 
 int dwe_start(struct dwe_ic_dev *dev)
 {
-#if defined(__KERNEL__) && defined(ENABLE_IRQ)
+#if defined(ENABLE_IRQ)
 	dwe_write_reg(dev, DEWARP_CTRL, 0x4C800001);
 #endif
 	return 0;
@@ -255,8 +194,6 @@ int dwe_start_dma_read(struct dwe_ic_dev *dev,
 	u32 reg_y_rbuff_size = ALIGN_UP(info->src_stride * info->src_h, 16);
 	u32 reg_dst_uv_base = reg_dst_y_base + reg_y_rbuff_size;
 
-	/* pr_debug("enter %s\n", __func__); */
-
 	dwe_write_reg(dev, SRC_IMG_Y_BASE, (reg_dst_y_base) >> 4);
 	dwe_write_reg(dev, SRC_IMG_UV_BASE, (reg_dst_uv_base) >> 4);
 
@@ -275,7 +212,6 @@ int dwe_set_buffer(struct dwe_ic_dev *dev, struct dwe_hw_info *info, u64 addr)
 	u32 reg_y_rbuff_size = ALIGN_UP(info->dst_stride * info->dst_h, 16);
 	u32 reg_dst_uv_base = reg_dst_y_base + reg_y_rbuff_size;
 
-	/* pr_debug("enter %s\n", __func__); */
 	dwe_write_reg(dev, DST_IMG_Y_BASE, (reg_dst_y_base) >> 4);
 	dwe_write_reg(dev, DST_IMG_UV_BASE, (reg_dst_uv_base) >> 4);
 
@@ -290,11 +226,9 @@ int dwe_set_lut(struct dwe_ic_dev *dev, u64 addr)
 
 int dwe_ioc_qcap(struct dwe_ic_dev *dev, void *args)
 {
-#ifdef __KERNEL__
 	struct v4l2_capability *cap = (struct v4l2_capability *)args;
 
 	strcpy((char *)cap->driver, "viv_dewarp100");
-#endif
 	return 0;
 }
 
@@ -366,11 +300,9 @@ long dwe_priv_ioctl(struct dwe_ic_dev *dev, unsigned int cmd, void *args)
 #endif
 		break;
 	}
-#ifdef __KERNEL__
 	case VIDIOC_QUERYCAP:
 		ret = dwe_ioc_qcap(dev, args);
 		break;
-#endif
 	default:
 		pr_err("unsupported dwe command %d", cmd);
 		ret = -EINVAL;

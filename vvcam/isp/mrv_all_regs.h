@@ -1485,46 +1485,46 @@ typedef struct {
 	uint32_t isp_denoise2d_sigma_sqr_shd;	/*!<(ro), 0x00003AD8 */
 	uint32_t isp_denoise2d_weight_mul_factor_shd;	/*!<(ro), 0x00003ADC */
 	uint32_t isp_denoise2d_dummy_hblank;	/*!<(ro), 0x00003AE0 */
-	uint32_t _notused_47[(0x00003e00 - 0x00003ae4) / 4];	// gap in address space
+	uint32_t _notused_47[(0x00003e00 - 0x00003ae4) / 4];	/* gap in address space */
 #else
-	uint32_t _notused_47[(0x00003e00 - 0x00003ac8) / 4];	// gap in address space
+	uint32_t _notused_47[(0x00003e00 - 0x00003ac8) / 4];	/* gap in address space */
 #endif
-	uint32_t isp_dmsc_ctrl;	//!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x00000000
-	uint32_t isp_dmsc_intp_thr;	//!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x00000004
-	uint32_t isp_dmsc_dmoi_ctrl;	//!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x00000008
-	uint32_t isp_dmsc_dmoi_thr;	//!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x0000000c
-	uint32_t isp_dmsc_dmoi_patn_thr;	//!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x00000010
-	uint32_t isp_dmsc_shap_fact;	//!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x00000014
-	uint32_t isp_dmsc_shap_clip;	//!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x00000018
-	uint32_t isp_dmsc_shap_thr;	//!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x0000001c
-	uint32_t isp_dmsc_shap_ratio;	//!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x00000020
-	uint32_t isp_dmsc_shap_line_ctrl;	//!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x00000024
-	uint32_t isp_dmsc_shap_line_ratio;	//!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x00000028
-	uint32_t isp_dmsc_shap_filt1;	//!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x0000002c
-	uint32_t isp_dmsc_shap_filt2;	//!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x00000030
-	uint32_t isp_dmsc_dpul_ctrl;	//!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x00000034
-	uint32_t isp_dmsc_skin_thr_cb;	//!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x00000038
-	uint32_t isp_dmsc_skin_thr_cr;	//!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x0000003c
-	uint32_t isp_dmsc_skin_thr_y;	//!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x00000040
-	uint32_t isp_dmsc_cac_ctrl;	//!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x00000044
-	uint32_t isp_dmsc_cac_count_start;	//!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x00000048
-	uint32_t isp_dmsc_cac_a;	//!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x0000004C
-	uint32_t isp_dmsc_cac_b;	//!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x00000050
-	uint32_t isp_dmsc_cac_c;	//!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x00000054
-	uint32_t isp_dmsc_cac_x_norm;	//!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x00000058
-	uint32_t isp_dmsc_cac_y_norm;	//!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x0000005C
-	uint32_t isp_dmsc_size_ctrl;	//!< demosaic V20 (r) ISP_DEMOSAIC_BASE + 0x00000060
-	uint32_t isp_dmsc_ctrl_shd;	//!< demosaic V20 (r) ISP_DEMOSAIC_BASE + 0x00000064
-	uint32_t isp_dmsc_shap_fact_shd;	//!< demosaic V20 (r) ISP_DEMOSAIC_BASE + 0x00000068
-	uint32_t isp_dmsc_shap_clip_shd;	//!< demosaic V20 (r) ISP_DEMOSAIC_BASE + 0x0000006c
-	uint32_t isp_dmsc_dpul_ctrl_shd;	//!< demosaic V20 (r) ISP_DEMOSAIC_BASE + 0x00000070
-	uint32_t isp_dmsc_cac_ctrl_shd;	//!< demosaic V20 (r) ISP_DEMOSAIC_BASE + 0x00000074
-	uint32_t isp_dmsc_cac_count_start_shd;	//!< demosaic V20 (r) ISP_DEMOSAIC_BASE + 0x00000078
-	uint32_t isp_dmsc_cac_a_shd;	//!< demosaic V20 (r) ISP_DEMOSAIC_BASE + 0x0000007c
-	uint32_t isp_dmsc_cac_b_shd;	//!< demosaic V20 (r) ISP_DEMOSAIC_BASE + 0x00000080
-	uint32_t isp_dmsc_cac_c_shd;	//!< demosaic V20 (r) ISP_DEMOSAIC_BASE + 0x00000084
-	uint32_t isp_dmsc_cac_x_norm_shd;	//!< demosaic V20 (r) ISP_DEMOSAIC_BASE + 0x00000088
-	uint32_t isp_dmsc_cac_y_norm_shd;	//!< demosaic V20 (r) ISP_DEMOSAIC_BASE + 0x0000008c
+	uint32_t isp_dmsc_ctrl;	/*!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x00000000 */
+	uint32_t isp_dmsc_intp_thr;	/*!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x00000004 */
+	uint32_t isp_dmsc_dmoi_ctrl;	/*!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x00000008 */
+	uint32_t isp_dmsc_dmoi_thr;	/*!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x0000000c */
+	uint32_t isp_dmsc_dmoi_patn_thr;	/*!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x00000010 */
+	uint32_t isp_dmsc_shap_fact;	/*!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x00000014 */
+	uint32_t isp_dmsc_shap_clip;	/*!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x00000018 */
+	uint32_t isp_dmsc_shap_thr;	/*!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x0000001c */
+	uint32_t isp_dmsc_shap_ratio;	/*!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x00000020 */
+	uint32_t isp_dmsc_shap_line_ctrl;	/*!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x00000024 */
+	uint32_t isp_dmsc_shap_line_ratio;	/*!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x00000028 */
+	uint32_t isp_dmsc_shap_filt1;	/*!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x0000002c */
+	uint32_t isp_dmsc_shap_filt2;	/*!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x00000030 */
+	uint32_t isp_dmsc_dpul_ctrl;	/*!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x00000034 */
+	uint32_t isp_dmsc_skin_thr_cb;	/*!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x00000038 */
+	uint32_t isp_dmsc_skin_thr_cr;	/*!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x0000003c */
+	uint32_t isp_dmsc_skin_thr_y;	/*!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x00000040 */
+	uint32_t isp_dmsc_cac_ctrl;	/*!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x00000044 */
+	uint32_t isp_dmsc_cac_count_start;	/*!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x00000048 */
+	uint32_t isp_dmsc_cac_a;	/*!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x0000004C */
+	uint32_t isp_dmsc_cac_b;	/*!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x00000050 */
+	uint32_t isp_dmsc_cac_c;	/*!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x00000054 */
+	uint32_t isp_dmsc_cac_x_norm;	/*!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x00000058 */
+	uint32_t isp_dmsc_cac_y_norm;	/*!< demosaic V20 (rw) ISP_DEMOSAIC_BASE + 0x0000005C */
+	uint32_t isp_dmsc_size_ctrl;	/*!< demosaic V20 (r) ISP_DEMOSAIC_BASE + 0x00000060 */
+	uint32_t isp_dmsc_ctrl_shd;	/*!< demosaic V20 (r) ISP_DEMOSAIC_BASE + 0x00000064 */
+	uint32_t isp_dmsc_shap_fact_shd;	/*!< demosaic V20 (r) ISP_DEMOSAIC_BASE + 0x00000068 */
+	uint32_t isp_dmsc_shap_clip_shd;	/*!< demosaic V20 (r) ISP_DEMOSAIC_BASE + 0x0000006c */
+	uint32_t isp_dmsc_dpul_ctrl_shd;	/*!< demosaic V20 (r) ISP_DEMOSAIC_BASE + 0x00000070 */
+	uint32_t isp_dmsc_cac_ctrl_shd;	/*!< demosaic V20 (r) ISP_DEMOSAIC_BASE + 0x00000074 */
+	uint32_t isp_dmsc_cac_count_start_shd;	/*!< demosaic V20 (r) ISP_DEMOSAIC_BASE + 0x00000078 */
+	uint32_t isp_dmsc_cac_a_shd;	/*!< demosaic V20 (r) ISP_DEMOSAIC_BASE + 0x0000007c */
+	uint32_t isp_dmsc_cac_b_shd;	/*!< demosaic V20 (r) ISP_DEMOSAIC_BASE + 0x00000080 */
+	uint32_t isp_dmsc_cac_c_shd;	/*!< demosaic V20 (r) ISP_DEMOSAIC_BASE + 0x00000084 */
+	uint32_t isp_dmsc_cac_x_norm_shd;	/*!< demosaic V20 (r) ISP_DEMOSAIC_BASE + 0x00000088 */
+	uint32_t isp_dmsc_cac_y_norm_shd;	/*!< demosaic V20 (r) ISP_DEMOSAIC_BASE + 0x0000008c */
 } MrvAllRegister_t;
 
 /* - MASK AND SHIFT MARCOS ----------------------------------------------------------*/
@@ -12331,17 +12331,17 @@ typedef struct {
 #define STITCHING_TRANS_RANGE_NORM_FACTOR_MUL_NONLINEAR_MASK 0x0000FFFFU
 #define STITCHING_TRANS_RANGE_NORM_FACTOR_MUL_NONLINEAR_SHIFT 0U
 /*!Register: isp_stitching_sat_level     (0x0000335C) */
-//Version-11 Stitching only support one type extend bit
-//!Slice: stitching_short_vs_extend_bit
+/* Version-11 Stitching only support one type extend bit */
+/* !Slice: stitching_short_vs_extend_bit */
 #define STITCHING_SHORT_EXTEND_BIT
 #define STITCHING_SHORT_EXTEND_BIT_MASK 0xFF000000U
 #define STITCHING_SHORT_EXTEND_BIT_SHIFT 24U
-//Version-12 Stitching support two type extend bit
-//!Slice: stitching_short_ls_extend_bit
+/* Version-12 Stitching support two type extend bit */
+/* !Slice: stitching_short_ls_extend_bit */
 #define STITCHING_SHORT_LS_EXTEND_BIT
 #define STITCHING_SHORT_LS_EXTEND_BIT_MASK 0xF0000000U
 #define STITCHING_SHORT_LS_EXTEND_BIT_SHIFT 28U
-//!Slice: stitching_short_vs_extend_bit
+/* !Slice: stitching_short_vs_extend_bit */
 #define STITCHING_SHORT_VS_EXTEND_BIT
 #define STITCHING_SHORT_VS_EXTEND_BIT_MASK 0x0F000000U
 #define STITCHING_SHORT_VS_EXTEND_BIT_SHIFT 24U
@@ -12594,21 +12594,21 @@ typedef struct {
 #define STITCHING_LONG_SAT_COMBINE_WEIGHT
 #define STITCHING_LONG_SAT_COMBINE_WEIGHT_MASK 0x000001FF
 #define STITCHING_LONG_SAT_COMBINE_WEIGHT_SHIFT 0U
-//!Register: isp_stitching_bls_exp_out_0                (0x000033F8)
-//! Slice: stitching_bls_exp_out_a:
+/* !Register: isp_stitching_bls_exp_out_0                (0x000033F8) */
+/* ! Slice: stitching_bls_exp_out_a: */
 #define  STITCHING_BLS_EXP_OUT_A
 #define  STITCHING_BLS_EXP_OUT_A_MASK 0x0FFF0000U
 #define  STITCHING_BLS_EXP_OUT_A_SHIFT 16U
-//! Slice: stitching_bls_exp_out_b:
+/* ! Slice: stitching_bls_exp_out_b: */
 #define  STITCHING_BLS_EXP_OUT_B
 #define  STITCHING_BLS_EXP_OUT_B_MASK 0x00000FFFU
 #define  STITCHING_BLS_EXP_OUT_B_SHIFT 0U
-//!Register: isp_stitching_bls_exp_out_1                (0x000033FC)
-//! Slice: stitching_bls_exp_out_c:
+/* !Register: isp_stitching_bls_exp_out_1                (0x000033FC) */
+/* ! Slice: stitching_bls_exp_out_c: */
 #define  STITCHING_BLS_EXP_OUT_C
 #define  STITCHING_BLS_EXP_OUT_C_MASK 0x0FFF0000U
 #define  STITCHING_BLS_EXP_OUT_C_SHIFT 16U
-//! Slice: stitching_bls_exp_out_d:
+/* ! Slice: stitching_bls_exp_out_d: */
 #define  STITCHING_BLS_EXP_OUT_D
 #define  STITCHING_BLS_EXP_OUT_D_MASK 0x00000FFFU
 #define  STITCHING_BLS_EXP_OUT_D_SHIFT 0U

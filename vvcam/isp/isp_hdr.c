@@ -50,10 +50,9 @@
  * version of this file.
  *
  *****************************************************************************/
-#ifdef __KERNEL__
+
 #include <linux/io.h>
 #include <linux/module.h>
-#endif
 #include "mrv_all_bits.h"
 #include "isp_ioctl.h"
 #include "isp_types.h"
@@ -70,68 +69,6 @@ int isp_s_hdr(struct isp_ic_dev *dev)
 
 	pr_info("enter %s\n", __func__);
 
-	val = 0;
-#if 0
-	REG_SET_SLICE(val, STITCHING_FRAME_WIDTH, hdr->width);
-	isp_write_reg(dev, REG_ADDR(isp_stitching_frame_width), val);
-
-	val = 0;
-	REG_SET_SLICE(val, STITCHING_FRAME_HEIGHT, hdr->height);
-	isp_write_reg(dev, REG_ADDR(isp_stitching_frame_height), val);
-
-	val = 0;
-	REG_SET_SLICE(val, STITCHING_L_BIT_DEPTH, hdr->l_bit_dep);
-	REG_SET_SLICE(val, STITCHING_S_BIT_DEPTH, hdr->s_bit_dep);
-	REG_SET_SLICE(val, STITCHING_VS_BIT_DEPTH, hdr->vs_bit_dep);
-	REG_SET_SLICE(val, STITCHING_LS_BIT_DEPTH, hdr->ls_bit_dep);
-	isp_write_reg(dev, REG_ADDR(isp_stitching_exposure_bit), val);
-
-	val = 0;
-	REG_SET_SLICE(val, STITCHING_COLOR_WEIGHT_0, hdr->weight0);
-	REG_SET_SLICE(val, STITCHING_COLOR_WEIGHT_1, hdr->weight1);
-	REG_SET_SLICE(val, STITCHING_COLOR_WEIGHT_2, hdr->weight2);
-	isp_write_reg(dev, REG_ADDR(isp_stitching_color_weight), val);
-
-	val = 0;
-	REG_SET_SLICE(val, STITCHING_TRANS_RANGE_START_LINEAR,
-		      hdr->start_linear);
-	REG_SET_SLICE(val, STITCHING_TRANS_RANGE_NORM_FACTOR_MUL_LINEAR,
-		      hdr->norm_factor_mul_linear);
-	isp_write_reg(dev, REG_ADDR(isp_stitching_trans_range_linear), val);
-
-	val = 0;
-	REG_SET_SLICE(val, STITCHING_TRANS_RANGE_START_NONLINEAR,
-		      hdr->start_nonlinear);
-	REG_SET_SLICE(val, STITCHING_TRANS_RANGE_NORM_FACTOR_MUL_NONLINEAR,
-		      hdr->norm_factor_mul_nonlinear);
-	isp_write_reg(dev, REG_ADDR(isp_stitching_trans_range_nonlinear), val);
-
-	val = 0;
-	REG_SET_SLICE(val, STITCHING_DUMMY_HBLANK, hdr->dummy_hblank);
-	REG_SET_SLICE(val, STITCHING_OUT_HBLANK, hdr->out_hblank);
-	isp_write_reg(dev, REG_ADDR(isp_stitching_out_hblank), val);
-
-	val = 0;
-	REG_SET_SLICE(val, STITCHING_OUT_VBLANK, hdr->out_vblank);
-	isp_write_reg(dev, REG_ADDR(isp_stitching_out_vblank), val);
-
-	val = 0;
-	REG_SET_SLICE(val, STITCHING_LONG_EXPOSURE_TIME, hdr->long_exp);
-	isp_write_reg(dev, REG_ADDR(isp_stitching_long_exposure), val);
-
-	val = 0;
-	REG_SET_SLICE(val, STITCHING_SHORT_EXPOSURE_TIME, hdr->short_exp);
-	isp_write_reg(dev, REG_ADDR(isp_stitching_short_exposure), val);
-
-	val = 0;
-	REG_SET_SLICE(val, STITCHING_VERY_SHORT_EXPOSURE_TIME,
-		      hdr->very_short_exp);
-	isp_write_reg(dev, REG_ADDR(isp_stitching_very_short_exposure), val);
-
-	val = 0;
-	REG_SET_SLICE(val, STITCHING_LONG_EXPOSURE_TIME, hdr->long_exp);
-	isp_write_reg(dev, REG_ADDR(isp_stitching_long_exposure), val);
-#endif
 	val = 0;
 	REG_SET_SLICE(val, STITCHING_RATIO_LONG_SHORT_1, hdr->ls1);
 	REG_SET_SLICE(val, STITCHING_RATIO_LONG_SHORT_0, hdr->ls0);

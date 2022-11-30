@@ -216,7 +216,6 @@ int isp_s_exp2(struct isp_ic_dev *dev);
 int isp_s_hdr(struct isp_ic_dev *dev);
 int isp_s_hdr_wb(struct isp_ic_dev *dev);
 int isp_s_hdr_bls(struct isp_ic_dev *dev);
-//int isp_s_hdr_digal_gain(struct isp_ic_dev *dev);
 int isp_enable_hdr(struct isp_ic_dev *dev);
 int isp_disable_hdr(struct isp_ic_dev *dev);
 int isp_s_2dnr(struct isp_ic_dev *dev);

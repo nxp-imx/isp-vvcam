@@ -50,10 +50,9 @@
  * version of this file.
  *
  *****************************************************************************/
-#ifdef __KERNEL__
+
 #include <linux/io.h>
 #include <linux/module.h>
-#endif
 #include "mrv_all_bits.h"
 #include "isp_ioctl.h"
 #include "isp_types.h"
@@ -162,8 +161,8 @@ void wdr3_hw_init(struct isp_ic_dev *dev)
 	slice_pixel_base_merge += 255;
 
 #ifndef __KERNEL__
-	//NOTE: register isp_wdr3_shift is read-only register on fpga, can not write
-	//NOTE: it is used by cmodel, So it should  be config.
+	/*NOTE: register isp_wdr3_shift is read-only register on fpga, can not write
+	  NOTE: it is used by cmodel, So it should  be config. */
 	u32 slice_pixel_shift;
 	u32 slice_output_shift;
 	u32 isp_wdr3_shift;

@@ -265,7 +265,7 @@ static int isp_buf_alloc(struct isp_ic_dev *dev, struct isp_buffer_context *buf)
 #endif
 	if (remote_pad) {
 		if (is_media_entity_v4l2_video_device(remote_pad->entity)) {
-			// isp connect to video, so no need allo buf for isp
+			/* isp connect to video, so no need allo buf for isp */
 			return 0;
 		}
 	}
