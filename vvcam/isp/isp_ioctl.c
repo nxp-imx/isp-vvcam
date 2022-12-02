@@ -783,6 +783,8 @@ int isp_s_cc(struct isp_ic_dev *dev)
 	REG_SET_SLICE(isp_ctrl, MRV_ISP_ISP_CSM_C_RANGE, cc->conv_range_c_full);
 	isp_write_reg(dev, REG_ADDR(isp_ctrl), isp_ctrl);
 
+	dev->cc.changed = false;
+
 	if (cc->update_curve) {
 		addr = REG_ADDR(isp_cc_coeff_0);
 		for (i = 0; i < 9; i++) {
@@ -791,6 +793,23 @@ int isp_s_cc(struct isp_ic_dev *dev)
 		}
 	}
 	return 0;
+}
+
+int isp_cc_control(struct isp_ic_dev *dev)
+{
+	unsigned long flags;
+	int ret = 0;
+
+	spin_lock_irqsave(&dev->irqlock, flags);
+	if (!is_isp_enable(dev)) {
+		ret = isp_s_cc(dev);
+	} else {
+		dev->cc.changed = true;
+	}
+
+	spin_unlock_irqrestore(&dev->irqlock, flags);
+
+	return ret;
 }
 
 int isp_s_xtalk(struct isp_ic_dev *dev)
@@ -2356,7 +2375,7 @@ long isp_priv_ioctl(struct isp_ic_dev *dev, unsigned int cmd, void *args)
 	case ISPIOC_S_CC:
 		viv_check_retval(copy_from_user
 				 (&dev->cc, args, sizeof(dev->cc)));
-		ret = isp_s_cc(dev);
+		ret = isp_cc_control(dev);
 		break;
 	case ISPIOC_S_EE:
 		viv_check_retval(copy_from_user
