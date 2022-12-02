@@ -310,6 +310,10 @@ irqreturn_t isp_hw_isr(int irq, void *data)
 			isp_s_cproc(dev);
 		}
 
+		if (dev->cc.changed) {
+			isp_s_cc(dev);
+		}
+
 		if (dev->awb.changed) {
 			isp_s_awb(dev);
 		}

@@ -200,6 +200,7 @@ struct isp_cnr_context {
 
 struct isp_cc_context {
 	u32 lCoeff[9];
+	bool changed;
 	bool update_curve;
 	bool conv_range_y_full, conv_range_c_full;
 };
