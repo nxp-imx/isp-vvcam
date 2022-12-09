@@ -60,7 +60,7 @@
 #include <linux/uaccess.h>
 #endif
 
-#define VVCAM_SUPPORT_MAX_MODE_COUNT                6
+#define VVCAM_SUPPORT_MAX_MODE_COUNT                20
 #define VVCAM_CAP_BUS_INFO_I2C_ADAPTER_NR_POS       8
 
 #define SENSOR_FIX_FRACBITS 10
