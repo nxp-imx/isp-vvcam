@@ -913,9 +913,8 @@ static long private_ioctl(struct file *file, void *fh,
 			rc = -ENOMEM;
 			break;
 		}
-		edb->vaddr = dma_alloc_attrs(handle->queue.dev,
-				ext_buf->size, &ext_buf->addr,
-				GFP_KERNEL, DMA_ATTR_WRITE_COMBINE);
+		edb->vaddr = dma_alloc_coherent(handle->queue.dev,
+				ext_buf->size, &(ext_buf->addr), GFP_KERNEL);
 		if (!edb->vaddr) {
 			pr_err("failed to alloc dma buffer!\n");
 			rc = -ENOMEM;
@@ -941,9 +940,8 @@ static long private_ioctl(struct file *file, void *fh,
 		}
 
 		if (edb) {
-			dma_free_attrs(handle->queue.dev, edb->size,
-					edb->vaddr, edb->addr,
-					DMA_ATTR_WRITE_COMBINE);
+			dma_free_coherent(handle->queue.dev, edb->size,
+			edb->vaddr, edb->addr);
 			list_del(&edb->entry);
 			kfree(edb);
 		}
@@ -1633,13 +1631,28 @@ static int viv_private_mmap(struct file *file, struct vm_area_struct *vma)
 	struct viv_video_file *handle = priv_to_handle(file->private_data);
 	struct viv_video_device *vdev = video_drvdata(file);
 	int ret  = 0;
+	bool dma_coherent = false;
+	struct ext_dma_buf *b, *edb = NULL;
+
+	list_for_each_entry(b, &handle->extdmaqueue, entry) {
+		if ((b->addr >> PAGE_SHIFT) == vma->vm_pgoff) {
+			dma_coherent = true;
+			edb = b;
+			break;
+		}
+	}
 
 	if(vma->vm_pgoff == vdev->ctrls.buf_pa >> PAGE_SHIFT) {
 		vma->vm_pgoff = 0;
 		vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
 		ret = dma_mmap_coherent(handle->queue.dev, vma, vdev->ctrls.buf_va,
 			vdev->ctrls.buf_pa, vma->vm_end - vma->vm_start);
-	} else {
+	} else if (dma_coherent) {
+		vma->vm_pgoff = 0;
+		vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
+		ret = dma_mmap_coherent(handle->queue.dev, vma, edb->vaddr,
+			edb->addr, vma->vm_end - vma->vm_start);
+	}else {
 		ret = remap_pfn_range(vma, vma->vm_start, vma->vm_pgoff,
 			vma->vm_end - vma->vm_start,vma->vm_page_prot);
 	}
