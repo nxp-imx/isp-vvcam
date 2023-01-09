@@ -69,9 +69,25 @@ error: ignoring return value of function declared with 'warn_unused_result' attr
 		unsigned long copy_ret; \
 		copy_ret = copy_to_user(arg_user, arg, sizeof(TYPE));\
 	} while (0)
+
+#define USER_TO_KERNEL_VMALLOC(TYPE) \
+	do {\
+		unsigned long copy_ret; \
+		TYPE *arg = (TYPE *)vmalloc(sizeof(TYPE)); \
+		copy_ret = copy_from_user(arg, arg_user, sizeof(TYPE));\
+	} while (0)
+
+#define KERNEL_TO_USER_VMALLOC(TYPE) \
+	do {\
+		unsigned long copy_ret; \
+		copy_ret = copy_to_user(arg_user, arg, sizeof(TYPE));\
+		vfree(arg); \
+	} while (0)
 #else
 #define USER_TO_KERNEL(TYPE)
 #define KERNEL_TO_USER(TYPE)
+#define USER_TO_KERNEL_VMALLOC(TYPE)
+#define KERNEL_TO_USER_VMALLOC(TYPE)
 #endif
 
 
@@ -888,9 +904,9 @@ static long os08a20_priv_ioctl(struct v4l2_subdev *sd,
 		ret = os08a20_query_capability(sensor, arg);
 		break;
 	case VVSENSORIOC_QUERY:
-		USER_TO_KERNEL(struct vvcam_mode_info_array_s);
+		USER_TO_KERNEL_VMALLOC(struct vvcam_mode_info_array_s);
 		ret = os08a20_query_supports(sensor, arg);
-		KERNEL_TO_USER(struct vvcam_mode_info_array_s);
+		KERNEL_TO_USER_VMALLOC(struct vvcam_mode_info_array_s);
 		break;
 	case VVSENSORIOC_G_CHIP_ID:
 		ret = os08a20_get_sensor_id(sensor, arg);
