@@ -73,7 +73,7 @@ error: ignoring return value of function declared with 'warn_unused_result' attr
 #define USER_TO_KERNEL_VMALLOC(TYPE) \
 	do {\
 		unsigned long copy_ret; \
-		TYPE *arg = (TYPE *)vmalloc(sizeof(TYPE)); \
+		arg = vmalloc(sizeof(TYPE)); \
 		copy_ret = copy_from_user(arg, arg_user, sizeof(TYPE));\
 	} while (0)
 
