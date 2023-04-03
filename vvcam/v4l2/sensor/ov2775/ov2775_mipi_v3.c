@@ -1560,8 +1560,12 @@ static int ov2775_retrieve_capture_properties(
 	return ret;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)
+static int ov2775_probe(struct i2c_client *client)
+#else
 static int ov2775_probe(struct i2c_client *client,
-                        const struct i2c_device_id *id)
+			const struct i2c_device_id *id)
+#endif
 {
 	int retval;
 	struct device *dev = &client->dev;
