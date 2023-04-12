@@ -58,6 +58,8 @@
 #include <linux/of_reserved_mem.h>
 #include <linux/pm_domain.h>
 #include <linux/version.h>
+#include <linux/proc_fs.h>
+#include <linux/seq_file.h>
 
 #include "isp_driver.h"
 #include "isp_ioctl.h"
@@ -347,6 +349,93 @@ static struct v4l2_subdev_internal_ops isp_internal_ops = {
 	.close = isp_close,
 };
 
+
+static int isp_info_procfs_show(struct seq_file *sfile, void *offset)
+{
+	struct isp_device *isp_dev;
+	isp_dev = (struct isp_device *) sfile->private;
+
+	seq_printf(sfile ,"/********************************VSI ISP%d INFO********************************/\n",
+				isp_dev->id);
+	seq_printf(sfile, "width\t height\t frame_in\t frame_out\t frame_loss\t fps\t status\n");
+	seq_printf(sfile, "%d\t %d\t %-16lld%-16lld%-16lld%d.%d\t %s\n",
+				isp_dev->ic_dev.ctx.isWindow.width, isp_dev->ic_dev.ctx.isWindow.height,
+				isp_dev->ic_dev.frame_in_cnt,
+				isp_dev->ic_dev.frame_in_cnt - isp_dev->ic_dev.frame_loss_cnt[0],
+				isp_dev->ic_dev.frame_loss_cnt[0],
+				isp_dev->ic_dev.fps[0] / 100, isp_dev->ic_dev.fps[0] % 100,
+				isp_dev->ic_dev.streaming ? "run" : "idle");
+	return 0;
+}
+
+static int isp_procfs_open(struct inode *inode, struct file *file)
+{
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 17, 0)
+	return single_open(file, isp_info_procfs_show, PDE_DATA(inode));
+#else
+	return single_open(file, isp_info_procfs_show, pde_data(inode));
+#endif
+}
+
+static ssize_t isp_procfs_write(struct file *file,
+		const char __user *buffer, size_t count, loff_t *ppos)
+{
+	struct isp_device *isp_dev;
+	char strbuf[128];
+	char str[128] = "";
+	int i;
+
+	if (count >= 128) {
+		return count;
+	}
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 17, 0)
+	isp_dev = (struct isp_device *) PDE_DATA(file_inode(file));
+#else
+	isp_dev = (struct isp_device *) pde_data(file_inode(file));
+#endif
+
+	if (copy_from_user(strbuf, buffer, count))
+		return -EFAULT;
+	strbuf[count] = '\0';
+	sscanf(strbuf, "%s", str);
+
+	if (!strcmp("clear", str) || !strlen(str)) {
+		isp_dev->ic_dev.frame_in_cnt = 0;
+		for (i = 0; i < MI_PATH_NUM; i++) {
+			isp_dev->ic_dev.frame_loss_cnt[i] = 0;
+			isp_dev->ic_dev.fps[i] = 0;
+		}
+	}
+	return count;
+}
+
+static const struct proc_ops isp_procfs_ops = {
+	.proc_open = isp_procfs_open,
+	.proc_release = seq_release,
+	.proc_read = seq_read,
+	.proc_write = isp_procfs_write,
+	.proc_lseek = seq_lseek,
+};
+
+static int isp_create_procfs(struct isp_device *isp_dev)
+{
+	struct proc_dir_entry *ent;
+	char isp_procfs_filename[30];
+	if (!isp_dev) {
+		return -1;
+	}
+	sprintf(isp_procfs_filename, "vsiisp%d", isp_dev->id);
+
+	ent = proc_create_data(isp_procfs_filename, 0444, NULL, &isp_procfs_ops, isp_dev);
+	if (!ent)
+		return -1;
+
+	isp_dev->pde = ent;
+	return 0;
+}
+
+
 /**
  * isp_attach_pm_domains() - attach the power domains
  * On i.MX8MP there is multiple power domains
@@ -452,6 +541,7 @@ int isp_hw_probe(struct platform_device *pdev)
 	struct resource *mem_res;
 	int irq;
 	int rc;
+	int i;
 	pr_info("enter %s\n", __func__);
 	isp_dev = kzalloc(sizeof(struct isp_device), GFP_KERNEL);
 	if (!isp_dev)
@@ -543,6 +633,12 @@ int isp_hw_probe(struct platform_device *pdev)
 	isp_dev->ic_dev.alloc = isp_buf_alloc;
 	isp_dev->ic_dev.free = isp_buf_free;
 
+	isp_dev->ic_dev.frame_in_cnt = 0;
+	for (i = 0; i < MI_PATH_NUM; i++) {
+		isp_dev->ic_dev.frame_loss_cnt[i] = 0;
+		isp_dev->ic_dev.fps[i] = 0;
+	}
+
 	irq = platform_get_irq(pdev, 0);
 	if (irq < 0) {
 		pr_err("failed to get irq number.\n");
@@ -572,6 +668,12 @@ int isp_hw_probe(struct platform_device *pdev)
 	rc = v4l2_async_register_subdev(&isp_dev->sd);
 	if (rc)
 		goto end;
+
+	rc = isp_create_procfs(isp_dev);
+	if (rc) {
+		pr_err("create isp proc fs failed.\n");
+		goto end;
+	}
 
 	pm_runtime_enable(&pdev->dev);
 
@@ -612,6 +714,7 @@ int isp_hw_remove(struct platform_device *pdev)
 		return rc;
 	}
 
+	proc_remove(isp->pde);
 	pm_runtime_disable(&pdev->dev);
 	kfree(isp);
 	pr_info("vvcam isp driver removed\n");

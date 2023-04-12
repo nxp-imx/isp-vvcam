@@ -1014,12 +1014,8 @@ free_ctrls:
 	return ret;
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)
-static int basler_camera_probe(struct i2c_client *client)
-#else
 static int basler_camera_probe(struct i2c_client *client,
 			       const struct i2c_device_id *id)
-#endif
 {
 	struct device *dev = &client->dev;
 	struct basler_camera_dev *sensor;

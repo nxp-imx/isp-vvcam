@@ -83,6 +83,7 @@ error: ignoring return value of function declared with 'warn_unused_result' attr
 		copy_ret = copy_to_user(arg_user, arg, sizeof(TYPE));\
 		vfree(arg); \
 	} while (0)
+
 #else
 #define USER_TO_KERNEL(TYPE)
 #define KERNEL_TO_USER(TYPE)
@@ -1163,12 +1164,9 @@ static int os08a20_retrieve_capture_properties(
 	return ret;
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)
-static int os08a20_probe(struct i2c_client *client)
-#else
+
 static int os08a20_probe(struct i2c_client *client,
 			const struct i2c_device_id *id)
-#endif
 {
 	int retval;
 	struct device *dev = &client->dev;

@@ -2602,11 +2602,16 @@ long isp_priv_ioctl(struct isp_ic_dev *dev, unsigned int cmd, void *args)
 		}
 	case ISPIOC_START_CAPTURE:{
 			u32 num;
+			int i;
 			viv_check_retval(copy_from_user
 					 (&num, args, sizeof(num)));
 			ret = isp_start_stream(dev, num);
 			if(!ret) {
 				dev->streaming = true;
+				for (i = 0; i < MI_PATH_NUM; i++) {
+					dev->frame_cnt[i] = 0;
+					dev->last_ns[i] = 0;
+				}
 			}
 			break;
 		}

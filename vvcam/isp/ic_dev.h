@@ -731,6 +731,11 @@ struct isp_ic_dev {
 
 #ifdef __KERNEL__
 	spinlock_t irqlock;
+	uint64_t last_ns[MI_PATH_NUM];
+	uint64_t frame_loss_cnt[MI_PATH_NUM];
+	uint32_t frame_cnt[MI_PATH_NUM];
+	uint32_t fps[MI_PATH_NUM];
+	uint64_t frame_in_cnt;
 #endif
 
 	void (*post_event)(struct isp_ic_dev *dev, void *data, size_t size);
