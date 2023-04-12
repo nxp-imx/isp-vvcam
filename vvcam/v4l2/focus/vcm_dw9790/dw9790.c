@@ -309,12 +309,8 @@ static int dw9790_init(struct dw9790_device *dw9790_dev)
     return 0;
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)
-static int dw9790_probe(struct i2c_client *client)
-#else
 static int dw9790_probe(struct i2c_client *client,
                         const struct i2c_device_id *id)
-#endif
 {
     struct dw9790_device *dw9790_dev;
     struct device *dev = &client->dev;

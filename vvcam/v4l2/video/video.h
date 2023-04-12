@@ -113,18 +113,19 @@ struct viv_video_device {
 	bool dweEnabled;
 	atomic_t refcnt;
 	struct viv_caps_supports caps_supports;
-	u64 duration, last_ts, frameCnt[VIDEO_NODE_NUM];
-	u32 loop_cnt[VIDEO_NODE_NUM];
+	u64 last_ts;
+	u32 frame_cnt;
+	u32 fps;
 	struct completion subscribed_wait;
 	int subscribed_cnt;
 	int active;
 	void *rmem;
-	bool frame_flag;
 	int dumpbuf_status;
 	struct vb2_dc_buf* dumpbuf;
 	struct mutex event_lock;
 	struct video_event_shm event_shm;
 	int pipeline_status;
+	struct proc_dir_entry *pde;
 };
 
 struct viv_video_file {

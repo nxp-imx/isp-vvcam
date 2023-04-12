@@ -127,8 +127,10 @@ int update_dma_buffer(struct isp_ic_dev *dev)
 			continue;
 
 		buf = vvbuf_pull_buf(dev->bctx);
-		if (buf == NULL)
+		if (buf == NULL) {
+			dev->frame_loss_cnt[i]++;
 			continue;
+		}
 		dmabuf.path = i;
 		if (config_dma_buf(&mi->path[i], buf->dma, &dmabuf)){
 			vvbuf_push_buf(dev->bctx,buf);
@@ -142,6 +144,22 @@ int update_dma_buffer(struct isp_ic_dev *dev)
 
 #endif
 	return 0;
+}
+
+static void isp_fps_stat(struct isp_ic_dev *dev, int path)
+{
+	uint64_t cur_ns = 0, interval = 0;
+	cur_ns = ktime_get_ns();
+	interval = ktime_us_delta(cur_ns,dev->last_ns[path]);
+	if (interval < 3 * USEC_PER_SEC) {
+		dev->frame_cnt[path]++;
+	} else {
+		if (dev->last_ns[path] > 0) {
+			dev->fps[path] = (uint32_t) (dev->frame_cnt[path] * USEC_PER_SEC * 100 / interval);
+		}
+		dev->frame_cnt[path] = 0;
+		dev->last_ns[path] = cur_ns;
+	}
 }
 
 static void isr_process_frame(struct isp_ic_dev *dev)
@@ -158,6 +176,7 @@ static void isr_process_frame(struct isp_ic_dev *dev)
 		if (dev->mi_buf_shd[i]) {
 			vvbuf_ready(dev->bctx, dev->mi_buf_shd[i]->pad, dev->mi_buf_shd[i]);
 			dev->mi_buf_shd[i] = NULL;
+			isp_fps_stat(dev, i);
 		}
 	}
 	spin_unlock_irqrestore(&dev->lock, flags);
@@ -302,6 +321,9 @@ irqreturn_t isp_hw_isr(int irq, void *data)
 		isp_write_reg(dev, REG_ADDR(mi_status), mi_status);
 		pr_debug("MI FIFO full: 0x%x\n", mi_status);
 	}
+
+	if (isp_mis & MRV_ISP_MIS_FRAME_IN_MASK)
+		dev->frame_in_cnt++;
 
 	if (isp_mis & MRV_ISP_MIS_FRAME_MASK) {
 		spin_lock_irqsave(&dev->irqlock, flags);

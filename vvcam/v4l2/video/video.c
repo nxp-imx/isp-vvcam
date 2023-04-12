@@ -63,6 +63,8 @@
 #include <media/v4l2-ioctl.h>
 #include <media/videobuf2-dma-contig.h>
 #include <linux/of_reserved_mem.h>
+#include <linux/proc_fs.h>
+#include <linux/seq_file.h>
 
 #include "video.h"
 #include "vvctrl.h"
@@ -346,6 +348,8 @@ static int start_streaming(struct vb2_queue *vq, unsigned int count)
 		viv_post_simple_event(VIV_VIDEO_EVENT_START_STREAM,
 				      handle->streamid, fh, true);
 		handle->vdev->pipeline_status = PIPELINE_STREAMON;
+		handle->vdev->frame_cnt = 0;
+		handle->vdev->last_ts = 0;
 	} else {
 		pr_err("can't start streaming, device busy!\n");
 		return -EBUSY;
@@ -543,11 +547,12 @@ static int video_open(struct file *file)
 static int video_close(struct file *file)
 {
 	struct viv_video_file *handle = priv_to_handle(file->private_data);
+	struct viv_video_device *vdev = video_drvdata(file);
 	struct vb2_buffer *vb;
 	spinlock_t *lock;
 	unsigned long flags;
 
-	atomic_inc(&(handle->vdev->refcnt));
+	atomic_inc(&(vdev->refcnt));
 	pr_debug("enter %s\n", __func__);
 	if (handle) {
 		handle->req = false;
@@ -563,7 +568,6 @@ static int video_close(struct file *file)
 			viv_post_simple_event(VIV_VIDEO_EVENT_DEL_STREAM,
 						handle->streamid, &handle->vfh,
 						true);
-			handle->vdev->frame_flag = false;
 			handle->vdev->pipeline_status = PIPELINE_INIT;
 		}
 
@@ -607,12 +611,13 @@ static int video_close(struct file *file)
 		vb2_queue_release(&handle->queue);
 		mutex_destroy(&handle->buffer_mutex);
 		kfree(handle);
+		handle = NULL;
 	}
 
-	atomic_dec(&(handle->vdev->refcnt));
-	if (atomic_read(&(handle->vdev->refcnt)) == 0) {
-		reinit_completion(&handle->vdev->subscribed_wait);
-		handle->vdev->subscribed_cnt = 0;
+	atomic_dec(&(vdev->refcnt));
+	if (atomic_read(&(vdev->refcnt)) == 0) {
+		reinit_completion(&vdev->subscribed_wait);
+		vdev->subscribed_cnt = 0;
 	}
 
 	return 0;
@@ -1104,7 +1109,9 @@ static int vidioc_try_fmt_vid_cap(struct file *file, void *priv,
 		return -EINVAL;
 
 	f->fmt.pix.field = dev->fmt.fmt.pix.field;
-	f->fmt.pix.colorspace = dev->fmt.fmt.pix.colorspace;
+	if (f->fmt.pix.colorspace == V4L2_COLORSPACE_DEFAULT) {
+		f->fmt.pix.colorspace = dev->fmt.fmt.pix.colorspace;
+	}
 	init_v4l2_fmt(f, format->bpp, format->depth, &bytesperline, &sizeimage);
 	f->fmt.pix.bytesperline = bytesperline;
 	f->fmt.pix.sizeimage = sizeimage;
@@ -1294,9 +1301,14 @@ static int vidioc_dqbuf(struct file *file, void *priv, struct v4l2_buffer *p)
 	struct viv_video_file *handle = priv_to_handle(file->private_data);
 	int rc = 0;
 
-	rc = vb2_dqbuf(&handle->queue, p, file->f_flags & O_NONBLOCK);
-	p->field = V4L2_FIELD_NONE;
-	p->sequence = handle->sequence++;
+	if (handle->vdev->pipeline_status != PIPELINE_STREAMOFF) {
+		rc = vb2_dqbuf(&handle->queue, p, file->f_flags & O_NONBLOCK);
+		p->field = V4L2_FIELD_NONE;
+		p->sequence = handle->sequence++;
+	} else {
+		rc = -EINVAL;
+	}
+
 	return rc;
 }
 
@@ -1546,14 +1558,14 @@ static int vidioc_s_selection(struct file *file, void *fh,
 	case V4L2_SEL_TGT_CROP:
 		if (((s->r.left + s->r.width) < VIDEO_FRAME_MIN_WIDTH) ||
 		    ((s->r.left + s->r.width) > vdev->camera_mode.size.width) ||
-			((s->r.top + s->r.height) < VIDEO_FRAME_MIN_HEIGHT) ||
+		    ((s->r.top + s->r.height) < VIDEO_FRAME_MIN_HEIGHT) ||
 		    ((s->r.top + s->r.height) > vdev->camera_mode.size.height))
 			return -EINVAL;
 		break;
 	case V4L2_SEL_TGT_COMPOSE:
 		if (((s->r.left + s->r.width) < VIDEO_FRAME_MIN_WIDTH) ||
 		    ((s->r.left + s->r.width) > VIDEO_FRAME_MAX_WIDTH) ||
-			((s->r.top + s->r.height) < VIDEO_FRAME_MIN_HEIGHT) ||
+		    ((s->r.top + s->r.height) < VIDEO_FRAME_MIN_HEIGHT) ||
 		    ((s->r.top + s->r.height) > VIDEO_FRAME_MAX_HEIGHT))
 			return -EINVAL;
 		break;
@@ -1851,8 +1863,6 @@ static void viv_buf_notify(struct vvbuf_ctx *ctx, struct vb2_dc_buf *buf)
 	struct viv_video_file *fh;
 	struct viv_video_device *vdev;
 	u64 cur_ts, interval;
-	u32 fps;
-	int i;
 
 	if (!buf || buf->vb.vb2_buf.state != VB2_BUF_STATE_ACTIVE)
 		return;
@@ -1872,36 +1882,71 @@ static void viv_buf_notify(struct vvbuf_ctx *ctx, struct vb2_dc_buf *buf)
 
 	/* print fps info for debugging purpose */
 	interval = ktime_us_delta(cur_ts,vdev->last_ts);
-	for (i = 0; i < VIDEO_NODE_NUM; i++) {
-		if (vdev->id == i) {
-			if (vdev->duration >= 3 * 1000000/*ms*/) {
-				vdev->loop_cnt[i]++;
-				if (vdev->loop_cnt[i] >= 10) {
-					if (vdev->frame_flag) {
-						fps = vdev->frameCnt[i] * 100000000 / vdev->duration;
-						pr_info("###### video%d(%d) %d.%02d fps ######\n",
-								vdev->video->num, vdev->id,
-								fps / 100, fps % 100);
-					} else {
-						vdev->frame_flag = true;
-					}
-					vdev->loop_cnt[i] = 0;
-				}
-				vdev->frameCnt[i] = 0;
-				vdev->duration = 0;
-			} else if (interval > 0) {
-				vdev->frameCnt[i]++;
-				vdev->duration += interval;
-			}
+	if (interval < 3 * USEC_PER_SEC) {
+		vdev->frame_cnt++;
+	} else {
+		if (vdev->last_ts > 0) {
+			vdev->fps = (uint32_t) (vdev->frame_cnt * USEC_PER_SEC * 100 / interval);
 		}
+		vdev->frame_cnt = 0;
+		vdev->last_ts = cur_ts;
 	}
-	vdev->last_ts = cur_ts;
+
 }
 
 static const struct vvbuf_ops viv_buf_ops = {
 	.notify = viv_buf_notify,
 };
 #endif
+
+static int video_info_procfs_show(struct seq_file *sfile, void *offset)
+{
+	struct viv_video_device *vdev;
+	vdev = (struct viv_video_device *) sfile->private;
+
+	seq_printf(sfile, "Name\t\t: %s\n", vdev->video->name);
+	seq_printf(sfile, "Resolution\t: %dx%d (max:%4dx%-4d min:%dx%d)\n",
+				vdev->compose.width, vdev->compose.height,
+				VIDEO_FRAME_MAX_WIDTH, VIDEO_FRAME_MAX_HEIGHT,
+				VIDEO_FRAME_MIN_WIDTH, VIDEO_FRAME_MIN_HEIGHT);
+	seq_printf(sfile, "Status\t\t: %s\n", vdev->pipeline_status == PIPELINE_STREAMON ? "run" : "idle");
+	seq_printf(sfile, "Fps\t\t: %d.%d\n", vdev->fps/100, vdev->fps%100);
+
+	return 0;
+}
+
+static int video_procfs_open(struct inode *inode, struct file *file)
+{
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 17, 0)
+	return single_open(file, video_info_procfs_show, PDE_DATA(inode));
+#else
+	return single_open(file, video_info_procfs_show, pde_data(inode));
+#endif
+}
+
+static const struct proc_ops video_procfs_ops = {
+	.proc_open = video_procfs_open,
+	.proc_release = seq_release,
+	.proc_read = seq_read,
+	.proc_lseek = seq_lseek,
+};
+
+static int video_create_procfs(struct viv_video_device *vdev)
+{
+	struct proc_dir_entry *ent;
+	char video_procfs_filename[30];
+	if (!vdev->video) {
+		return -1;
+	}
+
+	sprintf(video_procfs_filename, "vsivideo%d", vdev->video->num);
+	ent = proc_create_data(video_procfs_filename, 0444, NULL, &video_procfs_ops, vdev);
+	if (!ent)
+		return -1;
+
+	vdev->pde = ent;
+	return 0;
+}
 
 struct dev_node {
 	enum v4l2_async_match_type match_type;
@@ -1987,7 +2032,7 @@ static int viv_video_probe(struct platform_device *pdev)
 {
 	struct viv_video_device *vdev;
 	int rc = 0;
-	int i,m, video_id;
+	int i, video_id;
 	struct dev_node nodes[MAX_SUBDEVS_NUM];
 	int nodecount;
 
@@ -2156,6 +2201,11 @@ static int viv_video_probe(struct platform_device *pdev)
 
 			rc = v4l2_device_register_subdev_nodes(vdev->v4l2_dev);
 #endif
+			rc = video_create_procfs(vdev);
+			if (rc < 0) {
+				pr_err("create video proc fs failed.\n");
+				goto register_fail;
+			}
 
 			vdev->ctrls.buf_va = dma_alloc_coherent(&(pdev->dev),
 				VIV_JSON_BUFFER_SIZE, &(vdev->ctrls.buf_pa), GFP_KERNEL);
@@ -2167,18 +2217,15 @@ static int viv_video_probe(struct platform_device *pdev)
 
 			vdev->fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 			vdev->fmt.fmt.pix.field = V4L2_FIELD_NONE;
-			vdev->fmt.fmt.pix.colorspace = V4L2_COLORSPACE_REC709;
+			vdev->fmt.fmt.pix.colorspace = V4L2_COLORSPACE_SMPTE170M;
 
 			if (sizeof(vdev->formats) >= sizeof(formats)) {
 				memcpy(vdev->formats, formats, sizeof(formats));
 				vdev->formatscount = ARRAY_SIZE(formats);
 			}
-			for (m = 0; m < VIDEO_NODE_NUM; m++) {
-				vdev->loop_cnt[m] = 0;
-				vdev->frameCnt[m] = 0;
-			}
-			vdev->duration = 0;
 			vdev->last_ts = 0;
+			vdev->fps = 0;
+			vdev->frame_cnt = 0;
 			atomic_set(&(vdev->refcnt), 0);
 			mutex_init(&vdev->event_lock);
 
@@ -2229,6 +2276,7 @@ static int viv_video_remove(struct platform_device *pdev)
 		dma_free_coherent(&(pdev->dev), VIV_JSON_BUFFER_SIZE,
 			vdev->ctrls.buf_va, vdev->ctrls.buf_pa);
 		v4l2_ctrl_handler_free(&vdev->ctrls.handler);
+		proc_remove(vdev->pde);
 		kfree(vvdev[i]);
 		vvdev[i] = NULL;
 	}

@@ -3,7 +3,12 @@ INCLUDE_DIR := /usr/src/linux-headers-$(shell uname -r)
 KERNEL_SRC := $(INCLUDE_DIR)
 endif
 
-SRC := $(shell pwd)
+ANDROID := no
+ifeq ($(ANDROID), yes)
+PWD := $(shell pwd)
+#PWD := $(ANDROID_BUILD_TOP)/vendor/nxp-opensource/verisilicon_sw_isp_vvcam/vvcam/v4l2
+endif
+PWD := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 
 EXTRA_CFLAGS += -I$(PWD)/../common/
 EXTRA_CFLAGS += -I$(PWD)/../isp/
@@ -16,7 +21,11 @@ ifeq ($(ENABLE_IRQ), yes)
   EXTRA_CFLAGS += -DENABLE_IRQ
 endif
 
+ifeq ($(ANDROID), no)
 EXTRA_CFLAGS += -O2 -Werror
+endif
+
+obj-m += video/
 
 include $(PWD)/../version/ISP8000NANO_V1802.mk
 
@@ -62,19 +71,21 @@ obj-m += vvcam-dwe.o
 #obj-m += csi/
 obj-m += sensor/
 obj-m += focus/
-obj-m += video/
+
+V := 1
+
+build_target := modules
+
+ifeq ($(BUILD_FOR_GKI), yes)
+build_target += modules_install
+ARCH_TYPE := arm64
+endif
 
 all:
-	make -C $(KERNEL_SRC) M=$(SRC) ENABLE_IRQ=$(ENABLE_IRQ)
-
-modules_install:
-	make -C $(KERNEL_SRC) M=$(SRC) modules_install
+	@$(MAKE) V=$(V) -C $(KERNEL_SRC) ARCH=$(ARCH_TYPE) M=$(PWD) ENABLE_IRQ=$(ENABLE_IRQ) $(build_target)
 
 clean:
-	make -C $(KERNEL_SRC) M=$(SRC) clean
-	find ../ -name '*.o' -delete
-	find ../ -name '*.ko' -delete
-	find ../ -name 'modules.order' -delete
-	find ../ -name 'Module.symvers' -delete
-	find ../ -name '*.mod.c' -delete
-	find ../ -name '*.cmd' -delete
+	@rm -rf modules.order Module.symvers
+	@find ../ -name "*.o" | xargs rm -f
+	@find ../ -name "*.ko" | xargs rm -f
+

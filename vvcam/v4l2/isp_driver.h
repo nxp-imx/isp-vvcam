@@ -78,6 +78,7 @@ struct isp_device {
 	int num_domains;
 	int id;
 	struct mutex mlock;
+	struct proc_dir_entry *pde;
 };
 struct isp_pd {
 	struct device    **pd_dev;
