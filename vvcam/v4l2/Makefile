@@ -71,16 +71,17 @@ obj-m += focus/
 obj-m += video/
 
 ifeq ($(ANDROID), yes)
+V := 1
 
 build_target := modules
 
 ARCH_TYPE ?= arm64
 
 all:
-	@$(MAKE) V=1 -C $(KERNEL_SRC) ARCH=$(ARCH_TYPE) M=$(M) ENABLE_IRQ=$(ENABLE_IRQ)
+	@$(MAKE) V=$(V) -C $(KERNEL_SRC) ARCH=$(ARCH_TYPE) M=$(M) ENABLE_IRQ=$(ENABLE_IRQ)
 
 modules_install:
-	@$(MAKE) V=1 -C $(KERNEL_SRC) ARCH=$(ARCH_TYPE) M=$(M) ENABLE_IRQ=$(ENABLE_IRQ) modules_install
+	@$(MAKE) V=$(V) -C $(KERNEL_SRC) ARCH=$(ARCH_TYPE) M=$(M) ENABLE_IRQ=$(ENABLE_IRQ) modules_install
 
 clean:
 	@rm -rf modules.order Module.symvers
