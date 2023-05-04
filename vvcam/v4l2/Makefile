@@ -15,13 +15,6 @@ EXTRA_CFLAGS += -I$(PWD)/../common/
 EXTRA_CFLAGS += -I$(PWD)/../isp/
 EXTRA_CFLAGS += -I$(PWD)/../v4l2/
 
-# Enable interrupt mode for vvcam modules (yes, no)
-ENABLE_IRQ := yes
-
-ifeq ($(ENABLE_IRQ), yes)
-  EXTRA_CFLAGS += -DENABLE_IRQ
-endif
-
 EXTRA_CFLAGS += -O2 -Werror
 
 include $(PWD)/../version/ISP8000NANO_V1802.mk
@@ -45,23 +38,15 @@ vvcam-isp-objs += ../isp/isp_rgbgamma.o
 #vvcam-isp-objs += ../isp/isp_dec.o
 #vvcam-isp_objs += ../isp/isp_dmsc2.o
 vvcam-isp-objs += ../isp/isp_isr.o
-ifeq ($(ENABLE_IRQ), yes)
-  vvcam-isp-objs += isp_driver_of.o
-else
-  vvcam-isp-objs += isp_driver.o
-endif
+vvcam-isp-objs += isp_driver_of.o
 vvcam-isp-objs += video/vvbuf.o
 obj-m += vvcam-isp.o
 
 EXTRA_CFLAGS += -I$(PWD)/../dwe/
 vvcam-dwe-objs += ../dwe/dwe_ioctl.o
 vvcam-dwe-objs += ../dwe/dwe_isr.o
-ifeq ($(ENABLE_IRQ), yes)
-  vvcam-dwe-objs += dwe_driver_of.o
-  vvcam-dwe-objs += dwe_devcore.o
-else
-  vvcam-dwe-objs += dwe_driver.o
-endif
+vvcam-dwe-objs += dwe_driver_of.o
+vvcam-dwe-objs += dwe_devcore.o
 vvcam-dwe-objs += video/vvbuf.o
 obj-m += vvcam-dwe.o
 
@@ -78,10 +63,10 @@ build_target := modules
 ARCH_TYPE ?= arm64
 
 all:
-	@$(MAKE) V=1 -C $(KERNEL_SRC) ARCH=$(ARCH_TYPE) M=$(M) ENABLE_IRQ=$(ENABLE_IRQ)
+	@$(MAKE) V=1 -C $(KERNEL_SRC) ARCH=$(ARCH_TYPE) M=$(M)
 
 modules_install:
-	@$(MAKE) V=1 -C $(KERNEL_SRC) ARCH=$(ARCH_TYPE) M=$(M) ENABLE_IRQ=$(ENABLE_IRQ) modules_install
+	@$(MAKE) V=1 -C $(KERNEL_SRC) ARCH=$(ARCH_TYPE) M=$(M) modules_install
 
 clean:
 	@rm -rf modules.order Module.symvers
@@ -89,8 +74,7 @@ clean:
 	@find ../ -name "*.ko" | xargs rm -f
 else
 all:
-	make -C $(KERNEL_SRC) M=$(SRC) ENABLE_IRQ=$(ENABLE_IRQ)
-
+	make -C $(KERNEL_SRC) M=$(SRC)
 modules_install:
 	make -C $(KERNEL_SRC) M=$(SRC) modules_install
 

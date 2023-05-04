@@ -56,8 +56,6 @@
 #include "dwe_ioctl.h"
 #include "dwe_regs.h"
 
-#if defined(ENABLE_IRQ)
-
 void dwe_isr_tasklet(unsigned long arg)
 {
 	int which;
@@ -198,4 +196,3 @@ void dwe_clean_src_memory(struct dwe_ic_dev *dev)
 	spin_unlock_irqrestore(&dev->irqlock, flags);
 }
 
-#endif

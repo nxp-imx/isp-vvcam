@@ -60,9 +60,7 @@ struct isp_device {
 	struct vvbuf_ctx bctx;
 	/* Driver private data */
 	struct v4l2_subdev sd;
-#ifndef ENABLE_IRQ
 	struct v4l2_device *vd;
-#endif
 	struct isp_ic_dev ic_dev;
 	struct clk *clk_core;
 	struct clk *clk_axi;
@@ -70,10 +68,8 @@ struct isp_device {
 	struct clk *clk_sensor;
 	struct isp_pd *priv;
 	int refcnt;
-#ifdef ENABLE_IRQ
 	struct media_pad pads[ISP_PADS_NUM];
 	int state;
-#endif
 	int irq;
 	int num_domains;
 	int id;

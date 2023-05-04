@@ -55,8 +55,6 @@
 
 #include "vvbuf.h"
 
-#ifdef ENABLE_IRQ
-
 void vvbuf_ctx_init(struct vvbuf_ctx *ctx)
 {
 	if (unlikely(!ctx))
@@ -179,4 +177,3 @@ void vvbuf_ready(struct vvbuf_ctx *ctx, struct media_pad *pad,
 		rctx->ops->notify(rctx, buf);
 }
 
-#endif

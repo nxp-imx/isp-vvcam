@@ -28,11 +28,7 @@ make ARCH=arm64 menuconfig
 make -j4
 
 (2)编译vvcam
-DWE disable IRQ:
-make VERSION=ISP8000NANO_V1802 KERNEL_SRC=$(arm_kernel_src) ENABLE_IRQ=no
-
-DWE enable IRQ:
-make VERSION=ISP8000NANO_V1802 KERNEL_SRC=$(arm_kernel_src) ENABLE_IRQ=yes
+make VERSION=ISP8000NANO_V1802 KERNEL_SRC=$(arm_kernel_src)
 
 (3)加载KO
 ov2775 insmod:
