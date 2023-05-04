@@ -56,7 +56,6 @@
 #include "dwe_dev.h"
 #include "video/vvbuf.h"
 
-#ifdef ENABLE_IRQ
 struct dwe_devcore {
 	struct vvbuf_ctx bctx[DWE_PADS_NUM];
 	struct dwe_ic_dev ic_dev;
@@ -70,33 +69,25 @@ struct dwe_devcore {
 	int irq;
 	struct list_head entry;
 };
-#endif
 
 struct dwe_device {
 	struct vvbuf_ctx bctx[DWE_PADS_NUM];
 	/* Driver private data */
 	struct v4l2_subdev sd;
 	struct fwnode_handle fwnode;
-#ifdef ENABLE_IRQ
 	struct dwe_devcore *core;
 	struct media_pad pads[DWE_PADS_NUM];
 	int state;
 	int id;
 	int irq;
-#else
-	struct v4l2_device *vd;
-	struct dwe_ic_dev ic_dev;
-#endif
 	struct clk *clk_core;
 	struct clk *clk_axi;
 	struct clk *clk_ahb;
 	int refcnt;
 };
 
-#ifdef ENABLE_IRQ
 struct dwe_devcore *dwe_devcore_init(struct dwe_device *dwe,
 				struct resource *res);
 void dwe_devcore_deinit(struct dwe_device *dwe);
 long dwe_devcore_ioctl(struct dwe_device *dwe, unsigned int cmd, void *args);
-#endif
 #endif /* _DWE_DRIVER_H_ */

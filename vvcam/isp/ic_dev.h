@@ -718,7 +718,7 @@ struct isp_ic_dev {
 #ifdef ISP8000NANO_V1802
 	struct regmap *mix_gpr;
 #endif
-#if defined(__KERNEL__) && defined(ENABLE_IRQ)
+#if defined(__KERNEL__)
 	struct vvbuf_ctx *bctx;
 	struct vb2_dc_buf *mi_buf[MI_PATH_NUM];
 	struct vb2_dc_buf *mi_buf_shd[MI_PATH_NUM];

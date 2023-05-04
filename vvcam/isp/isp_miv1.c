@@ -115,9 +115,6 @@ int isp_ioc_start_dma_read(struct isp_ic_dev *dev, void *args)
 
 	mi_imsc = isp_read_reg(dev, REG_ADDR(mi_imsc));
 	mi_imsc |= MRV_MI_DMA_READY_MASK;
-#ifndef ENABLE_IRQ
-	mi_imsc = 0;
-#endif
 	isp_write_reg(dev, REG_ADDR(mi_imsc), mi_imsc);
 	isp_write_reg(dev, REG_ADDR(mi_dma_start), MRV_MI_DMA_START_MASK);
 	return 0;
@@ -307,9 +304,6 @@ int isp_bppath_start(struct isp_ic_dev *dev)
 	}
 	bp_ctrl |= MRV_MI_BP_PATH_ENABLE_MASK;
 	isp_write_reg(dev, REG_ADDR(mi_bp_ctrl), bp_ctrl);
-#ifndef ENABLE_IRQ
-	mi_imsc = 0;
-#endif
 	isp_write_reg(dev, REG_ADDR(mi_imsc), mi_imsc);
 	return 0;
 }
@@ -501,13 +495,7 @@ int isp_mi_start(struct isp_ic_dev *dev)
 		     MRV_MI_WRAP_SP_CB_MASK | MRV_MI_WRAP_SP_CR_MASK);
 	}
 
-#if defined(ENABLE_IRQ)
-		*dev->state |= STATE_DRIVER_STARTED;
-#endif
-
-#ifndef ENABLE_IRQ
-	mi_imsc = 0;
-#endif
+	*dev->state |= STATE_DRIVER_STARTED;
 
 	mi_ctrl |= (MRV_MI_INIT_BASE_EN_MASK | MRV_MI_INIT_OFFSET_EN_MASK);
 	REG_SET_SLICE(mi_ctrl, MRV_MI_BURST_LEN_CHROM, mi.burst_len);
@@ -520,17 +508,13 @@ int isp_mi_start(struct isp_ic_dev *dev)
 	isp_bppath_start(dev);
 #endif
 
-#if defined(ENABLE_IRQ)
 	/*set memory for first frame, need set MRV_MI_MI_CFG_UPD bit to update memory to mi shadow address*/
 	update_dma_buffer(dev);
-#endif
 
 	isp_write_reg(dev, REG_ADDR(mi_init), mi_init);
 
-#if defined(ENABLE_IRQ)
 	/*prepare  memory for next frame */
 	update_dma_buffer(dev);
-#endif
 	return 0;
 }
 
@@ -553,12 +537,10 @@ int isp_mi_stop(struct isp_ic_dev *dev)
 	REG_SET_SLICE(mi_init, MRV_MI_MI_CFG_UPD, 1);
 	isp_write_reg(dev, REG_ADDR(mi_init), mi_init);
 
-#if defined(ENABLE_IRQ)
 	if (*dev->state & STATE_DRIVER_STARTED) {
 		*dev->state &= ~STATE_DRIVER_STARTED;
 		clean_dma_buffer(dev);
 	}
-#endif
 	return 0;
 }
 

@@ -28,10 +28,7 @@ make KERNEL_SRC=$KERNEL_SOURCE_DIR clean
 if [ "$BUILD_MODE" = 'v4l2' ]
 then
    echo "v4l2 mode build --------------------->"
-   make KERNEL_SRC=$KERNEL_SOURCE_DIR ENABLE_IRQ=yes
-else
-   echo "native mode build --------------------->"
-   make KERNEL_SRC=$KERNEL_SOURCE_DIR ENABLE_IRQ=no
+   make KERNEL_SRC=$KERNEL_SOURCE_DIR
 fi
 
 cd -

@@ -169,9 +169,7 @@ int dwe_read_irq(struct dwe_ic_dev *dev, u32 *ret)
 
 int dwe_start(struct dwe_ic_dev *dev)
 {
-#if defined(ENABLE_IRQ)
 	dwe_write_reg(dev, DEWARP_CTRL, 0x4C800001);
-#endif
 	return 0;
 }
 
@@ -245,25 +243,8 @@ long dwe_priv_ioctl(struct dwe_ic_dev *dev, unsigned int cmd, void *args)
 				 (&dev->info[0][0], args, sizeof(dev->info[0][0])));
 		ret = dwe_s_params(dev, &dev->info[0][0]);
 		break;
-#ifndef ENABLE_IRQ
-	case DWEIOC_ENABLE_BUS:
-		ret = dwe_enable_bus(dev, 1);
-		break;
-	case DWEIOC_DISABLE_BUS:
-		ret = dwe_enable_bus(dev, 0);
-		break;
-	case DWEIOC_DISABLE_IRQ:
-		ret = dwe_disable_irq(dev);
-		break;
-	case DWEIOC_CLEAR_IRQ:
-		ret = dwe_clear_irq(dev);
-		break;
-#endif
 	case DWEIOC_READ_IRQ: {
 		u32 irq = 0;
-#ifndef ENABLE_IRQ
-		ret = dwe_read_irq(dev, &irq);
-#endif
 		viv_check_retval(copy_to_user(args, &irq, sizeof(irq)));
 		break;
 	}
@@ -274,30 +255,15 @@ long dwe_priv_ioctl(struct dwe_ic_dev *dev, unsigned int cmd, void *args)
 		ret = dwe_stop(dev);
 		break;
 	case DWEIOC_START_DMA_READ: {
-#ifndef ENABLE_IRQ
-		u64 addr;
-
-		viv_check_retval(copy_from_user(&addr, args, sizeof(addr)));
-		ret = dwe_start_dma_read(dev, &dev->info[0][0], addr);
-#endif
 		break;
 	}
 	case DWEIOC_SET_BUFFER: {
-#ifndef ENABLE_IRQ
-		u64 addr;
-
-		viv_check_retval(copy_from_user(&addr, args, sizeof(addr)));
-		ret = dwe_set_buffer(dev, &dev->info[0][0], addr);
-#endif
 		break;
 	}
 	case DWEIOC_SET_LUT: {
 		struct lut_info info;
 
 		viv_check_retval(copy_from_user(&info, args, sizeof(info)));
-#ifndef ENABLE_IRQ
-		ret = dwe_set_lut(dev, info.addr);
-#endif
 		break;
 	}
 	case VIDIOC_QUERYCAP:

@@ -92,7 +92,7 @@ struct dwe_ic_dev {
 	int which[MAX_DWE_NUM];
 	void __iomem *base;
 	void __iomem *reset;
-#if defined(__KERNEL__) && defined(ENABLE_IRQ)
+#if defined(__KERNEL__)
 	struct vvbuf_ctx *sink_bctx;
 	struct vvbuf_ctx *src_bctx[MAX_DWE_NUM];
 	dma_addr_t dist_map[MAX_DWE_NUM][MAX_CFG_NUM];

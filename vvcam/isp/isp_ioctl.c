@@ -196,17 +196,9 @@ int isp_enable(struct isp_ic_dev *dev)
 int isp_disable(struct isp_ic_dev *dev)
 {
 	u32 isp_ctrl;
-#ifndef ENABLE_IRQ
-	u32 isp_imsc;
-#endif
 
 	isp_info("enter %s\n", __func__);
 	isp_ctrl = isp_read_reg(dev, REG_ADDR(isp_ctrl));
-#ifndef ENABLE_IRQ
-	isp_imsc = isp_read_reg(dev, REG_ADDR(isp_imsc));
-	isp_imsc |= (MRV_ISP_IMSC_ISP_OFF_MASK | MRV_ISP_IMSC_FRAME_MASK);
-	isp_write_reg(dev, REG_ADDR(isp_imsc), isp_imsc);
-#endif
 	REG_SET_SLICE(isp_ctrl, MRV_ISP_ISP_ENABLE, 0);
 	isp_write_reg(dev, REG_ADDR(isp_ctrl), isp_ctrl);
 	REG_SET_SLICE(isp_ctrl, MRV_ISP_ISP_INFORM_ENABLE, 0);
@@ -2585,12 +2577,8 @@ long isp_priv_ioctl(struct isp_ic_dev *dev, unsigned int cmd, void *args)
 			struct isp_buffer_context buf;
 			viv_check_retval(copy_from_user
 					 (&buf, args, sizeof(buf)));
-#if defined(ENABLE_IRQ)
 			if (dev->alloc)
 				ret = dev->alloc(dev, &buf);
-#else
-			ret = isp_set_buffer(dev, &buf);
-#endif
 			break;
 		}
 	case ISPIOC_SET_BP_BUFFER:{

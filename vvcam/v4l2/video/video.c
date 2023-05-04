@@ -76,9 +76,7 @@
 static struct viv_video_device *vvdev[VIDEO_NODE_NUM];
 static struct list_head file_list_head[VIDEO_NODE_NUM];
 static spinlock_t file_list_lock[VIDEO_NODE_NUM];
-#ifdef ENABLE_IRQ
 static struct media_device mdev;
-#endif
 
 #ifdef CONFIG_VIDEOBUF2_DMA_CONTIG
 struct ext_dma_buf {
@@ -425,13 +423,8 @@ static void buffer_queue(struct vb2_buffer *vb)
 	struct viv_video_file *handle;
 	struct vb2_v4l2_buffer *vbuf;
 	struct vb2_dc_buf *buf;
-#ifdef ENABLE_IRQ
 	struct viv_video_device *vdev;
 	struct media_pad *pad;
-#else
-	struct v4l2_event event;
-	struct viv_video_event *v_event;
-#endif
 
 	if (!vb)
 		return;
@@ -449,7 +442,6 @@ static void buffer_queue(struct vb2_buffer *vb)
 	buf->dma = vb2_dma_contig_plane_dma_addr(vb, DEF_PLANE_NO);
 #endif
 
-#ifdef ENABLE_IRQ
 	vdev = handle->vdev;
 	if (!vdev)
 		return;
@@ -467,24 +459,6 @@ static void buffer_queue(struct vb2_buffer *vb)
 			vdev->dumpbuf = NULL;
 		}
 	}
-#endif
-
-#ifndef ENABLE_IRQ
-	if (handle->streamid < 0)
-		return;
-
-	v_event = (struct viv_video_event *)&event.u.data[0];
-	v_event->stream_id = handle->streamid;
-	v_event->file = &handle->vfh;
-#ifdef CONFIG_VIDEOBUF2_DMA_CONTIG
-	v_event->addr = vb2_dma_contig_plane_dma_addr(vb, DEF_PLANE_NO);
-#endif
-	v_event->buf_index = vb->index;
-	v_event->sync = false;
-	event.type = VIV_VIDEO_EVENT_TYPE;
-	event.id = VIV_VIDEO_EVENT_QBUF;
-	viv_post_event(&event, &handle->vfh, false);
-#endif
 }
 
 static struct vb2_ops buffer_ops = {
@@ -721,7 +695,6 @@ static int get_caps_suppots_event(struct file *file)
 	return viv_post_event(&event, &handle->vfh, true);
 }
 
-#ifdef ENABLE_IRQ
 static struct media_entity *viv_find_entity(struct viv_video_device *dev,
 				const char *name)
 {
@@ -815,7 +788,6 @@ static int viv_config_dwe(struct viv_video_file *handle, bool enable)
 end:
 	return rc;
 }
-#endif
 
 static inline void init_v4l2_fmt(struct v4l2_format *f, unsigned int bpp,
 		    unsigned int depth, unsigned int *bytesperline,
@@ -900,14 +872,12 @@ static long private_ioctl(struct file *file, void *fh,
 		pr_debug("priv ioctl VIV_VIDIOC_S_STREAMID\n");
 		handle->streamid = *((int *)arg);
 		break;
-#ifdef ENABLE_IRQ
 	case VIV_VIDIOC_S_DWECFG:
 		viv_config_dwe(handle, !!*((int *)arg));
 		break;
 	case VIV_VIDIOC_G_DWECFG:
 		*((int *)arg) = handle->vdev->dweEnabled ? 1 : 0;
 		break;
-#endif
 	case VIV_VIDIOC_BUFFER_ALLOC: {
 #ifdef CONFIG_VIDEOBUF2_DMA_CONTIG
 		struct ext_buf_info *ext_buf = (struct ext_buf_info *)arg;
@@ -1174,7 +1144,6 @@ static int vidioc_s_fmt_vid_cap(struct file *file, void *priv,
 	if (ret < 0)
 		return -EINVAL;
 
-#ifdef ENABLE_IRQ
 	if ((f->fmt.pix.pixelformat == V4L2_PIX_FMT_SBGGR8) ||
 	    (f->fmt.pix.pixelformat == V4L2_PIX_FMT_SGBRG8) ||
 	    (f->fmt.pix.pixelformat == V4L2_PIX_FMT_SGRBG8) ||
@@ -1189,7 +1158,6 @@ static int vidioc_s_fmt_vid_cap(struct file *file, void *priv,
 	    (f->fmt.pix.pixelformat == V4L2_PIX_FMT_SRGGB12)) {
 		viv_config_dwe(handle, false);
 	}
-#endif
 
 	handle->vdev->fmt = *f;
 
@@ -1678,24 +1646,12 @@ int vidioc_mmap(struct file *file, struct vm_area_struct *vma)
 	int rc;
 	struct viv_video_file *handle = priv_to_handle(file->private_data);
 	struct viv_video_device *dev = video_drvdata(file);
-#ifndef ENABLE_IRQ
-	struct reserved_mem *rmem = (struct reserved_mem *)dev->rmem;
-	unsigned long reserved_base_addr = 0;
-	if (!rmem)
-		reserved_base_addr = 0;
-	else
-		reserved_base_addr = rmem->base;
-#endif
 
-#ifdef ENABLE_IRQ
 	if (dev->dumpbuf != NULL) {
 		return vb2_mmap(dev->dumpbuf->vb.vb2_buf.vb2_queue, vma);
 	}
 
 	if (handle->streamid < 0)
-#else
-	if (vma->vm_pgoff >= (reserved_base_addr >> PAGE_SHIFT))
-#endif
 		rc = viv_private_mmap(file, vma);
 	else
 		rc = vb2_mmap(&handle->queue, vma);
@@ -1794,7 +1750,6 @@ const struct v4l2_ctrl_config viv_video_ctrls[] = {
 	},
 };
 
-#ifdef ENABLE_IRQ
 static int viv_notifier_bound(struct v4l2_async_notifier *notifier,
 		    struct v4l2_subdev *sd, struct v4l2_async_subdev *asd)
 {
@@ -1897,7 +1852,6 @@ static void viv_buf_notify(struct vvbuf_ctx *ctx, struct vb2_dc_buf *buf)
 static const struct vvbuf_ops viv_buf_ops = {
 	.notify = viv_buf_notify,
 };
-#endif
 
 static int video_info_procfs_show(struct seq_file *sfile, void *offset)
 {
@@ -1989,43 +1943,6 @@ static inline int viv_find_compatible_nodes(struct dev_node *nodes, int size)
 	}
 	return cnt;
 }
-#ifndef ENABLE_IRQ
-static struct reserved_mem * viv_find_isp_reserve_mem(int dev_id)
-{
-	int i,rc;
-	int id=0;
-	struct device_node *node = NULL;
-	struct device_node *mem_node;
-
-	for (i=0; i<VIDEO_NODE_NUM; i++)
-	{
-		node = of_find_compatible_node(node,
-					NULL, ISP_COMPAT_NAME);
-		if (!node)
-			break;
-		rc = fwnode_property_read_u32(
-					of_fwnode_handle(node), "id", &id);
-		if (rc) {
-			pr_err("%s:get fwnode id failed \n",__func__);
-			break;
-		}
-
-		if (id == dev_id) {
-			of_node_put(node);
-			mem_node = of_parse_phandle(node, "memory-region", 0);
-			if (!mem_node) {
-				pr_err("No memory-region found\n");
-				return NULL;
-			}
-			return of_reserved_mem_lookup(mem_node);
-		}
-	}
-	if (node)
-		of_node_put(node);
-
-	return NULL;
-}
-#endif
 
 extern struct v4l2_subdev *g_dwe_subdev[2];
 static int viv_video_probe(struct platform_device *pdev)
@@ -2036,14 +1953,12 @@ static int viv_video_probe(struct platform_device *pdev)
 	struct dev_node nodes[MAX_SUBDEVS_NUM];
 	int nodecount;
 
-#ifdef ENABLE_IRQ
 	int j;
 	struct v4l2_async_subdev *asd;
 	strscpy(mdev.model, "viv_media", sizeof(mdev.model));
 	mdev.ops = &viv_mdev_ops;
 	mdev.dev = &pdev->dev;
 	media_device_init(&mdev);
-#endif
 
 	memset(nodes, 0, sizeof(nodes));
 	nodecount = viv_find_compatible_nodes(nodes, MAX_SUBDEVS_NUM);
@@ -2067,9 +1982,6 @@ static int viv_video_probe(struct platform_device *pdev)
 			}
 			vdev = vvdev[video_id];
 			vdev->id = video_id;
-#ifndef ENABLE_IRQ
-			vdev->rmem = viv_find_isp_reserve_mem(vdev->id);
-#endif
 			vdev->v4l2_dev = kzalloc(sizeof(*vdev->v4l2_dev), GFP_KERNEL);
 			if (WARN_ON(!vdev->v4l2_dev)) {
 				rc = -ENOMEM;
@@ -2101,7 +2013,6 @@ static int viv_video_probe(struct platform_device *pdev)
 			vdev->video->device_caps =
 					V4L2_CAP_VIDEO_CAPTURE | V4L2_CAP_STREAMING;
 #endif
-#ifdef ENABLE_IRQ
 			video_set_drvdata(vdev->video, vdev);
 
 			vvbuf_ctx_init(&vdev->bctx);
@@ -2128,7 +2039,6 @@ static int viv_video_probe(struct platform_device *pdev)
 #endif
 
 			vdev->subdev_notifier.ops = &sd_async_notifier_ops;
-#endif
 
 #if LINUX_VERSION_CODE > KERNEL_VERSION(5, 10, 0)
 			rc = video_register_device(vdev->video, VFL_TYPE_VIDEO, -1);
@@ -2138,7 +2048,6 @@ static int viv_video_probe(struct platform_device *pdev)
 			if (WARN_ON(rc < 0))
 				goto register_fail;
 
-#ifdef ENABLE_IRQ
 			for (j = 0; j < nodecount; ++j) {
 				if (nodes[j].id == video_id) {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 16, 0)
@@ -2196,11 +2105,6 @@ static int viv_video_probe(struct platform_device *pdev)
 #endif
 			if (WARN_ON(rc < 0))
 				goto register_fail;
-#else
-			video_set_drvdata(vdev->video, vdev);
-
-			rc = v4l2_device_register_subdev_nodes(vdev->v4l2_dev);
-#endif
 			rc = video_create_procfs(vdev);
 			if (rc < 0) {
 				pr_err("create video proc fs failed.\n");
@@ -2234,10 +2138,8 @@ register_fail:
 			video_device_release(vdev->video);
 		}
 	}
-#ifdef ENABLE_IRQ
 	if (!rc)
 		rc = media_device_register(&mdev);
-#endif
 probe_end:
 	return rc;
 }
@@ -2251,7 +2153,6 @@ static int viv_video_remove(struct platform_device *pdev)
 		vdev = vvdev[i];
 		if (!vdev || !vdev->video)
 			continue;
-#ifdef ENABLE_IRQ
 		media_entity_cleanup(&vdev->video->entity);
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 16, 0)
 		v4l2_async_nf_cleanup(&vdev->subdev_notifier);
@@ -2263,14 +2164,8 @@ static int viv_video_remove(struct platform_device *pdev)
 
 		v4l2_device_unregister(vdev->v4l2_dev);
 		kfree(vdev->v4l2_dev);
-#endif
 		video_unregister_device(vdev->video);
-#ifdef ENABLE_IRQ
 		vvbuf_ctx_deinit(&vdev->bctx);
-#else
-		v4l2_device_disconnect(vdev->video->v4l2_dev);
-		v4l2_device_put(vdev->video->v4l2_dev);
-#endif
 
 		mutex_destroy(&vdev->event_lock);
 		dma_free_coherent(&(pdev->dev), VIV_JSON_BUFFER_SIZE,
@@ -2281,10 +2176,8 @@ static int viv_video_remove(struct platform_device *pdev)
 		vvdev[i] = NULL;
 	}
 
-#ifdef ENABLE_IRQ
 	media_device_unregister(&mdev);
 	media_device_cleanup(&mdev);
-#endif
 	return 0;
 }
 

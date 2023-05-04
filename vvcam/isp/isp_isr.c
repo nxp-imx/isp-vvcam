@@ -50,7 +50,6 @@
  * version of this file.
  *
  *****************************************************************************/
-#ifdef ENABLE_IRQ
 
 #include <linux/version.h>
 #include "isp_ioctl.h"
@@ -378,4 +377,3 @@ irqreturn_t isp_hw_isr(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
-#endif
