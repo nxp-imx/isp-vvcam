@@ -173,6 +173,7 @@ static void isr_process_frame(struct isp_ic_dev *dev)
 			continue;
 
 		if (dev->mi_buf_shd[i]) {
+			dev->mi_buf_shd[i]->timestamp = dev->frame_in_timestamp;
 			vvbuf_ready(dev->bctx, dev->mi_buf_shd[i]->pad, dev->mi_buf_shd[i]);
 			dev->mi_buf_shd[i] = NULL;
 			isp_fps_stat(dev, i);
@@ -321,8 +322,10 @@ irqreturn_t isp_hw_isr(int irq, void *data)
 		pr_debug("MI FIFO full: 0x%x\n", mi_status);
 	}
 
-	if (isp_mis & MRV_ISP_MIS_FRAME_IN_MASK)
+	if (isp_mis & MRV_ISP_MIS_FRAME_IN_MASK) {
 		dev->frame_in_cnt++;
+		dev->frame_in_timestamp = ktime_get_ns();
+	}
 
 	if (isp_mis & MRV_ISP_MIS_FRAME_MASK) {
 		spin_lock_irqsave(&dev->irqlock, flags);

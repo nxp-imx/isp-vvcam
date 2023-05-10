@@ -736,6 +736,7 @@ struct isp_ic_dev {
 	uint32_t frame_cnt[MI_PATH_NUM];
 	uint32_t fps[MI_PATH_NUM];
 	uint64_t frame_in_cnt;
+	uint64_t frame_in_timestamp;
 #endif
 
 	void (*post_event)(struct isp_ic_dev *dev, void *data, size_t size);
