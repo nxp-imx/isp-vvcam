@@ -1831,7 +1831,7 @@ static void viv_buf_notify(struct vvbuf_ctx *ctx, struct vb2_dc_buf *buf)
 			vdev->fmt.fmt.pix.sizeimage;
 	cur_ts = ktime_get_ns();
 #if LINUX_VERSION_CODE > KERNEL_VERSION(5, 0, 0)
-	buf->vb.vb2_buf.timestamp = cur_ts;
+	buf->vb.vb2_buf.timestamp = buf->timestamp;
 #endif
 	vb2_buffer_done(&buf->vb.vb2_buf, VB2_BUF_STATE_DONE);
 

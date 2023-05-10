@@ -103,6 +103,7 @@ void dwe_isr_tasklet(unsigned long arg)
 		}
 	} while (dev->dst == NULL);
 
+	dev->dst->timestamp = dev->src->timestamp;
 	dwe_s_params(dev, &dev->info[dev->index][which]);
 	dwe_set_buffer(dev, &dev->info[dev->index][which], dev->dst->dma);
 	dwe_set_lut(dev, dev->dist_map[dev->index][which]);
