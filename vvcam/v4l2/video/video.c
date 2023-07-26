@@ -50,7 +50,7 @@
  * version of this file.
  *
  *****************************************************************************/
-#ifdef CONFIG_VIDEOBUF2_DMA_CONTIG
+#if IS_ENABLED(CONFIG_VIDEOBUF2_DMA_CONTIG)
 # include <linux/dma-direct.h>
 #endif
 #include <linux/module.h>
@@ -78,7 +78,7 @@ static struct list_head file_list_head[VIDEO_NODE_NUM];
 static spinlock_t file_list_lock[VIDEO_NODE_NUM];
 static struct media_device mdev;
 
-#ifdef CONFIG_VIDEOBUF2_DMA_CONTIG
+#if IS_ENABLED(CONFIG_VIDEOBUF2_DMA_CONTIG)
 struct ext_dma_buf {
 	dma_addr_t addr;
 	void *vaddr;
@@ -438,7 +438,7 @@ static void buffer_queue(struct vb2_buffer *vb)
 	if (!handle)
 		return;
 
-#ifdef CONFIG_VIDEOBUF2_DMA_CONTIG
+#if IS_ENABLED(CONFIG_VIDEOBUF2_DMA_CONTIG)
 	buf->dma = vb2_dma_contig_plane_dma_addr(vb, DEF_PLANE_NO);
 #endif
 
@@ -487,7 +487,7 @@ static int video_open(struct file *file)
 	handle->queue.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	handle->queue.drv_priv = handle;
 	handle->queue.ops = &buffer_ops;
-#ifdef CONFIG_VIDEOBUF2_DMA_CONTIG
+#if IS_ENABLED(CONFIG_VIDEOBUF2_DMA_CONTIG)
 	handle->queue.io_modes = VB2_MMAP | VB2_DMABUF;
 	handle->queue.mem_ops = &vb2_dma_contig_memops;
 #endif
@@ -507,7 +507,7 @@ static int video_open(struct file *file)
 	mutex_init(&handle->buffer_mutex);
 	init_completion(&handle->wait);
 
-#ifdef CONFIG_VIDEOBUF2_DMA_CONTIG
+#if IS_ENABLED(CONFIG_VIDEOBUF2_DMA_CONTIG)
 	INIT_LIST_HEAD(&handle->extdmaqueue);
 #endif
 
@@ -563,7 +563,7 @@ static int video_close(struct file *file)
 		v4l2_fh_del(&handle->vfh);
 		v4l2_fh_exit(&handle->vfh);
 
-#ifdef CONFIG_VIDEOBUF2_DMA_CONTIG
+#if IS_ENABLED(CONFIG_VIDEOBUF2_DMA_CONTIG)
 		{
 			struct ext_dma_buf *edb = NULL;
 
@@ -879,7 +879,7 @@ static long private_ioctl(struct file *file, void *fh,
 		*((int *)arg) = handle->vdev->dweEnabled ? 1 : 0;
 		break;
 	case VIV_VIDIOC_BUFFER_ALLOC: {
-#ifdef CONFIG_VIDEOBUF2_DMA_CONTIG
+#if IS_ENABLED(CONFIG_VIDEOBUF2_DMA_CONTIG)
 		struct ext_buf_info *ext_buf = (struct ext_buf_info *)arg;
 		struct ext_dma_buf *edb = kzalloc(sizeof(*edb), GFP_KERNEL);
 
@@ -902,7 +902,7 @@ static long private_ioctl(struct file *file, void *fh,
 		break;
 	}
 	case VIV_VIDIOC_BUFFER_FREE: {
-#ifdef CONFIG_VIDEOBUF2_DMA_CONTIG
+#if IS_ENABLED(CONFIG_VIDEOBUF2_DMA_CONTIG)
 		struct ext_buf_info *ext_buf = (struct ext_buf_info *)arg;
 		struct ext_dma_buf *b, *edb = NULL;
 
@@ -1612,8 +1612,11 @@ static int viv_private_mmap(struct file *file, struct vm_area_struct *vma)
 	struct viv_video_device *vdev = video_drvdata(file);
 	int ret  = 0;
 	bool dma_coherent = false;
+#if IS_ENABLED(CONFIG_VIDEOBUF2_DMA_CONTIG)
 	struct ext_dma_buf *b, *edb = NULL;
+#endif
 
+#if IS_ENABLED(CONFIG_VIDEOBUF2_DMA_CONTIG)
 	list_for_each_entry(b, &handle->extdmaqueue, entry) {
 		if ((b->addr >> PAGE_SHIFT) == vma->vm_pgoff) {
 			dma_coherent = true;
@@ -1621,7 +1624,7 @@ static int viv_private_mmap(struct file *file, struct vm_area_struct *vma)
 			break;
 		}
 	}
-
+#endif
 	if(vma->vm_pgoff == vdev->ctrls.buf_pa >> PAGE_SHIFT) {
 		vma->vm_pgoff = 0;
 		vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
@@ -1630,8 +1633,10 @@ static int viv_private_mmap(struct file *file, struct vm_area_struct *vma)
 	} else if (dma_coherent) {
 		vma->vm_pgoff = 0;
 		vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
+#if IS_ENABLED(CONFIG_VIDEOBUF2_DMA_CONTIG)
 		ret = dma_mmap_coherent(handle->queue.dev, vma, edb->vaddr,
 			edb->addr, vma->vm_end - vma->vm_start);
+#endif
 	}else {
 		ret = remap_pfn_range(vma, vma->vm_start, vma->vm_pgoff,
 			vma->vm_end - vma->vm_start,vma->vm_page_prot);

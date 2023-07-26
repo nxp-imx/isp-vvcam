@@ -141,7 +141,7 @@ struct viv_video_file {
 	struct list_head entry;
 	struct viv_video_device *vdev;
 	int pipeline;
-#ifdef CONFIG_VIDEOBUF2_DMA_CONTIG
+#if IS_ENABLED(CONFIG_VIDEOBUF2_DMA_CONTIG)
 	struct list_head extdmaqueue;
 #endif
 };
