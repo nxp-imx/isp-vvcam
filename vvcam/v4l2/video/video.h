@@ -95,7 +95,7 @@ struct viv_video_device {
 	struct v4l2_async_notifier subdev_notifier;
 	struct v4l2_subdev *subdevs[MAX_SUBDEVS_NUM];
 	int sdcount;
-	struct v4l2_async_subdev *asd[MAX_SUBDEVS_NUM];
+	struct v4l2_async_connection *asd[MAX_SUBDEVS_NUM];
 	int asdcount;
 	struct media_device *mdev;
 	struct media_pad pad;

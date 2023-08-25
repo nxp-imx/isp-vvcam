@@ -1756,7 +1756,8 @@ const struct v4l2_ctrl_config viv_video_ctrls[] = {
 };
 
 static int viv_notifier_bound(struct v4l2_async_notifier *notifier,
-		    struct v4l2_subdev *sd, struct v4l2_async_subdev *asd)
+		    struct v4l2_subdev *sd,
+		    struct v4l2_async_connection *asc)
 {
 	struct viv_video_device *dev = container_of(notifier,
 			struct viv_video_device, subdev_notifier);
@@ -1941,7 +1942,7 @@ static inline int viv_find_compatible_nodes(struct dev_node *nodes, int size)
 			if (avail) {
 				nodes[cnt].node = avail;
 				nodes[cnt].id = id;
-				nodes[cnt].match_type = V4L2_ASYNC_MATCH_FWNODE;
+				nodes[cnt].match_type = V4L2_ASYNC_MATCH_TYPE_FWNODE;
 				cnt++;
 			}
 		}
@@ -1959,7 +1960,7 @@ static int viv_video_probe(struct platform_device *pdev)
 	int nodecount;
 
 	int j;
-	struct v4l2_async_subdev *asd;
+	struct v4l2_async_connection *asd;
 	strscpy(mdev.model, "viv_media", sizeof(mdev.model));
 	mdev.ops = &viv_mdev_ops;
 	mdev.dev = &pdev->dev;
@@ -2037,12 +2038,7 @@ static int viv_video_probe(struct platform_device *pdev)
 			if (WARN_ON(rc < 0))
 				goto register_fail;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 16, 0)
-			v4l2_async_nf_init(&vdev->subdev_notifier);
-#else
-			v4l2_async_notifier_init(&vdev->subdev_notifier);
-#endif
-
+			v4l2_async_nf_init(&vdev->subdev_notifier, vdev->v4l2_dev);
 			vdev->subdev_notifier.ops = &sd_async_notifier_ops;
 
 #if LINUX_VERSION_CODE > KERNEL_VERSION(5, 10, 0)
@@ -2055,22 +2051,10 @@ static int viv_video_probe(struct platform_device *pdev)
 
 			for (j = 0; j < nodecount; ++j) {
 				if (nodes[j].id == video_id) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 16, 0)
-						asd = __v4l2_async_nf_add_fwnode(
-							&vdev->subdev_notifier,
-							of_fwnode_handle(nodes[j].node),
-							sizeof(struct v4l2_async_subdev));
-#elif LINUX_VERSION_CODE > KERNEL_VERSION(5, 12, 0)
-						asd = __v4l2_async_notifier_add_fwnode_subdev(
-							&vdev->subdev_notifier,
-							of_fwnode_handle(nodes[j].node),
-							sizeof(struct v4l2_async_subdev));
-#else
-						asd = v4l2_async_notifier_add_fwnode_subdev(
-							&vdev->subdev_notifier,
-							of_fwnode_handle(nodes[j].node),
-							sizeof(struct v4l2_async_subdev));
-#endif
+					asd = __v4l2_async_nf_add_fwnode(
+						&vdev->subdev_notifier,
+						of_fwnode_handle(nodes[j].node),
+						sizeof(struct v4l2_async_connection));
 					if (asd) {
 						vdev->asd[vdev->asdcount] = asd;
 						vdev->asdcount++;
@@ -2079,35 +2063,17 @@ static int viv_video_probe(struct platform_device *pdev)
 			}
 
 			if (g_dwe_subdev[video_id]) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 16, 0)
 				asd = __v4l2_async_nf_add_fwnode(
 					&vdev->subdev_notifier,
 					g_dwe_subdev[video_id]->fwnode,
-					sizeof(struct v4l2_async_subdev));
-#elif LINUX_VERSION_CODE > KERNEL_VERSION(5, 12, 0)
-				asd = __v4l2_async_notifier_add_fwnode_subdev(
-					&vdev->subdev_notifier,
-					g_dwe_subdev[video_id]->fwnode,
-					sizeof(struct v4l2_async_subdev));
-#else
-				asd = v4l2_async_notifier_add_fwnode_subdev(
-					&vdev->subdev_notifier,
-					g_dwe_subdev[video_id]->fwnode,
-					sizeof(struct v4l2_async_subdev));
-#endif
+					sizeof(struct v4l2_async_connection));
 				if (asd) {
 						vdev->asd[vdev->asdcount] = asd;
 						vdev->asdcount++;
 				}
 			}
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 16, 0)
-			rc = v4l2_async_nf_register(vdev->v4l2_dev,
-					&vdev->subdev_notifier);
-#else
-			rc = v4l2_async_notifier_register(vdev->v4l2_dev,
-					&vdev->subdev_notifier);
-#endif
+			rc = v4l2_async_nf_register(&vdev->subdev_notifier);
 			if (WARN_ON(rc < 0))
 				goto register_fail;
 			rc = video_create_procfs(vdev);
