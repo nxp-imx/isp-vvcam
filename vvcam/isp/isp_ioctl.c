@@ -2600,6 +2600,16 @@ long isp_priv_ioctl(struct isp_ic_dev *dev, unsigned int cmd, void *args)
 					dev->frame_cnt[i] = 0;
 					dev->last_ns[i] = 0;
 				}
+
+#ifdef ENABLE_LATENCY_STATISTIC
+				dev->latency_stat_frame = 0;
+				dev->frame_id_latency = 0;
+				dev->frame_out_timestamp = 0;
+				dev->interleave_frames = 0;
+				memset(dev->isp_in_timestamp, 0, sizeof(dev->isp_in_timestamp));
+				memset(dev->isp_out_timestamp, 0,
+						sizeof(dev->isp_out_timestamp));
+#endif
 			}
 			break;
 		}

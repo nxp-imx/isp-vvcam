@@ -115,6 +115,10 @@ void dwe_isr_tasklet(unsigned long arg)
 	dwe_enable_bus(dev, 1);
 	dev->curmap[dev->index][which] = dev->dist_map[dev->index][which];
 	spin_unlock_irqrestore(&dev->irqlock, flags);
+#ifdef ENABLE_LATENCY_STATISTIC
+	dev->dwe_frame_cnt++;
+	dev->frame_in_timestamp = ktime_get_ns();
+#endif
 }
 
 void dwe_clear_interrupts(struct dwe_ic_dev *dev)
@@ -125,6 +129,83 @@ void dwe_clear_interrupts(struct dwe_ic_dev *dev)
 	clr = (status & 0xFF) << 24;
 	dwe_write_reg(dev, INTERRUPT_STATUS, clr);
 }
+
+#ifdef ENABLE_LATENCY_STATISTIC
+void dwe_latency_statistic(struct dwe_ic_dev *dev)
+{
+	int i = 0;
+	uint64_t average_latency_ns = 0;
+
+	if (dev->dwe_frame_cnt < LATENCY_START_STATISTIC)
+		return;
+
+	if (dev->interleave_frames > 0 &&
+		dev->interleave_frames <= LATENCY_INTERLEVE_FRAME) {
+		dev->interleave_frames++;
+		return;
+	}
+
+	dev->interleave_frames = 0;
+
+	dev->dwe_in_timestamp[dev->frame_id_latency]  = dev->frame_in_timestamp;
+	dev->dwe_out_timestamp[dev->frame_id_latency] = dev->frame_out_timestamp;
+	if (dev->frame_id_latency == (LATENCY_FRAME_NUM - 1)) {
+		pr_info("dwe[%d] dwe_in_timestamp(ns) [%lld~%lld]:\n"
+			"%lld ,%lld ,%lld ,%lld ,%lld ,%lld ,%lld ,%lld\n"
+			"%lld ,%lld ,%lld ,%lld ,%lld ,%lld ,%lld ,%lld\n"
+			"%lld ,%lld ,%lld ,%lld ,%lld ,%lld ,%lld ,%lld\n",
+			dev->index, dev->dwe_frame_cnt - LATENCY_FRAME_NUM + 1,
+			dev->dwe_frame_cnt,
+			dev->dwe_in_timestamp[0], dev->dwe_in_timestamp[1],
+			dev->dwe_in_timestamp[2], dev->dwe_in_timestamp[3],
+			dev->dwe_in_timestamp[4], dev->dwe_in_timestamp[5],
+			dev->dwe_in_timestamp[6], dev->dwe_in_timestamp[7],
+			dev->dwe_in_timestamp[8], dev->dwe_in_timestamp[9],
+			dev->dwe_in_timestamp[10], dev->dwe_in_timestamp[11],
+			dev->dwe_in_timestamp[12], dev->dwe_in_timestamp[13],
+			dev->dwe_in_timestamp[14], dev->dwe_in_timestamp[15],
+			dev->dwe_in_timestamp[16], dev->dwe_in_timestamp[17],
+			dev->dwe_in_timestamp[18], dev->dwe_in_timestamp[19],
+			dev->dwe_in_timestamp[20], dev->dwe_in_timestamp[21],
+			dev->dwe_in_timestamp[22], dev->dwe_in_timestamp[23]
+		);
+
+		pr_info("dwe[%d] dwe_out_timestamp(ns) [%lld~%lld]:\n"
+			"%lld ,%lld ,%lld ,%lld ,%lld ,%lld ,%lld ,%lld\n"
+			"%lld ,%lld ,%lld ,%lld ,%lld ,%lld ,%lld ,%lld\n"
+			"%lld ,%lld ,%lld ,%lld ,%lld ,%lld ,%lld ,%lld\n",
+			dev->index, dev->dwe_frame_cnt - LATENCY_FRAME_NUM + 1,
+			dev->dwe_frame_cnt,
+			dev->dwe_out_timestamp[0], dev->dwe_out_timestamp[1],
+			dev->dwe_out_timestamp[2], dev->dwe_out_timestamp[3],
+			dev->dwe_out_timestamp[4], dev->dwe_out_timestamp[5],
+			dev->dwe_out_timestamp[6], dev->dwe_out_timestamp[7],
+			dev->dwe_out_timestamp[8], dev->dwe_out_timestamp[9],
+			dev->dwe_out_timestamp[10], dev->dwe_out_timestamp[11],
+			dev->dwe_out_timestamp[12], dev->dwe_out_timestamp[13],
+			dev->dwe_out_timestamp[14], dev->dwe_out_timestamp[15],
+			dev->dwe_out_timestamp[16], dev->dwe_out_timestamp[17],
+			dev->dwe_out_timestamp[18], dev->dwe_out_timestamp[19],
+			dev->dwe_out_timestamp[20], dev->dwe_out_timestamp[21],
+			dev->dwe_out_timestamp[22], dev->dwe_out_timestamp[23]
+		);
+
+		pr_info("dwe[%d] average latency(ns) [%lld~%lld]:\n",
+			dev->index, dev->dwe_frame_cnt - LATENCY_FRAME_NUM + 1,
+			dev->dwe_frame_cnt);
+		for (i = 0; i < LATENCY_FRAME_NUM; i++) {
+			average_latency_ns +=
+				(dev->dwe_out_timestamp[i] - dev->dwe_in_timestamp[i]);
+		}
+		pr_info("%lld\n", average_latency_ns / LATENCY_FRAME_NUM);
+
+		dev->frame_id_latency = 0;
+		dev->interleave_frames++;
+	} else if (dev->frame_id_latency < (LATENCY_FRAME_NUM - 1)) {
+		dev->frame_id_latency++;
+	}
+}
+#endif
 
 irqreturn_t dwe_hw_isr(int irq, void *data)
 {
@@ -144,6 +225,10 @@ irqreturn_t dwe_hw_isr(int irq, void *data)
 	if ((dev->state[0] && (*dev->state[0] == dwe_status_active)) ||
 	    (dev->state[1] && (*dev->state[1] == dwe_status_active))) {
 		if (status & INT_FRAME_DONE) {
+#ifdef ENABLE_LATENCY_STATISTIC
+			dev->frame_out_timestamp = ktime_get_ns();
+			dwe_latency_statistic(dev);
+#endif
 			spin_lock_irqsave(&dev->irqlock, flags);
 			if (dev->src) {
 				vvbuf_ready(dev->sink_bctx, dev->src->pad, dev->src);

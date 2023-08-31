@@ -156,6 +156,81 @@ static void isp_fps_stat(struct isp_ic_dev *dev, int path)
 		dev->last_ns[path] = cur_ns;
 	}
 }
+#ifdef ENABLE_LATENCY_STATISTIC
+void isp_latency_statistic(struct isp_ic_dev *dev)
+{
+	int i = 0;
+	uint64_t average_latency_ns = 0;
+
+	if (dev->frame_in_cnt < LATENCY_START_STATISTIC)
+		return;
+
+	if (dev->interleave_frames > 0 &&
+		dev->interleave_frames < LATENCY_INTERLEVE_FRAME) {
+		dev->interleave_frames++;
+		return;
+	}
+
+	dev->interleave_frames = 0;
+	dev->isp_in_timestamp[dev->frame_id_latency]  = dev->frame_in_timestamp;
+	dev->isp_out_timestamp[dev->frame_id_latency] = dev->frame_out_timestamp;
+	if (dev->frame_id_latency == (LATENCY_FRAME_NUM - 1)) {
+		pr_info("isp[%d] isp_in_timestamp(ns) [%lld~%lld]:\n"
+			"%lld ,%lld ,%lld ,%lld ,%lld ,%lld ,%lld ,%lld\n"
+			"%lld ,%lld ,%lld ,%lld ,%lld ,%lld ,%lld ,%lld\n"
+			"%lld ,%lld ,%lld ,%lld ,%lld ,%lld ,%lld ,%lld\n",
+			dev->id, dev->frame_in_cnt - LATENCY_FRAME_NUM + 1,
+			dev->frame_in_cnt,
+			dev->isp_in_timestamp[0], dev->isp_in_timestamp[1],
+			dev->isp_in_timestamp[2], dev->isp_in_timestamp[3],
+			dev->isp_in_timestamp[4], dev->isp_in_timestamp[5],
+			dev->isp_in_timestamp[6], dev->isp_in_timestamp[7],
+			dev->isp_in_timestamp[8], dev->isp_in_timestamp[9],
+			dev->isp_in_timestamp[10], dev->isp_in_timestamp[11],
+			dev->isp_in_timestamp[12], dev->isp_in_timestamp[13],
+			dev->isp_in_timestamp[14], dev->isp_in_timestamp[15],
+			dev->isp_in_timestamp[16], dev->isp_in_timestamp[17],
+			dev->isp_in_timestamp[18], dev->isp_in_timestamp[19],
+			dev->isp_in_timestamp[20], dev->isp_in_timestamp[21],
+			dev->isp_in_timestamp[22], dev->isp_in_timestamp[23]
+		);
+
+		pr_info("isp[%d] isp_out_timestamp(ns)  [%lld~%lld]:\n"
+			"%lld ,%lld ,%lld ,%lld ,%lld ,%lld ,%lld ,%lld\n"
+			"%lld ,%lld ,%lld ,%lld ,%lld ,%lld ,%lld ,%lld\n"
+			"%lld ,%lld ,%lld ,%lld ,%lld ,%lld ,%lld ,%lld\n",
+			dev->id, dev->frame_in_cnt - LATENCY_FRAME_NUM + 1,
+			dev->frame_in_cnt,
+			dev->isp_out_timestamp[0], dev->isp_out_timestamp[1],
+			dev->isp_out_timestamp[2], dev->isp_out_timestamp[3],
+			dev->isp_out_timestamp[4], dev->isp_out_timestamp[5],
+			dev->isp_out_timestamp[6], dev->isp_out_timestamp[7],
+			dev->isp_out_timestamp[8], dev->isp_out_timestamp[9],
+			dev->isp_out_timestamp[10], dev->isp_out_timestamp[11],
+			dev->isp_out_timestamp[12], dev->isp_out_timestamp[13],
+			dev->isp_out_timestamp[14], dev->isp_out_timestamp[15],
+			dev->isp_out_timestamp[16], dev->isp_out_timestamp[17],
+			dev->isp_out_timestamp[18], dev->isp_out_timestamp[19],
+			dev->isp_out_timestamp[20], dev->isp_out_timestamp[21],
+			dev->isp_out_timestamp[22], dev->isp_out_timestamp[23]
+		);
+
+		pr_info("isp[%d] average latency(ns) [%lld~%lld]:\n",
+			dev->id, dev->frame_in_cnt - LATENCY_FRAME_NUM + 1,
+			dev->frame_in_cnt);
+		for (i = 0; i < LATENCY_FRAME_NUM; i++) {
+			average_latency_ns +=
+				(dev->isp_out_timestamp[i] - dev->isp_in_timestamp[i]);
+		}
+		pr_info("%lld\n", average_latency_ns / LATENCY_FRAME_NUM);
+
+		dev->frame_id_latency = 0;
+		dev->interleave_frames++;
+	} else if (dev->frame_id_latency < (LATENCY_FRAME_NUM - 1)) {
+		dev->frame_id_latency++;
+	}
+}
+#endif
 
 static void isr_process_frame(struct isp_ic_dev *dev)
 {
@@ -173,6 +248,10 @@ static void isr_process_frame(struct isp_ic_dev *dev)
 			vvbuf_ready(dev->bctx, dev->mi_buf_shd[i]->pad, dev->mi_buf_shd[i]);
 			dev->mi_buf_shd[i] = NULL;
 			isp_fps_stat(dev, i);
+#ifdef ENABLE_LATENCY_STATISTIC
+			if (i == 0)
+				isp_latency_statistic(dev);
+#endif
 		}
 	}
 	spin_unlock_irqrestore(&dev->lock, flags);
@@ -358,6 +437,9 @@ irqreturn_t isp_hw_isr(int irq, void *data)
 
 	if (mi_mis & frameendmask) {
 		if (*dev->state == (STATE_DRIVER_STARTED | STATE_STREAM_STARTED)) {
+#ifdef ENABLE_LATENCY_STATISTIC
+			dev->frame_out_timestamp = ktime_get_ns();
+#endif
 			isr_process_frame(dev);
 		}
 	}

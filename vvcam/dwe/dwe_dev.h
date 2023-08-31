@@ -106,6 +106,16 @@ struct dwe_ic_dev {
 	u32 error;
 	int (*get_index)(struct dwe_ic_dev *dev, struct vb2_dc_buf *buf);
 	struct tasklet_struct tasklet;
+
+#ifdef ENABLE_LATENCY_STATISTIC
+	uint64_t dwe_frame_cnt;
+	uint64_t frame_id_latency;
+	uint64_t frame_in_timestamp;
+	uint64_t frame_out_timestamp;
+	uint32_t interleave_frames;
+	uint64_t dwe_in_timestamp[LATENCY_FRAME_NUM];
+	uint64_t dwe_out_timestamp[LATENCY_FRAME_NUM];
+#endif
 #endif
 
 };
