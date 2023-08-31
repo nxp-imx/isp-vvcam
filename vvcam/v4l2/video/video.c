@@ -1079,9 +1079,6 @@ static int vidioc_try_fmt_vid_cap(struct file *file, void *priv,
 		return -EINVAL;
 
 	f->fmt.pix.field = dev->fmt.fmt.pix.field;
-	if (f->fmt.pix.colorspace == V4L2_COLORSPACE_DEFAULT) {
-		f->fmt.pix.colorspace = dev->fmt.fmt.pix.colorspace;
-	}
 	init_v4l2_fmt(f, format->bpp, format->depth, &bytesperline, &sizeimage);
 	f->fmt.pix.bytesperline = bytesperline;
 	f->fmt.pix.sizeimage = sizeimage;
@@ -2092,7 +2089,8 @@ static int viv_video_probe(struct platform_device *pdev)
 
 			vdev->fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 			vdev->fmt.fmt.pix.field = V4L2_FIELD_NONE;
-			vdev->fmt.fmt.pix.colorspace = V4L2_COLORSPACE_SMPTE170M;
+			vdev->fmt.fmt.pix.colorspace = V4L2_COLORSPACE_DEFAULT;
+			vdev->fmt.fmt.pix.quantization = V4L2_QUANTIZATION_DEFAULT;
 
 			if (sizeof(vdev->formats) >= sizeof(formats)) {
 				memcpy(vdev->formats, formats, sizeof(formats));
