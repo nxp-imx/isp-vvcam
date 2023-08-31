@@ -128,6 +128,12 @@ enum STATE_CODE {
 #define ISP_DEVICE_NAME "vvcam-isp"
 #define DWE_DEVICE_NAME "vvcam-dwe"
 
+#ifdef ENABLE_LATENCY_STATISTIC
+#define LATENCY_INTERLEVE_FRAME		1000
+#define LATENCY_FRAME_NUM			24
+#define LATENCY_START_STATISTIC		500
+#endif
+
 #define ISP_PAD_SOURCE      (0)
 #define ISP_PADS_NUM        (1)
 

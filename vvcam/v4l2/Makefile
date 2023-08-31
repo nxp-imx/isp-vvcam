@@ -11,19 +11,23 @@ ifeq ($(ANDROID), yes)
   PWD := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 endif
 
-EXTRA_CFLAGS += -I$(PWD)/../common/
-EXTRA_CFLAGS += -I$(PWD)/../isp/
-EXTRA_CFLAGS += -I$(PWD)/../v4l2/
+ccflags-y += -I$(PWD)/../common/
+ccflags-y += -I$(PWD)/../isp/
+ccflags-y += -I$(PWD)/../v4l2/
 
-EXTRA_CFLAGS += -O2 -Werror
+ccflags-y += -O2 -Werror
+
+ifeq ($(ENABLE_LATENCY_STATISTIC), yes)
+ccflags-y += -DENABLE_LATENCY_STATISTIC
+endif
 
 include $(PWD)/../version/ISP8000NANO_V1802.mk
 
-EXTRA_CFLAGS += -DISP_REG_SIZE=0x00010000
-EXTRA_CFLAGS += -DDEC_REG_BASE=0x00600000
-EXTRA_CFLAGS += -DDEC_REG_SIZE=0x2000
-EXTRA_CFLAGS += -DRESERVED_MEM_BASE=0xB0000000
-EXTRA_CFLAGS += -DRESERVED_MEM_SIZE=0x10000000
+ccflags-y += -DISP_REG_SIZE=0x00010000
+ccflags-y += -DDEC_REG_BASE=0x00600000
+ccflags-y += -DDEC_REG_SIZE=0x2000
+ccflags-y += -DRESERVED_MEM_BASE=0xB0000000
+ccflags-y += -DRESERVED_MEM_SIZE=0x10000000
 
 vvcam-isp-objs += ../isp/isp_miv1.o
 vvcam-isp-objs += ../isp/isp_miv2.o
@@ -42,7 +46,7 @@ vvcam-isp-objs += isp_driver_of.o
 vvcam-isp-objs += video/vvbuf.o
 obj-m += vvcam-isp.o
 
-EXTRA_CFLAGS += -I$(PWD)/../dwe/
+ccflags-y += -I$(PWD)/../dwe/
 vvcam-dwe-objs += ../dwe/dwe_ioctl.o
 vvcam-dwe-objs += ../dwe/dwe_isr.o
 vvcam-dwe-objs += dwe_driver_of.o

@@ -250,6 +250,14 @@ long dwe_priv_ioctl(struct dwe_ic_dev *dev, unsigned int cmd, void *args)
 	}
 	case DWEIOC_START:
 		ret = dwe_start(dev);
+#ifdef ENABLE_LATENCY_STATISTIC
+		dev->frame_id_latency = 0;
+		dev->frame_out_timestamp = 0;
+		dev->interleave_frames = 0;
+		memset(dev->dwe_in_timestamp, 0, sizeof(dev->dwe_in_timestamp));
+		memset(dev->dwe_out_timestamp, 0,
+				sizeof(dev->dwe_out_timestamp));
+#endif
 		break;
 	case DWEIOC_STOP:
 		ret = dwe_stop(dev);

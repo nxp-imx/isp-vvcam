@@ -737,6 +737,14 @@ struct isp_ic_dev {
 	uint32_t fps[MI_PATH_NUM];
 	uint64_t frame_in_cnt;
 	uint64_t frame_in_timestamp;
+#ifdef ENABLE_LATENCY_STATISTIC
+	uint64_t frame_id_latency;
+	uint64_t frame_out_timestamp;
+	uint64_t latency_stat_frame;
+	uint32_t interleave_frames;
+	uint64_t isp_in_timestamp[LATENCY_FRAME_NUM];
+	uint64_t isp_out_timestamp[LATENCY_FRAME_NUM];
+#endif
 #endif
 
 	void (*post_event)(struct isp_ic_dev *dev, void *data, size_t size);
