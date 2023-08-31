@@ -60,7 +60,6 @@
 
 extern MrvAllRegister_t *all_regs;
 
-#if IS_ENABLED(CONFIG_VIDEOBUF2_DMA_CONTIG)
 static int config_dma_buf(struct isp_mi_data_path_context *path,
 		dma_addr_t dma, struct isp_buffer_context *buf)
 {
@@ -109,11 +108,9 @@ static int config_dma_buf(struct isp_mi_data_path_context *path,
 #endif
 	return 0;
 }
-#endif
 
 int update_dma_buffer(struct isp_ic_dev *dev)
 {
-#if IS_ENABLED(CONFIG_VIDEOBUF2_DMA_CONTIG)
 	int i;
 	unsigned long flags;
 	struct isp_mi_context *mi = &dev->mi;
@@ -141,11 +138,9 @@ int update_dma_buffer(struct isp_ic_dev *dev)
 	}
 	spin_unlock_irqrestore(&dev->lock, flags);
 
-#endif
 	return 0;
 }
 
-#if IS_ENABLED(CONFIG_VIDEOBUF2_DMA_CONTIG)
 static void isp_fps_stat(struct isp_ic_dev *dev, int path)
 {
 	uint64_t cur_ns = 0, interval = 0;
@@ -184,7 +179,6 @@ static void isr_process_frame(struct isp_ic_dev *dev)
 	tasklet_schedule(&dev->tasklet);
 	return;
 }
-#endif
 
 void isp_isr_tasklet(unsigned long arg)
 {
@@ -195,7 +189,6 @@ void isp_isr_tasklet(unsigned long arg)
 
 int clean_dma_buffer(struct isp_ic_dev *dev)
 {
-#if IS_ENABLED(CONFIG_VIDEOBUF2_DMA_CONTIG)
 	int i;
 	struct vb2_dc_buf *buf = NULL;
 	struct isp_device *isp_dev;
@@ -246,7 +239,6 @@ int clean_dma_buffer(struct isp_ic_dev *dev)
 		spin_unlock_irqrestore(&dev->lock, flags);
 	}
 
-#endif
 	return 0;
 }
 
@@ -273,7 +265,6 @@ irqreturn_t isp_hw_isr(int irq, void *data)
 	unsigned long flags;
 	struct isp_ic_dev *dev = (struct isp_ic_dev *)data;
 	static const u32 frameendmask = MRV_MI_MP_FRAME_END_MASK |
-
 #ifdef ISP_MI_BP
 			MRV_MI_BP_FRAME_END_MASK |
 #endif
@@ -367,9 +358,7 @@ irqreturn_t isp_hw_isr(int irq, void *data)
 
 	if (mi_mis & frameendmask) {
 		if (*dev->state == (STATE_DRIVER_STARTED | STATE_STREAM_STARTED)) {
-#if IS_ENABLED(CONFIG_VIDEOBUF2_DMA_CONTIG)
 			isr_process_frame(dev);
-#endif
 		}
 	}
 
