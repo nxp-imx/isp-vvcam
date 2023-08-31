@@ -151,6 +151,8 @@ struct viv_video_file {
 #define VIDEO_FRAME_WIDTH_ALIGN 16
 #define VIDEO_FRAME_HEIGHT_ALIGN 8
 
+#define VIDEO_COLORSPACE_DEFAULT V4L2_COLORSPACE_SMPTE170M
+
 
 
 #define priv_to_handle(priv)	container_of(priv, struct viv_video_file, vfh)
