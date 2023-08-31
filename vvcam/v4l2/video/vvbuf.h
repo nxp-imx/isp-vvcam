@@ -59,6 +59,10 @@
 #include <media/media-entity.h>
 #include <media/videobuf2-v4l2.h>
 
+#if !IS_ENABLED(CONFIG_VIDEOBUF2_DMA_CONTIG)
+#error "CONFIG_VIDEOBUF2_DMA_CONTIG is not enable"
+#endif
+
 struct vb2_dc_buf {
 	struct vb2_v4l2_buffer vb;
 	struct media_pad *pad;
