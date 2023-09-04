@@ -2125,13 +2125,8 @@ static int viv_video_remove(struct platform_device *pdev)
 		if (!vdev || !vdev->video)
 			continue;
 		media_entity_cleanup(&vdev->video->entity);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 16, 0)
-		v4l2_async_nf_cleanup(&vdev->subdev_notifier);
 		v4l2_async_nf_unregister(&vdev->subdev_notifier);
-#else
-		v4l2_async_notifier_cleanup(&vdev->subdev_notifier);
-		v4l2_async_notifier_unregister(&vdev->subdev_notifier);
-#endif
+		v4l2_async_nf_cleanup(&vdev->subdev_notifier);
 
 		v4l2_device_unregister(vdev->v4l2_dev);
 		kfree(vdev->v4l2_dev);
