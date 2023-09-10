@@ -2057,6 +2057,7 @@ static int viv_video_probe(struct platform_device *pdev)
 			rc = v4l2_async_nf_register(&vdev->subdev_notifier);
 			if (WARN_ON(rc < 0))
 				goto register_fail;
+
 			rc = video_create_procfs(vdev);
 			if (rc < 0) {
 				pr_err("create video proc fs failed.\n");

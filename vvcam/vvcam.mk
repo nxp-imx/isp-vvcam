@@ -24,7 +24,6 @@ vvcam: $(VVCAM_KERNELENVSH) $(VVCAM_SRC_PATH)
 	fi
 	@ . $(VVCAM_KERNELENVSH); $(kernel_build_shell_env) \
 	$(MAKE) -C $(VVCAM_SRC_PATH) ANDROID=yes \
-		PWD=$(ANDROID_BUILD_TOP)/vendor/nxp-opensource/verisilicon_sw_isp_vvcam/vvcam/v4l2 \
 		$(CLANG_TO_COMPILE) \
 		$(KERNEL_CFLAGS) \
 		ARCH_TYPE=$(ARCH_TYPE) \
@@ -33,5 +32,5 @@ vvcam: $(VVCAM_KERNELENVSH) $(VVCAM_SRC_PATH)
 	cp $(VVCAM_SRC_PATH)/sensor/camera-proxy-driver/basler-camera-driver-vvcam.ko $(VVCAM_OUT);
 	cp $(VVCAM_SRC_PATH)/sensor/os08a20/os08a20.ko $(VVCAM_OUT);
 	cp $(VVCAM_SRC_PATH)/video/vvcam-video.ko $(VVCAM_OUT);
-	cp $(VVCAM_SRC_PATH)/vvcam-isp.ko $(VVCAM_OUT);
-	cp $(VVCAM_SRC_PATH)/vvcam-dwe.ko $(VVCAM_OUT);
+	cp $(VVCAM_SRC_PATH)/isp/vvcam-isp.ko $(VVCAM_OUT);
+	cp $(VVCAM_SRC_PATH)/dwe/vvcam-dwe.ko $(VVCAM_OUT);

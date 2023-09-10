@@ -85,6 +85,7 @@ long dwe_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 {
 	int ret = 0;
 	struct dwe_device *dwe_dev = v4l2_get_subdevdata(sd);
+
 	mutex_lock(&dwe_dev->core->mutex);
 	ret = dwe_ioctl_compat(sd, cmd, arg);
 	mutex_unlock(&dwe_dev->core->mutex);
@@ -94,7 +95,9 @@ long dwe_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 long dwe_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 {
 	int ret = 0;
+
 	struct dwe_device *dwe_dev = v4l2_get_subdevdata(sd);
+
 	mutex_lock(&dwe_dev->core->mutex);
 	ret = dwe_devcore_ioctl(v4l2_get_subdevdata(sd), cmd, arg);
 	mutex_unlock(&dwe_dev->core->mutex);
@@ -105,6 +108,7 @@ long dwe_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 static int dwe_enable_clocks(struct dwe_device *dwe_dev)
 {
 	int ret;
+
 	ret = clk_prepare_enable(dwe_dev->clk_core);
 	if (ret)
 		return ret;
@@ -148,11 +152,7 @@ int dwe_set_stream(struct v4l2_subdev *sd, int enable)
 
 	pad = &dwe_dev->pads[DWE_PAD_SINK];
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 19, 0)
-	pad = media_entity_remote_pad(pad);
-#else
 	pad = media_pad_remote_pad_first(pad);
-#endif
 
 	if (pad && is_media_entity_v4l2_subdev(pad->entity)) {
 		sd = media_entity_to_v4l2_subdev(pad->entity);
@@ -169,17 +169,17 @@ int dwe_set_stream(struct v4l2_subdev *sd, int enable)
 	return 0;
 }
 
-static struct v4l2_subdev_core_ops dwe_v4l2_subdev_core_ops = {
+static const struct v4l2_subdev_core_ops dwe_v4l2_subdev_core_ops = {
 	.ioctl = dwe_ioctl,
 	.subscribe_event = dwe_subscribe_event,
 	.unsubscribe_event = dwe_unsubscribe_event,
 };
 
-static struct v4l2_subdev_video_ops dwe_v4l2_subdev_video_ops = {
+static const struct v4l2_subdev_video_ops dwe_v4l2_subdev_video_ops = {
 	.s_stream = dwe_set_stream,
 };
 
-static struct v4l2_subdev_ops dwe_v4l2_subdev_ops = {
+static const struct v4l2_subdev_ops dwe_v4l2_subdev_ops = {
 	.core = &dwe_v4l2_subdev_core_ops,
 	.video = &dwe_v4l2_subdev_video_ops,
 };
@@ -200,6 +200,7 @@ static void dwe_src_buf_notify(struct vvbuf_ctx *ctx, struct vb2_dc_buf *buf)
 {
 	struct v4l2_subdev *sd;
 	struct dwe_device *dwe;
+
 	if (unlikely(!ctx || !buf))
 		return;
 	sd = media_entity_to_v4l2_subdev(buf->pad->entity);
@@ -211,7 +212,7 @@ static void dwe_src_buf_notify(struct vvbuf_ctx *ctx, struct vb2_dc_buf *buf)
 	}
 
 	ctx = &dwe->core->bctx[DWE_PAD_SINK];
-	vvbuf_push_buf(ctx,buf);
+	vvbuf_push_buf(ctx, buf);
 	if ((dwe->core->ic_dev.hardware_status == HARDWARE_IDLE) &&
 	    (dwe->state == (STATE_DRIVER_STARTED | STATE_STREAM_STARTED))) {
 		dwe->core->ic_dev.hardware_status = HARDWARE_BUSY;
@@ -227,7 +228,7 @@ static void dwe_dst_buf_notify(struct vvbuf_ctx *ctx, struct vb2_dc_buf *buf)
 {
 	if (unlikely(!ctx || !buf))
 		return;
-	vvbuf_push_buf(ctx,buf);
+	vvbuf_push_buf(ctx, buf);
 }
 
 static const struct vvbuf_ops dwe_dst_buf_ops = {
@@ -236,7 +237,6 @@ static const struct vvbuf_ops dwe_dst_buf_ops = {
 
 static void fake_pdev_release(struct device *dev)
 {
-	pr_info("enter %s\n", __func__);
 }
 
 static struct platform_device fake_pdev = {
@@ -262,14 +262,17 @@ static int dwe_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 
 	mutex_lock(&dwe_dev->core->mutex);
 	pm_runtime_get_sync(pdwe_dev[0]->sd.dev);
-	if ((pdwe_dev[0]->refcnt > 0) || (pdwe_dev[1]->refcnt > 0)) {
+	if ((pdwe_dev[0]->refcnt > 0) || (pdwe_dev[1]->refcnt > 0))
 		goto unlock;
-	}
+
 	if ((pdwe_dev[0]->refcnt + pdwe_dev[1]->refcnt) == 0) {
 		msleep(1);
 		dwe_clear_interrupts(&pdwe_dev[0]->core->ic_dev);
-		if (devm_request_irq(pdwe_dev[0]->sd.dev, pdwe_dev[0]->irq, dwe_hw_isr, IRQF_SHARED,
-					dev_name(pdwe_dev[0]->sd.dev), &pdwe_dev[0]->core->ic_dev) != 0) {
+		if (devm_request_irq(pdwe_dev[0]->sd.dev,
+					pdwe_dev[0]->irq,
+					dwe_hw_isr, IRQF_SHARED,
+					dev_name(pdwe_dev[0]->sd.dev),
+					&pdwe_dev[0]->core->ic_dev) != 0) {
 			pr_err("failed to request irq.\n");
 			pm_runtime_put_sync(pdwe_dev[0]->sd.dev);
 			ret = -1;
@@ -321,7 +324,7 @@ exit:
 	return 0;
 }
 
-static struct v4l2_subdev_internal_ops dwe_internal_ops = {
+static const struct v4l2_subdev_internal_ops dwe_internal_ops = {
 	.open = dwe_open,
 	.close = dwe_close,
 };

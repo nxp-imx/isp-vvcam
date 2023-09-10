@@ -17,7 +17,7 @@ find -name *.ko
 
 
 
-(1)编译imx8-media-dev.ko
+(1)build imx8-media-dev.ko
 mkdir build_v8 && cd build_v8
 make ARCH=arm64 menuconfig
 		Device Drivers  --->
@@ -27,23 +27,23 @@ make ARCH=arm64 menuconfig
 						<M> IMX8 Media Device Driver
 make -j4
 
-(2)编译vvcam
+(2)build vvcam
 make VERSION=ISP8000NANO_V1802 KERNEL_SRC=$(arm_kernel_src)
 
-(3)加载KO
+(3)load KO
 ov2775 insmod:
 cp $Kernel_SRC/driver/staging/media/imx/imx8-media-dev.ko to your board directory
-insmod vvcam-video.ko
 insmod ov2775.ko
 insmod vvcam-dwe.ko
 insmod vvcam-isp.ko
+insmod vvcam-video.ko
 insmod imx8-media-dev.ko
 
 
 os08a20 insmod:
 cp $Kernel_SRC/driver/staging/media/imx/imx8-media-dev.ko to your board directory
-insmod vvcam-video.ko
 insmod os08a20.ko
 insmod vvcam-dwe.ko
 insmod vvcam-isp.ko
+insmod vvcam-video.ko
 insmod imx8-media-dev.ko

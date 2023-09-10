@@ -61,6 +61,7 @@ long dwe_devcore_ioctl(struct dwe_device *dwe, unsigned int cmd, void *args)
 	struct dwe_ic_dev *dev = &dwe->core->ic_dev;
 	int which;
 	long ret = 0;
+	uint32_t lut_status;
 
 	switch (cmd) {
 	case DWEIOC_RESET:
@@ -104,7 +105,6 @@ long dwe_devcore_ioctl(struct dwe_device *dwe, unsigned int cmd, void *args)
 		break;
 	}
 	case DWEIOC_GET_LUT_STATUS: {
-		uint32_t lut_status;
 		which = dev->which[dwe->id];
 		if (dwe->state & STATE_DRIVER_STARTED) {
 			if (dev->dist_map[dwe->id][which] ==
