@@ -1,12 +1,23 @@
 PWD := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 
-TARGET = os08a20
+TARGET = vvcam-dwe
 
 obj-m +=$(TARGET).o
-$(TARGET)-objs += os08a20_mipi_v3.o
+$(TARGET)-objs += dwe_driver_of.o
+$(TARGET)-objs += ../video/vvbuf.o
+$(TARGET)-objs += dwe_devcore.o
+$(TARGET)-objs += ../../dwe/dwe_ioctl.o
+$(TARGET)-objs += ../../dwe/dwe_isr.o
 
-ccflags-y += -I$(PWD)/../../../common/
+ccflags-y += -I$(PWD)
+ccflags-y += -I$(PWD)/../
+ccflags-y += -I$(PWD)/../../common/
+ccflags-y += -I$(PWD)/../../dwe/
 ccflags-y += -O2 -Werror
+
+ifeq ($(ENABLE_LATENCY_STATISTIC), yes)
+ccflags-y += -DENABLE_LATENCY_STATISTIC
+endif
 
 ARCH_TYPE ?= arm64
 ANDROID ?= no
@@ -23,7 +34,6 @@ clean:
 	@rm -rf modules.order Module.symvers
 	@find ../ -name "*.o" | xargs rm -f
 	@find ../ -name "*.ko" | xargs rm -f
-
 else
 
 all:
