@@ -513,10 +513,11 @@ static int video_close(struct file *file)
 	struct viv_video_file *handle = priv_to_handle(file->private_data);
 	struct viv_video_device *vdev = video_drvdata(file);
 	struct vb2_buffer *vb;
+	struct viv_video_file *ph;
+	bool del_stream = true;
 	spinlock_t *lock;
 	unsigned long flags;
 
-	atomic_inc(&(vdev->refcnt));
 	pr_debug("enter %s\n", __func__);
 	if (handle) {
 		handle->req = false;
@@ -529,14 +530,19 @@ static int video_close(struct file *file)
 			handle->vdev->pipeline_status = PIPELINE_STREAMOFF;
 		}
 		if (handle->streamid >= 0 && handle->state == 1) {
-			viv_post_simple_event(VIV_VIDEO_EVENT_DEL_STREAM,
+			list_for_each_entry(ph, &file_list_head[vdev->id], entry) {
+				if (ph != handle && ph->state >= 1)
+					del_stream = false;
+			}
+
+			if (del_stream) {
+				viv_post_simple_event(VIV_VIDEO_EVENT_DEL_STREAM,
 						handle->streamid, &handle->vfh,
 						true);
-			handle->vdev->pipeline_status = PIPELINE_INIT;
+				handle->vdev->pipeline_status = PIPELINE_INIT;
+				handle->vdev->active = 0;
+			}
 		}
-
-		if (handle->state > 0)
-			handle->vdev->active = 0;
 		handle->state = -1;
 		handle->streamid = 0;
 		lock = &file_list_lock[handle->vdev->id];
@@ -1120,6 +1126,14 @@ static int vidioc_s_fmt_vid_cap(struct file *file, void *priv,
 	struct viv_rect *rect = (struct viv_rect *)vdev->ctrls.buf_va;
 
 	pr_debug("enter %s\n", __func__);
+
+	if (vdev->pipeline_status == PIPELINE_REQBUFED ||
+		vdev->pipeline_status == PIPELINE_STREAMON) {
+		pr_err("%s stream is busy, pipeline status %d",
+			__func__, vdev->pipeline_status);
+		return -EBUSY;
+	}
+
 	if (f->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
 		return -EINVAL;
 
@@ -1179,6 +1193,12 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 	unsigned long flags;
 	int ret = 0;
 
+	if (vdev->pipeline_status == PIPELINE_STREAMON) {
+		pr_err("%s stream is busy, pipeline status %d",
+			__func__, vdev->pipeline_status);
+		return -EBUSY;
+	}
+
 	pr_debug("enter %s %d %d\n", __func__, p->count, p->memory);
 	if (p->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
 		return -EINVAL;
@@ -1200,13 +1220,15 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 	else
 		handle->req = true;
 
-	if ((p->count) && (vdev->pipeline_status != PIPELINE_FMTSETTED))
+	if ((p->count) && ((vdev->pipeline_status < PIPELINE_FMTSETTED) ||
+		(vdev->pipeline_status > PIPELINE_STREAMON)))
 		viv_post_fmt_event(file);
 
+	if (p->count)
+		vdev->pipeline_status = PIPELINE_REQBUFED;
 	mutex_lock(&handle->buffer_mutex);
 	ret = vb2_reqbufs(&handle->queue, p);
 	mutex_unlock(&handle->buffer_mutex);
-
 	return ret;
 }
 
