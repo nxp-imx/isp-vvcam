@@ -1,0 +1,43 @@
+# NOTE: THIS FILE IS EXPERIMENTAL FOR THE BAZEL MIGRATION AND NOT USED FOR
+# YOUR BUILDS CURRENTLY.
+#
+# It is not yet the source of truth for your build. If you're looking to modify
+# the build file, modify the Android.bp file instead. Do *not* modify this file
+# unless you have coordinated with the team managing the Soong to Bazel
+# migration.
+
+load("//build/kernel/kleaf:kernel.bzl", "kernel_module")
+
+kernel_module(
+    name = "isp.imx.dwe",
+    srcs = glob([
+        "**"
+        ],
+        exclude = [
+            "**/.*",          # Hidden files
+            "**/.*/**",       # Files in hidden directories
+            "**/BUILD.bazel", # build files
+            "**/*.bzl",       # build files
+        ],) + [
+            "//verisilicon_sw_isp_vvcam/vvcam/isp:isp_sources",
+            "//verisilicon_sw_isp_vvcam/vvcam/version:version_sources",
+            "//verisilicon_sw_isp_vvcam/vvcam/dwe:dwe_sources",
+            "//verisilicon_sw_isp_vvcam/vvcam/v4l2/video:v4l2_video_sources",
+        ],
+    outs = [
+         "vvcam-dwe.ko",
+    ],
+    kernel_build = "//common:imx",
+    visibility = [
+        "//common:__pkg__",
+        "//verisilicon_sw_isp_vvcam/vvcam/v4l2/video:__pkg__",
+    ],
+)
+
+filegroup(
+    name = "v4l2_dwe_sources",
+    srcs = glob(["**"]),
+    visibility = [
+            "//verisilicon_sw_isp_vvcam/vvcam/v4l2/video:__subpackages__",
+    ],
+)

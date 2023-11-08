@@ -6,5 +6,10 @@ filegroup(
     ]),
     visibility = [
         "//verisilicon_sw_isp_vvcam/vvcam/v4l2:__subpackages__",
+        "//verisilicon_sw_isp_vvcam/vvcam/v4l2/sensor/camera-proxy-driver:__subpackages__",
+        "//verisilicon_sw_isp_vvcam/vvcam/v4l2/video:__subpackages__",
+        "//verisilicon_sw_isp_vvcam/vvcam/v4l2/dwe:__subpackages__",
+        "//verisilicon_sw_isp_vvcam/vvcam/v4l2/isp:__subpackages__",
+        "//verisilicon_sw_isp_vvcam/vvcam/v4l2/sensor/os08a20:__subpackages__",
     ],
 )

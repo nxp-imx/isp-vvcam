@@ -9,7 +9,7 @@
 load("//build/kernel/kleaf:kernel.bzl", "kernel_module")
 
 kernel_module(
-    name = "isp.imx",
+    name = "isp.imx.basler.camera",
     srcs = glob([
         "**"
         ],
@@ -24,14 +24,7 @@ kernel_module(
             "//verisilicon_sw_isp_vvcam/vvcam/dwe:dwe_sources",
         ],
     outs = [
-         "vvcam-isp.ko",
-         "vvcam-dwe.ko",
-         "sensor/os08a20/os08a20.ko",
-         "sensor/ar1335/ar1335.ko",
-         "video/vvcam-video.ko",
-         "focus/vcm_dw9790/vcm-dw9790.ko",
-         "sensor/ov2775/ov2775.ko",
-         "sensor/camera-proxy-driver/basler-camera-driver-vvcam.ko",
+         "basler-camera-driver-vvcam.ko",
     ],
     kernel_build = "//common:imx",
     visibility = [
