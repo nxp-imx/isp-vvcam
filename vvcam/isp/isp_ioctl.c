@@ -321,9 +321,6 @@ int isp_s_input(struct isp_ic_dev *dev)
 	isp_write_reg(dev, REG_ADDR(isp_acq_h_size), isp_ctx.acqWindow.width);
 	isp_write_reg(dev, REG_ADDR(isp_acq_v_size), isp_ctx.acqWindow.height);
 
-	isp_write_reg(dev, REG_ADDR(isp_stitching_frame_width), isp_ctx.acqWindow.width);
-	isp_write_reg(dev, REG_ADDR(isp_stitching_frame_height), isp_ctx.acqWindow.height);
-
 	isp_write_reg(dev, REG_ADDR(isp_out_h_offs),
 			  (isp_ctx.ofWindow.x & MRV_ISP_ISP_OUT_H_OFFS_MASK));
 	isp_write_reg(dev, REG_ADDR(isp_out_v_offs),
