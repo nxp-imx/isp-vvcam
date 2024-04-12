@@ -130,6 +130,7 @@ struct isp_dummy_hblank_cxt {
 struct isp_mi_context {
 	struct isp_mi_data_path_context path[3];
 	u32 burst_len;
+	u32 mi_ctrl;
 };
 
 struct isp_bls_context {

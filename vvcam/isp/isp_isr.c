@@ -343,20 +343,11 @@ irqreturn_t isp_hw_isr(int irq, void *data)
 	unsigned long flags;
 	struct isp_ic_dev *dev = (struct isp_ic_dev *)data;
 	static const u32 frameendmask = MRV_MI_MP_FRAME_END_MASK |
-#ifdef ISP_MI_BP
-			MRV_MI_BP_FRAME_END_MASK |
-#endif
 			MRV_MI_SP_FRAME_END_MASK;
 	static const u32 errormask = MRV_MI_WRAP_MP_Y_MASK |
 			MRV_MI_WRAP_MP_CB_MASK |
 			MRV_MI_WRAP_MP_CR_MASK |
-#ifdef ISP_MI_BP
-			MRV_MI_BP_WRAP_R_MASK |
-			MRV_MI_BP_WRAP_GR_MASK |
-			MRV_MI_BP_WRAP_GB_MASK |
-			MRV_MI_BP_WRAP_B_MASK |
-#endif
-			MRV_MI_WRAP_SP_Y_MASK |
+			MRV_MI_WRAP_SP_Y_MASK  |
 			MRV_MI_WRAP_SP_CB_MASK |
 			MRV_MI_WRAP_SP_CR_MASK |
 			MRV_MI_FILL_MP_Y_MASK;
@@ -439,8 +430,9 @@ irqreturn_t isp_hw_isr(int irq, void *data)
 		spin_unlock_irqrestore(&dev->irqlock, flags);
 	}
 
-	if (mi_mis & errormask)
-		pr_debug("MI mis error: 0x%x\n", mi_mis);
+	if (mi_mis & errormask) {
+		isp_write_reg(dev, REG_ADDR(mi_ctrl), dev->mi.mi_ctrl);
+	}
 
 	if (mi_mis & frameendmask) {
 		if (*dev->state == (STATE_DRIVER_STARTED | STATE_STREAM_STARTED)) {

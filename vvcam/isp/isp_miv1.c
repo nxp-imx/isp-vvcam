@@ -515,6 +515,8 @@ int isp_mi_start(struct isp_ic_dev *dev)
 
 	/*prepare  memory for next frame */
 	update_dma_buffer(dev);
+
+	dev->mi.mi_ctrl = isp_read_reg(dev, REG_ADDR(mi_ctrl));
 	return 0;
 }
 
@@ -541,6 +543,9 @@ int isp_mi_stop(struct isp_ic_dev *dev)
 		*dev->state &= ~STATE_DRIVER_STARTED;
 		clean_dma_buffer(dev);
 	}
+
+	dev->mi.mi_ctrl = isp_read_reg(dev, REG_ADDR(mi_ctrl));
+
 	return 0;
 }
 

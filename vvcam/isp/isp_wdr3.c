@@ -465,7 +465,6 @@ int isp_u_wdr3(struct isp_ic_dev *dev)
 
 int isp_s_wdr3(struct isp_ic_dev *dev)
 {
-
 #ifndef ISP_WDR_V3
 	pr_err("unsupported function: %s", __func__);
 	return -EINVAL;
@@ -486,13 +485,7 @@ int isp_s_wdr3(struct isp_ic_dev *dev)
 	isp_write_reg(dev, REG_ADDR(isp_wdr3_block_size),
 		      width | (height << 9));
 	isp_write_reg(dev, REG_ADDR(isp_wdr3_strength), isp_wdr3_strength);
-	isp_write_reg(dev, REG_ADDR(isp_wdr3_strength_shd), isp_wdr3_strength);	/* cmodel use */
 
-	{
-	uint32_t isp_ctrl = isp_read_reg(dev, REG_ADDR(isp_ctrl));
-	REG_SET_SLICE(isp_ctrl, MRV_ISP_ISP_GEN_CFG_UPD, 1);
-	isp_write_reg(dev, REG_ADDR(isp_ctrl), isp_ctrl);
-	}
 	return 0;
 #endif
 }
