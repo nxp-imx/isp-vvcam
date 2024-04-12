@@ -276,7 +276,7 @@ int isp_cproc_control(struct isp_ic_dev *dev);
 int isp_ioc_qcap(struct isp_ic_dev *dev, void *args);
 int isp_ioc_g_status(struct isp_ic_dev *dev, void *args);
 int isp_ioc_g_feature(struct isp_ic_dev *dev, void *args);
-int isp_ioc_g_feature_veresion(struct isp_ic_dev *dev, void *args);
+int isp_ioc_g_feature_version(struct isp_ic_dev *dev, void *args);
 int isp_s_wdr_ctrl(struct isp_ic_dev *dev);
 
 #ifdef __KERNEL__

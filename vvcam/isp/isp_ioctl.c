@@ -2147,7 +2147,7 @@ int isp_ioc_g_feature(struct isp_ic_dev *dev, void *args)
 	return 0;
 }
 
-int isp_ioc_g_feature_veresion(struct isp_ic_dev *dev, void *args)
+int isp_ioc_g_feature_version(struct isp_ic_dev *dev, void *args)
 {
 	u32 val = 0;
 
@@ -2718,7 +2718,7 @@ long isp_priv_ioctl(struct isp_ic_dev *dev, unsigned int cmd, void *args)
 		ret = isp_ioc_g_feature(dev, args);
 		break;
 	case ISPIOC_G_FEATURE_VERSION:
-		ret = isp_ioc_g_feature_veresion(dev, args);
+		ret = isp_ioc_g_feature_version(dev, args);
 		break;
 	case ISPIOC_WDR_CONFIG:
 		viv_check_retval(copy_from_user
