@@ -6,7 +6,7 @@ obj-m +=$(TARGET).o
 $(TARGET)-objs += ov2775_mipi_v3.o
 
 ccflags-y += -I$(PWD)/../../../common/
-ccflags-y += -O2 -Werror
+ccflags-y += -O2 -Werror -Wmissing-declarations -Wmissing-prototypes
 
 ARCH_TYPE ?= arm64
 ANDROID ?= no

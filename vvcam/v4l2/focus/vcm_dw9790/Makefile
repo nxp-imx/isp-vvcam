@@ -6,7 +6,7 @@ obj-m +=$(TARGET).o
 $(TARGET)-objs += dw9790.o
 
 ccflags-y += -I$(PWD)/../../../common/
-ccflags-y += -O2 -Werror
+ccflags-y += -O2 -Werror -Wmissing-declarations -Wmissing-prototypes
 
 ARCH_TYPE ?= arm64
 ANDROID ?= no
