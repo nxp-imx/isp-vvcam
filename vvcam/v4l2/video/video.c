@@ -367,7 +367,12 @@ static void stop_streaming(struct vb2_queue *vq)
 	viv_post_simple_event(VIV_VIDEO_EVENT_STOP_STREAM, handle->streamid,
 			      &handle->vfh, false);
 	handle->sequence = 0;
-	for(i = 0; i < vq->num_buffers; i++) {
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 9, 0)
+	for (i = 0; i < vq->num_buffers; i++) {
+#else
+	for (i = 0; i < vb2_get_num_buffers(vq); i++) {
+#endif
 		if(vq->bufs[i]->state == VB2_BUF_STATE_ACTIVE)
 			vb2_buffer_done(vq->bufs[i], VB2_BUF_STATE_ERROR);
 	}
