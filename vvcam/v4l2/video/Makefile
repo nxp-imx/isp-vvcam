@@ -15,12 +15,14 @@ ANDROID ?= no
 
 ifeq ($(ANDROID), yes)
 
+M ?= $(shell pwd)
+
 V := 1
 
 all:
-	@$(MAKE) V=$(V) -C $(KERNEL_SRC) ARCH=$(ARCH_TYPE) M=$(PWD) modules KBUILD_EXTRA_SYMBOLS=$(PWD)/../dwe/Module.symvers
+	@$(MAKE) V=$(V) -C $(KERNEL_SRC) ARCH=$(ARCH_TYPE) M=$(M) modules KBUILD_EXTRA_SYMBOLS=$(M)/../dwe/Module.symvers
 modules_install:
-	@$(MAKE) V=$(V) -C $(KERNEL_SRC) M=$(PWD) modules_install
+	@$(MAKE) V=$(V) -C $(KERNEL_SRC) M=$(M) modules_install
 clean:
 	@rm -rf modules.order Module.symvers
 	@find ../ -name "*.o" | xargs rm -f
