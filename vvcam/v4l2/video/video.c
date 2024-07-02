@@ -2125,7 +2125,7 @@ probe_end:
 	return rc;
 }
 
-static int viv_video_remove(struct platform_device *pdev)
+static void viv_video_remove(struct platform_device *pdev)
 {
 	struct viv_video_device *vdev;
 	int i;
@@ -2154,7 +2154,7 @@ static int viv_video_remove(struct platform_device *pdev)
 
 	media_device_unregister(&mdev);
 	media_device_cleanup(&mdev);
-	return 0;
+	return;
 }
 
 static struct platform_driver viv_video_driver = {
