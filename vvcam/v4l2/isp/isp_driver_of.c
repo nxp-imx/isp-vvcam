@@ -693,14 +693,14 @@ err_put_isp:
 	return rc;
 }
 
-static int isp_hw_remove(struct platform_device *pdev)
+static void isp_hw_remove(struct platform_device *pdev)
 {
 	struct isp_device *isp = platform_get_drvdata(pdev);
 	int rc;
 
 	pr_info("enter %s\n", __func__);
 	if (!isp)
-		return -1;
+		return;
 
 	tasklet_kill(&isp->ic_dev.tasklet);
 	vvbuf_ctx_deinit(&isp->bctx);
@@ -711,14 +711,14 @@ static int isp_hw_remove(struct platform_device *pdev)
 
 	if (rc) {
 		pr_err("vvcam isp detach pm domain failed\n");
-		return rc;
+		return;
 	}
 
 	proc_remove(isp->pde);
 	pm_runtime_disable(&pdev->dev);
 	kfree(isp);
 	pr_info("vvcam isp driver removed\n");
-	return 0;
+	return;
 }
 
 static int isp_system_suspend(struct device *dev)
