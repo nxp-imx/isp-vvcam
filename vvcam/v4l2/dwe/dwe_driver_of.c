@@ -471,7 +471,7 @@ dewarp_destory_fake_pdev:
 	return rc;
 }
 
-static int dwe_hw_remove(struct platform_device *pdev)
+static void dwe_hw_remove(struct platform_device *pdev)
 {
 	struct dwe_device *dwe_dev;
 	int dev_id;
@@ -491,7 +491,7 @@ static int dwe_hw_remove(struct platform_device *pdev)
 	}
 	dwe_fake_pdev_destory();
 	pr_info("vvcam dewarp driver removed\n");
-	return 0;
+	return;
 }
 
 static int dwe_system_suspend(struct device *dev)
