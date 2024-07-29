@@ -127,6 +127,7 @@ struct viv_video_device {
 	struct video_event_shm event_shm;
 	int pipeline_status;
 	struct proc_dir_entry *pde;
+	struct mutex mlock;
 };
 
 struct viv_video_file {

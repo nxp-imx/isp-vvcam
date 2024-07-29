@@ -244,8 +244,6 @@ static int viv_v4l2_post_event(struct viv_video_device *vdev,
 		}
 	}
 
-	mutex_lock(&vdev->event_lock);
-
 	if (sync) {
 		vdev->event_shm.complete = 0;
 		vdev->event_shm.result = 0;
@@ -256,8 +254,6 @@ static int viv_v4l2_post_event(struct viv_video_device *vdev,
 	if (sync) {
 		ret = viv_event_wait_complete(vdev, event);
 	}
-
-	mutex_unlock(&vdev->event_lock);
 
 	return ret;
 }
@@ -279,14 +275,19 @@ static int viv_post_simple_event(int id, int streamid, void *fh, bool sync)
 {
 	struct v4l2_event event;
 	struct viv_video_event *v_event;
+	struct viv_video_file *handle = priv_to_handle(fh);
+	int ret = 0;
 
+	mutex_lock(&handle->vdev->event_lock);
 	v_event = (struct viv_video_event *)&event.u.data[0];
 	v_event->stream_id = streamid;
 	v_event->file = fh;
 	v_event->sync = sync;
 	event.type = VIV_VIDEO_EVENT_TYPE;
 	event.id = id;
-	return viv_post_event(&event, fh, sync);
+	ret = viv_post_event(&event, fh, sync);
+	mutex_unlock(&handle->vdev->event_lock);
+	return ret;
 }
 
 static int viv_post_control_event(int streamid, void *fh,
@@ -294,7 +295,10 @@ static int viv_post_control_event(int streamid, void *fh,
 {
 	struct v4l2_event event;
 	struct viv_video_event *v_event;
+	struct viv_video_file *handle = priv_to_handle(fh);
+	int ret = 0;
 
+	mutex_lock(&handle->vdev->event_lock);
 	v_event = (struct viv_video_event *)&event.u.data[0];
 	v_event->stream_id = streamid;
 	v_event->file = fh;
@@ -304,7 +308,9 @@ static int viv_post_control_event(int streamid, void *fh,
 	v_event->buf_index = control_event->id;
 	event.type = VIV_VIDEO_EVENT_TYPE;
 	event.id = VIV_VIDEO_EVENT_PASS_JSON;
-	return viv_post_event(&event, fh, true);
+	ret = viv_post_event(&event, fh, true);
+	mutex_unlock(&handle->vdev->event_lock);
+	return ret;
 }
 
 static int set_stream(struct viv_video_device *vdev, int enable)
@@ -661,7 +667,9 @@ static int set_caps_mode_event(struct file *file)
 	struct viv_video_file *handle = priv_to_handle(file->private_data);
 	struct v4l2_event event;
 	struct viv_video_event *v_event;
+	int ret = 0;
 
+	mutex_lock(&handle->vdev->event_lock);
 	v_event = (struct viv_video_event *)&event.u.data[0];
 	v_event->stream_id = 0;
 	v_event->file = &handle->vfh;
@@ -669,7 +677,9 @@ static int set_caps_mode_event(struct file *file)
 	v_event->buf_index = dev->id;
 	event.type = VIV_VIDEO_EVENT_TYPE;
 	event.id = VIV_VIDEO_EVENT_SET_CAPSMODE;
-	return viv_post_event(&event, &handle->vfh, true);
+	ret = viv_post_event(&event, &handle->vfh, true);
+	mutex_unlock(&handle->vdev->event_lock);
+	return ret;
 }
 
 static int get_caps_suppots_event(struct file *file)
@@ -678,7 +688,9 @@ static int get_caps_suppots_event(struct file *file)
 	struct viv_video_file *handle = priv_to_handle(file->private_data);
 	struct v4l2_event event;
 	struct viv_video_event *v_event;
+	int ret = 0;
 
+	mutex_lock(&handle->vdev->event_lock);
 	v_event = (struct viv_video_event *)&event.u.data[0];
 	v_event->stream_id = 0;
 	v_event->file = &handle->vfh;
@@ -689,9 +701,14 @@ static int get_caps_suppots_event(struct file *file)
 
 	if (dev->subscribed_cnt == 0 &&
 			wait_for_completion_timeout(&dev->subscribed_wait,
-			msecs_to_jiffies(VIV_VIDEO_EVENT_TIMOUT_MS)) == 0)
+			msecs_to_jiffies(VIV_VIDEO_EVENT_TIMOUT_MS)) == 0) {
+		mutex_unlock(&handle->vdev->event_lock);
 		return -ETIMEDOUT;
-	return viv_post_event(&event, &handle->vfh, true);
+	}
+
+	ret = viv_post_event(&event, &handle->vfh, true);
+	mutex_unlock(&handle->vdev->event_lock);
+	return ret;
 }
 
 static struct media_entity *viv_find_entity(struct viv_video_device *dev,
@@ -1101,7 +1118,7 @@ static int viv_post_fmt_event(struct file *file)
 		vdev->pipeline_status = PIPELINE_CREATED;
 		handle->state = 1;
 	}
-
+	mutex_lock(&vdev->event_lock);
 	v_event = (struct viv_video_event *)&event.u.data[0];
 	v_event->stream_id = handle->streamid;
 	v_event->file = &handle->vfh;
@@ -1112,9 +1129,9 @@ static int viv_post_fmt_event(struct file *file)
 	event.type = VIV_VIDEO_EVENT_TYPE;
 	event.id = VIV_VIDEO_EVENT_SET_FMT;
 	ret = viv_post_event(&event, &handle->vfh, true);
+	mutex_unlock(&vdev->event_lock);
 	if (ret)
 		return ret;
-
 	vdev->pipeline_status = PIPELINE_FMTSETTED;
 
 	return ret;
@@ -1132,20 +1149,23 @@ static int vidioc_s_fmt_vid_cap(struct file *file, void *priv,
 
 	pr_debug("enter %s\n", __func__);
 
+	if (f->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
+		return -EINVAL;
+
+	mutex_lock(&vdev->mlock);
 	if (vdev->pipeline_status == PIPELINE_REQBUFED ||
 		vdev->pipeline_status == PIPELINE_STREAMON) {
 		pr_err("%s stream is busy, pipeline status %d",
 			__func__, vdev->pipeline_status);
+		mutex_unlock(&vdev->mlock);
 		return -EBUSY;
 	}
 
-	if (f->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
-		return -EINVAL;
-
 	ret = vidioc_try_fmt_vid_cap(file, priv, f);
-
-	if (ret < 0)
+	if (ret < 0) {
+		mutex_unlock(&vdev->mlock);
 		return -EINVAL;
+	}
 
 	vdev->fmt.fmt.pix.colorspace = f->fmt.pix.colorspace;
 
@@ -1171,6 +1191,7 @@ static int vidioc_s_fmt_vid_cap(struct file *file, void *priv,
 	vdev->compose.width  = f->fmt.pix.width;
 	vdev->compose.height = f->fmt.pix.height;
 
+	mutex_lock(&vdev->event_lock);
 	rect->left   = vdev->compose.left;
 	rect->top    = vdev->compose.top;
 	rect->width  = vdev->compose.width;
@@ -1183,8 +1204,11 @@ static int vidioc_s_fmt_vid_cap(struct file *file, void *priv,
 	event.type = VIV_VIDEO_EVENT_TYPE;
 	event.id = VIV_VIDEO_EVENT_SET_COMPOSE;
 	viv_post_event(&event, &handle->vfh, true);
+	mutex_unlock(&vdev->event_lock);
 
 	viv_post_fmt_event(file);
+
+	mutex_unlock(&vdev->mlock);
 
 	return ret;
 }
@@ -1197,12 +1221,6 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 	struct viv_video_device *vdev = handle->vdev;
 	unsigned long flags;
 	int ret = 0;
-
-	if (vdev->pipeline_status == PIPELINE_STREAMON) {
-		pr_err("%s stream is busy, pipeline status %d",
-			__func__, vdev->pipeline_status);
-		return -EBUSY;
-	}
 
 	pr_debug("enter %s %d %d\n", __func__, p->count, p->memory);
 	if (p->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
@@ -1220,6 +1238,15 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 	}
 	spin_unlock_irqrestore(&file_list_lock[vdev->id], flags);
 
+	mutex_lock(&vdev->mlock);
+
+	if (vdev->pipeline_status == PIPELINE_STREAMON) {
+		pr_err("%s stream is busy, pipeline status %d",
+			__func__, vdev->pipeline_status);
+		mutex_unlock(&vdev->mlock);
+		return -EBUSY;
+	}
+
 	if (p->count == 0)
 		handle->req = false;
 	else
@@ -1234,6 +1261,7 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 	mutex_lock(&handle->buffer_mutex);
 	ret = vb2_reqbufs(&handle->queue, p);
 	mutex_unlock(&handle->buffer_mutex);
+	mutex_unlock(&vdev->mlock);
 	return ret;
 }
 
@@ -1415,6 +1443,7 @@ static int vidioc_s_parm(struct file *file, void *fh,
 		a->parm.capture.timeperframe = handle->vdev->timeperframe;
 	}
 	handle->vdev->timeperframe = a->parm.output.timeperframe;
+	mutex_lock(&vdev->event_lock);
 	sprintf(vdev->ctrls.buf_va,"{<id>:<s.fps>;<fps>:%d}",handle->vdev->timeperframe.denominator);
 	v_event = (struct viv_video_event *)&event.u.data[0];
 	v_event->stream_id = 0;
@@ -1425,6 +1454,7 @@ static int vidioc_s_parm(struct file *file, void *fh,
 	event.id = VIV_VIDEO_EVENT_EXTCTRL;
 
 	viv_post_event(&event, &handle->vfh, true);
+	mutex_unlock(&vdev->event_lock);
 
 	return 0;
 }
@@ -1557,6 +1587,7 @@ static int vidioc_s_selection(struct file *file, void *fh,
 	rect = (struct viv_rect *)vdev->ctrls.buf_va;
 	if (!rect)
 		return -ENOMEM;
+	mutex_lock(&vdev->event_lock);
 	rect->left   = s->r.left;
 	rect->top    = s->r.top;
 	rect->width  = s->r.width;
@@ -1586,6 +1617,7 @@ static int vidioc_s_selection(struct file *file, void *fh,
 			vdev->crop.height = rect->height;
 		}
 	}
+	mutex_unlock(&vdev->event_lock);
 	return rc;
 }
 
@@ -1730,6 +1762,7 @@ static int viv_s_ctrl(struct v4l2_ctrl *ctrl)
 		szbuf = (char *)vdev->ctrls.buf_va;
 		if (!ctrl->p_new.p_char)
 			return -EINVAL;
+		mutex_lock(&vdev->event_lock);
 		strcpy(szbuf, ctrl->p_new.p_char);
 		v_event = (struct viv_video_event *)&event.u.data[0];
 		v_event->stream_id = 0;
@@ -1742,6 +1775,7 @@ static int viv_s_ctrl(struct v4l2_ctrl *ctrl)
 		ret = viv_v4l2_post_event(vdev, &event, true);
 
 		strcpy(ctrl->p_new.p_char, szbuf);
+		mutex_unlock(&vdev->event_lock);
 		break;
 	}
 	}
@@ -2113,6 +2147,7 @@ static int viv_video_probe(struct platform_device *pdev)
 			vdev->frame_cnt = 0;
 			atomic_set(&(vdev->refcnt), 0);
 			mutex_init(&vdev->event_lock);
+			mutex_init(&vdev->mlock);
 
 			continue;
 register_fail:
@@ -2144,6 +2179,7 @@ static void viv_video_remove(struct platform_device *pdev)
 		vvbuf_ctx_deinit(&vdev->bctx);
 
 		mutex_destroy(&vdev->event_lock);
+		mutex_destroy(&vdev->mlock);
 		dma_free_coherent(&(pdev->dev), VIV_JSON_BUFFER_SIZE,
 			vdev->ctrls.buf_va, vdev->ctrls.buf_pa);
 		v4l2_ctrl_handler_free(&vdev->ctrls.handler);
