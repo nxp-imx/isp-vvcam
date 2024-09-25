@@ -354,7 +354,7 @@ int isp_mi_start(struct isp_ic_dev *dev)
 			REG_SET_SLICE(mi_ctrl, MRV_MI_RAW_ENABLE, 1);
 			REG_SET_SLICE(mi_init, MRV_MI_MP_OUTPUT_FORMAT,
 				      MRV_MI_MP_OUTPUT_FORMAT_RAW12);
-			isp_write_reg(dev, REG_ADDR(mi_output_align_format), 1);
+			isp_write_reg(dev, REG_ADDR(mi_output_align_format), 3);
 			break;
 		case (IC_MI_DATAMODE_RAW10):
 			REG_SET_SLICE(mi_ctrl, MRV_MI_MP_WRITE_FORMAT,
@@ -362,7 +362,7 @@ int isp_mi_start(struct isp_ic_dev *dev)
 			REG_SET_SLICE(mi_ctrl, MRV_MI_RAW_ENABLE, 1);
 			REG_SET_SLICE(mi_init, MRV_MI_MP_OUTPUT_FORMAT,
 				      MRV_MI_MP_OUTPUT_FORMAT_RAW10);
-			isp_write_reg(dev, REG_ADDR(mi_output_align_format), 1);
+			isp_write_reg(dev, REG_ADDR(mi_output_align_format), 3);
 			break;
 		case (IC_MI_DATAMODE_JPEG):
 			REG_SET_SLICE(mi_ctrl, MRV_MI_MP_WRITE_FORMAT,
