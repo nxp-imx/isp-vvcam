@@ -1889,7 +1889,8 @@ static void viv_buf_notify(struct vvbuf_ctx *ctx, struct vb2_dc_buf *buf)
 		vdev->frame_cnt++;
 	} else {
 		if (vdev->last_ts > 0) {
-			vdev->fps = (uint32_t) (vdev->frame_cnt * USEC_PER_SEC * 100 / interval);
+			vdev->fps = (uint32_t)(++vdev->frame_cnt *
+					USEC_PER_SEC * 100 / interval);
 		}
 		vdev->frame_cnt = 0;
 		vdev->last_ts = cur_ts;

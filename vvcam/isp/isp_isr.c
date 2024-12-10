@@ -150,7 +150,8 @@ static void isp_fps_stat(struct isp_ic_dev *dev, int path)
 		dev->frame_cnt[path]++;
 	} else {
 		if (dev->last_ns[path] > 0) {
-			dev->fps[path] = (uint32_t) (dev->frame_cnt[path] * USEC_PER_SEC * 100 / interval);
+			dev->fps[path] = (uint32_t)(++dev->frame_cnt[path]
+					* USEC_PER_SEC * 100 / interval);
 		}
 		dev->frame_cnt[path] = 0;
 		dev->last_ns[path] = cur_ns;
