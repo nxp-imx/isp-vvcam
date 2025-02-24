@@ -496,6 +496,7 @@ static int video_open(struct file *file)
 	handle->queue.mem_ops = &vb2_dma_contig_memops;
 	handle->queue.buf_struct_size = sizeof(struct vb2_dc_buf);
 	handle->queue.timestamp_flags = V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC;
+	handle->queue.lock = &dev->mlock;
 #if LINUX_VERSION_CODE > KERNEL_VERSION(4, 5, 0)
 	handle->queue.dev = dev->v4l2_dev->dev;
 #endif
