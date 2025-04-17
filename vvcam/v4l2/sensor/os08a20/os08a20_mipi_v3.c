@@ -29,6 +29,9 @@
 #include <media/v4l2-fwnode.h>
 #include <linux/uaccess.h>
 #include <linux/version.h>
+#if defined(CONFIG_ANDROID)
+#include <linux/vmalloc.h>
+#endif
 #include "vvsensor.h"
 
 #include "os08a20_regs_1080p.h"
