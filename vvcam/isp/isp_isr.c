@@ -428,6 +428,10 @@ irqreturn_t isp_hw_isr(int irq, void *data)
 			isp_s_hist(dev);
 		}
 
+		if (dev->comp.changed) {
+			isp_s_comp(dev);
+		}
+
 		spin_unlock_irqrestore(&dev->irqlock, flags);
 	}
 

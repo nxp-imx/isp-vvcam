@@ -637,6 +637,7 @@ struct isp_compand_bls_context {
 /* COMPAND */
 struct isp_comp_context {
 	bool enable;
+	bool changed;
 	struct isp_compand_curve_context expand;
 	struct isp_compand_bls_context   bls;
 	struct isp_compand_curve_context compress;

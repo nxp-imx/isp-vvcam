@@ -73,6 +73,7 @@ int isp_s_comp(struct isp_ic_dev *dev)
 
 	pr_info("enter %s\n", __func__);
 
+	comp->changed = false;
 	if (!comp->enable) {
 		REG_SET_SLICE(isp_compand_ctrl, COMPAND_CTRL_BLS_ENABLE, 0);
 		REG_SET_SLICE(isp_compand_ctrl, COMPAND_CTRL_COMPRESS_ENABLE, 0);
@@ -143,7 +144,7 @@ int isp_s_comp(struct isp_ic_dev *dev)
 				y_data = 0xfffff;
 			isp_write_reg(dev, REG_ADDR(isp_compand_expand_y_write_data), y_data);
 		}
-	
+
 	}
 
 	if (comp->compress.enable && comp->compress.update_curve) {

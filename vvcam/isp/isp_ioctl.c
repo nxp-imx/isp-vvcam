@@ -708,6 +708,7 @@ int isp_s_cnr(struct isp_ic_dev *dev)
 
 	if (!cnr->enable) {
 		REG_SET_SLICE(isp_ctrl, MRV_ISP_CNR_EN, 0);
+		REG_SET_SLICE(isp_ctrl, MRV_ISP_ISP_GEN_CFG_UPD, 1);
 		isp_write_reg(dev, REG_ADDR(isp_ctrl), isp_ctrl);
 		return 0;
 	}
@@ -716,6 +717,7 @@ int isp_s_cnr(struct isp_ic_dev *dev)
 	isp_write_reg(dev, REG_ADDR(isp_cnr_linesize), cnr->line_width);
 	isp_write_reg(dev, REG_ADDR(isp_cnr_threshold_c1), cnr->threshold_1);
 	isp_write_reg(dev, REG_ADDR(isp_cnr_threshold_c2), cnr->threshold_2);
+	REG_SET_SLICE(isp_ctrl, MRV_ISP_ISP_GEN_CFG_UPD, 1);
 	isp_write_reg(dev, REG_ADDR(isp_ctrl), isp_ctrl);
 	return 0;
 }
@@ -2031,6 +2033,23 @@ int isp_cproc_control(struct isp_ic_dev *dev)
 	return ret;
 }
 
+int isp_compand_control(struct isp_ic_dev *dev)
+{
+	unsigned long flags;
+	int ret = 0;
+
+	spin_lock_irqsave(&dev->irqlock, flags);
+	if (!is_isp_enable(dev)) {
+		ret = isp_s_comp(dev);
+	} else {
+		dev->comp.changed = true;
+	}
+
+	spin_unlock_irqrestore(&dev->irqlock, flags);
+
+	return ret;
+}
+
 int isp_s_elawb(struct isp_ic_dev *dev)
 {
 	struct isp_elawb_context *elawb = &dev->elawb;
@@ -2564,7 +2583,7 @@ long isp_priv_ioctl(struct isp_ic_dev *dev, unsigned int cmd, void *args)
 	case ISPIOC_S_COMP:
 		viv_check_retval(copy_from_user
 				 (&dev->comp, args, sizeof(dev->comp)));
-		ret = isp_s_comp(dev);
+		ret = isp_compand_control(dev);
 		break;
 	case ISPIOC_S_CPROC:
 		viv_check_retval(copy_from_user

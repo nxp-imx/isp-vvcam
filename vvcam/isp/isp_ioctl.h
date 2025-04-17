@@ -273,6 +273,7 @@ int isp_s_flt_ctrl(struct isp_ic_dev *dev);
 u32 get_eff_coeff(int decimal);
 u32 get_afm_shift(u32 count, u32 thresh);
 int isp_cproc_control(struct isp_ic_dev *dev);
+int isp_compand_control(struct isp_ic_dev *dev);
 int isp_ioc_qcap(struct isp_ic_dev *dev, void *args);
 int isp_ioc_g_status(struct isp_ic_dev *dev, void *args);
 int isp_ioc_g_feature(struct isp_ic_dev *dev, void *args);
