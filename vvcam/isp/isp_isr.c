@@ -243,11 +243,11 @@ static void isr_process_frame(struct isp_ic_dev *dev)
 		if (!mi->path[i].enable)
 			continue;
 
+		isp_fps_stat(dev, i);
 		if (dev->mi_buf_shd[i]) {
 			dev->mi_buf_shd[i]->timestamp = dev->frame_in_timestamp;
 			vvbuf_ready(dev->bctx, dev->mi_buf_shd[i]->pad, dev->mi_buf_shd[i]);
 			dev->mi_buf_shd[i] = NULL;
-			isp_fps_stat(dev, i);
 #ifdef ENABLE_LATENCY_STATISTIC
 			if (i == 0)
 				isp_latency_statistic(dev);
