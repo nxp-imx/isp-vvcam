@@ -432,6 +432,10 @@ irqreturn_t isp_hw_isr(int irq, void *data)
 			isp_s_comp(dev);
 		}
 
+		if (dev->cnr.changed) {
+			isp_s_cnr(dev);
+		}
+
 		spin_unlock_irqrestore(&dev->irqlock, flags);
 	}
 

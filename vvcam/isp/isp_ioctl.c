@@ -722,6 +722,23 @@ int isp_s_cnr(struct isp_ic_dev *dev)
 	return 0;
 }
 
+static int isp_cnr_control(struct isp_ic_dev *dev)
+{
+	unsigned long flags;
+	int ret = 0;
+
+	spin_lock_irqsave(&dev->irqlock, flags);
+	if (!is_isp_enable(dev)) {
+		ret = isp_s_cnr(dev);
+	} else {
+		dev->cnr.changed = true;
+	}
+
+	spin_unlock_irqrestore(&dev->irqlock, flags);
+
+	return ret;
+}
+
 int isp_start_stream(struct isp_ic_dev *dev, u32 numFrames)
 {
 	u32 isp_imsc, isp_ctrl;
@@ -2490,7 +2507,7 @@ long isp_priv_ioctl(struct isp_ic_dev *dev, unsigned int cmd, void *args)
 	case ISPIOC_S_CNR:
 		viv_check_retval(copy_from_user
 				 (&dev->cnr, args, sizeof(dev->cnr)));
-		ret = isp_s_cnr(dev);
+		ret = isp_cnr_control(dev);
 		break;
 	case ISPIOC_S_FLT:
 	{

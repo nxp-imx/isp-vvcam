@@ -194,6 +194,7 @@ struct isp_awb_mean {
 
 struct isp_cnr_context {
 	bool enable;
+	bool changed;
 	u32 line_width;
 	u32 threshold_1;
 	u32 threshold_2;
