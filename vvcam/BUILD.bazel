@@ -1,0 +1,306 @@
+# NOTE: THIS FILE IS EXPERIMENTAL FOR THE BAZEL MIGRATION AND NOT USED FOR
+# YOUR BUILDS CURRENTLY.
+#
+# It is not yet the source of truth for your build. If you're looking to modify
+# the build file, modify the Android.bp file instead. Do *not* modify this file
+# unless you have coordinated with the team managing the Soong to Bazel
+# migration.
+load("//build/kernel/kleaf:kernel.bzl", "ddk_module", "ddk_headers")
+
+# The various "-I" flags in the Makefiles.
+ddk_headers(
+    name = "vvcam_headers",
+    # Include all .h files recursively
+    hdrs = glob(["**/*.h"]),
+    # Define include paths relative to this BUILD file's directory.
+    # This allows #include "common/vvdefs.h" or #include "dwe_regs.h" to work.
+    includes = [
+        ".",          # For top-level includes
+        "common",
+        "dwe",
+        "isp",
+        "v4l2",
+        "v4l2/dwe",
+        "v4l2/isp",
+        "v4l2/video",
+    ],
+)
+
+# === vvcam-dwe.ko ===
+# Based on v4l2/dwe/Makefile
+ddk_module(
+    name = "vvcam-dwe",
+    out = "vvcam-dwe.ko",
+    srcs = [
+        "v4l2/dwe/dwe_driver_of.c",
+        "v4l2/dwe/dwe_devcore.c",
+        "dwe/dwe_ioctl.c",
+        "dwe/dwe_isr.c",
+        # Shared source file
+        "v4l2/video/vvbuf.c",
+    ],
+    # All modules will depend on the shared headers
+    hdrs = [":vvcam_headers"],
+    copts = [
+        "-O2",
+        "-Werror",
+        "-Wmissing-declarations",
+        "-Wmissing-prototypes",
+        # "-DENABLE_LATENCY_STATISTIC", # Add this if needed
+    ],
+    kernel_build = "//kernel_imx:imx_ddk_modules",
+    deps = ["//common:all_headers_aarch64"],
+    visibility = ["//kernel_imx:__pkg__"],
+)
+
+# === vvcam-isp.ko ===
+# Based on v4l2/isp/Makefile
+ddk_module(
+    name = "vvcam-isp",
+    out = "vvcam-isp.ko",
+    srcs = [
+        "v4l2/isp/isp_driver_of.c",
+        "isp/isp_miv1.c",
+        "isp/isp_miv2.c",
+        "isp/isp_wdr3.c",
+        "isp/isp_3dnr.c",
+        "isp/isp_hdr.c",
+        "isp/isp_dpf.c",
+        "isp/isp_compand.c",
+        "isp/isp_gcmono.c",
+        "isp/isp_ioctl.c",
+        "isp/isp_rgbgamma.c",
+        "isp/isp_isr.c",
+        # Shared source file
+        "v4l2/video/vvbuf.c",
+    ],
+    hdrs = [":vvcam_headers"],
+    copts = [
+        "-O2",
+        "-Werror",
+        "-Wmissing-declarations",
+        "-Wmissing-prototypes",
+        # "-DENABLE_LATENCY_STATISTIC", # Add this if needed
+        "-DISP_REG_SIZE=0x00010000",
+        # Flags from version/ISP8000NANO_V1802.mk
+        "-DISP_WDR_V3",
+        "-DISP_MIV1",
+        "-DISP_COMPAND",
+        "-DISP8000NANO_BASE",
+        "-DISP_MP_34BIT",
+        "-DISP_FILTER",
+        "-DISP8000NANO_V1802",
+    ],
+    kernel_build = "//kernel_imx:imx_ddk_modules",
+    deps = ["//common:all_headers_aarch64"],
+    visibility = ["//kernel_imx:__pkg__"],
+)
+
+# === vvcam-video.ko ===
+# Based on v4l2/video/Makefile
+ddk_module(
+    name = "vvcam-video",
+    out = "vvcam-video.ko",
+    srcs = [
+        "v4l2/video/video.c",
+        "v4l2/video/vvbuf.c",
+    ],
+    hdrs = [":vvcam_headers"],
+    copts = [
+        "-O2",
+        "-Werror",
+        "-DRESERVED_MEM_BASE=0xB0000000",
+        "-DRESERVED_MEM_SIZE=0x10000000",
+    ],
+    # This module depends on symbols from vvcam-dwe
+    deps = [
+        ":vvcam-dwe",
+        "//common:all_headers_aarch64",
+    ],
+    kernel_build = "//kernel_imx:imx_ddk_modules",
+    visibility = ["//kernel_imx:__pkg__"],
+)
+
+# === os08a20.ko ===
+# Based on v4l2/sensor/os08a20/Makefile
+ddk_module(
+    name = "os08a20",
+    out = "os08a20.ko",
+    srcs = ["v4l2/sensor/os08a20/os08a20_mipi_v3.c"],
+    hdrs = [":vvcam_headers"],
+    copts = [
+        "-O2",
+        "-Werror",
+        "-Wmissing-declarations",
+        "-Wmissing-prototypes",
+        "-DCONFIG_ANDROID",
+    ],
+    kernel_build = "//kernel_imx:imx_ddk_modules",
+    deps = ["//common:all_headers_aarch64"],
+    visibility = ["//kernel_imx:__pkg__"],
+)
+
+# === basler-camera-driver-vvcam.ko ===
+# Based on v4l2/sensor/camera-proxy-driver/Makefile
+ddk_module(
+    name = "basler-camera-driver-vvcam",
+    out = "basler-camera-driver-vvcam.ko",
+    srcs = ["v4l2/sensor/camera-proxy-driver/basler-camera-driver-vvcam/basler-camera-driver-vvcam.c"],
+    hdrs = [":vvcam_headers"],
+    copts = [
+        "-O2",
+        "-Werror",
+        "-Wmissing-declarations",
+        "-Wmissing-prototypes",
+        "-DISP8000NANO_V1802",
+    ],
+    kernel_build = "//kernel_imx:imx_ddk_modules",
+    deps = ["//common:all_headers_aarch64"],
+    visibility = ["//kernel_imx:__pkg__"],
+)
+
+# === vvcam-dwe.ko ===
+# Based on v4l2/dwe/Makefile
+ddk_module(
+    name = "vvcam-dwe-ddk",
+    out = "vvcam-dwe.ko",
+    srcs = [
+        "v4l2/dwe/dwe_driver_of.c",
+        "v4l2/dwe/dwe_devcore.c",
+        "dwe/dwe_ioctl.c",
+        "dwe/dwe_isr.c",
+        # Shared source file
+        "v4l2/video/vvbuf.c",
+    ],
+    # All modules will depend on the shared headers
+    hdrs = [":vvcam_headers"],
+    copts = [
+        "-O2",
+        "-Werror",
+        "-Wmissing-declarations",
+        "-Wmissing-prototypes",
+        # "-DENABLE_LATENCY_STATISTIC", # Add this if needed
+    ],
+    kernel_build = "//common:imx",
+    deps = ["//common:all_headers_aarch64"],
+    visibility = ["//common:__pkg__"],
+)
+
+# === vvcam-isp.ko ===
+# Based on v4l2/isp/Makefile
+ddk_module(
+    name = "vvcam-isp-ddk",
+    out = "vvcam-isp.ko",
+    srcs = [
+        "v4l2/isp/isp_driver_of.c",
+        "isp/isp_miv1.c",
+        "isp/isp_miv2.c",
+        "isp/isp_wdr3.c",
+        "isp/isp_3dnr.c",
+        "isp/isp_hdr.c",
+        "isp/isp_dpf.c",
+        "isp/isp_compand.c",
+        "isp/isp_gcmono.c",
+        "isp/isp_ioctl.c",
+        "isp/isp_rgbgamma.c",
+        "isp/isp_isr.c",
+        # Shared source file
+        "v4l2/video/vvbuf.c",
+    ],
+    hdrs = [":vvcam_headers"],
+    copts = [
+        "-O2",
+        "-Werror",
+        "-Wmissing-declarations",
+        "-Wmissing-prototypes",
+        # "-DENABLE_LATENCY_STATISTIC", # Add this if needed
+        "-DISP_REG_SIZE=0x00010000",
+        # Flags from version/ISP8000NANO_V1802.mk
+        "-DISP_WDR_V3",
+        "-DISP_MIV1",
+        "-DISP_COMPAND",
+        "-DISP8000NANO_BASE",
+        "-DISP_MP_34BIT",
+        "-DISP_FILTER",
+        "-DISP8000NANO_V1802",
+    ],
+    kernel_build = "//common:imx",
+    deps = ["//common:all_headers_aarch64"],
+    visibility = ["//common:__pkg__"],
+)
+
+# === vvcam-video.ko ===
+# Based on v4l2/video/Makefile
+ddk_module(
+    name = "vvcam-video-ddk",
+    out = "vvcam-video.ko",
+    srcs = [
+        "v4l2/video/video.c",
+        "v4l2/video/vvbuf.c",
+    ],
+    hdrs = [":vvcam_headers"],
+    copts = [
+        "-O2",
+        "-Werror",
+        "-DRESERVED_MEM_BASE=0xB0000000",
+        "-DRESERVED_MEM_SIZE=0x10000000",
+    ],
+    # This module depends on symbols from vvcam-dwe
+    deps = [
+        ":vvcam-dwe-ddk",
+        "//common:all_headers_aarch64",
+    ],
+    kernel_build = "//common:imx",
+    visibility = ["//common:__pkg__"],
+)
+
+# === os08a20.ko ===
+# Based on v4l2/sensor/os08a20/Makefile
+ddk_module(
+    name = "os08a20-ddk",
+    out = "os08a20.ko",
+    srcs = ["v4l2/sensor/os08a20/os08a20_mipi_v3.c"],
+    hdrs = [":vvcam_headers"],
+    copts = [
+        "-O2",
+        "-Werror",
+        "-Wmissing-declarations",
+        "-Wmissing-prototypes",
+        "-DCONFIG_ANDROID",
+    ],
+    kernel_build = "//common:imx",
+    deps = ["//common:all_headers_aarch64"],
+    visibility = ["//common:__pkg__"],
+)
+
+# === basler-camera-driver-vvcam.ko ===
+# Based on v4l2/sensor/camera-proxy-driver/Makefile
+ddk_module(
+    name = "basler-camera-driver-vvcam-ddk",
+    out = "basler-camera-driver-vvcam.ko",
+    srcs = ["v4l2/sensor/camera-proxy-driver/basler-camera-driver-vvcam/basler-camera-driver-vvcam.c"],
+    hdrs = [":vvcam_headers"],
+    copts = [
+        "-O2",
+        "-Werror",
+        "-Wmissing-declarations",
+        "-Wmissing-prototypes",
+        "-DISP8000NANO_V1802",
+    ],
+    kernel_build = "//common:imx",
+    deps = ["//common:all_headers_aarch64"],
+    visibility = ["//common:__pkg__"],
+)
+
+# Filegroup.
+filegroup(
+    name = "vvcam_modules",
+    srcs = [
+        ":vvcam-dwe-ddk",  # This refers to the output of the ddk_module rule
+        ":vvcam-isp-ddk",
+        ":vvcam-video-ddk",
+        ":os08a20-ddk",
+        ":basler-camera-driver-vvcam-ddk",
+    ],
+    visibility = ["//common:__pkg__"],
+)
