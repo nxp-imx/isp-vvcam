@@ -189,19 +189,19 @@ static struct vvcam_mode_info_s pos08a20_mode_info[] = {
 			.curr_frm_len_lines     = 0x492,
 			.one_line_exp_time_ns   = 14250,
 
-			.max_integration_line   = 0x400,
+			.max_integration_line   = 0x2c0,
 			.min_integration_line   = 8 * 16,
 			.max_vsintegration_line = 56,
 			.min_vsintegration_line = 8,
 
 			.max_again             = 15.5 * (1 << SENSOR_FIX_FRACBITS),
 			.min_again             = 1    * (1 << SENSOR_FIX_FRACBITS),
-			.max_dgain             = 4    * (1 << SENSOR_FIX_FRACBITS),
+			.max_dgain             = 2    * (1 << SENSOR_FIX_FRACBITS),
 			.min_dgain             = 1    * (1 << SENSOR_FIX_FRACBITS),
 
 			.max_short_again       = 15.5 * (1 << SENSOR_FIX_FRACBITS),
 			.min_short_again       = 1    * (1 << SENSOR_FIX_FRACBITS),
-			.max_short_dgain       = 4    * (1 << SENSOR_FIX_FRACBITS),
+			.max_short_dgain       = 2    * (1 << SENSOR_FIX_FRACBITS),
 			.min_short_dgain       = 1    * (1 << SENSOR_FIX_FRACBITS),
 
 			.start_exposure        = 8 * 800 * (1 << SENSOR_FIX_FRACBITS),
@@ -287,19 +287,19 @@ static struct vvcam_mode_info_s pos08a20_mode_info[] = {
 			.curr_frm_len_lines     = 0x90a,
 			.one_line_exp_time_ns   = 14389,
 
-			.max_integration_line   = 0x800,
+			.max_integration_line   = 0x5a0,
 			.min_integration_line   = 8 * 16,
 			.max_vsintegration_line = 56,
 			.min_vsintegration_line = 8,
 
 			.max_again             = 15.5 * (1 << SENSOR_FIX_FRACBITS),
 			.min_again             = 1    * (1 << SENSOR_FIX_FRACBITS),
-			.max_dgain             = 4    * (1 << SENSOR_FIX_FRACBITS),
+			.max_dgain             = 2    * (1 << SENSOR_FIX_FRACBITS),
 			.min_dgain             = 1    * (1 << SENSOR_FIX_FRACBITS),
 
 			.max_short_again       = 15.5 * (1 << SENSOR_FIX_FRACBITS),
 			.min_short_again       = 1    * (1 << SENSOR_FIX_FRACBITS),
-			.max_short_dgain       = 4    * (1 << SENSOR_FIX_FRACBITS),
+			.max_short_dgain       = 2    * (1 << SENSOR_FIX_FRACBITS),
 			.min_short_dgain       = 1    * (1 << SENSOR_FIX_FRACBITS),
 
 			.start_exposure        = 8 * 800 * (1 << SENSOR_FIX_FRACBITS),
@@ -670,10 +670,12 @@ static int os08a20_set_fps(struct os08a20 *sensor, u32 fps)
 
 	if (sensor->cur_mode.hdr_mode == SENSOR_MODE_LINEAR) {
 		sensor->cur_mode.ae_info.max_integration_line = vts - 8;
-	} else {
+	}
+	/* for os08a20 ghost and noise issue, do not change max_integration_time */
+	/*} else {
 		sensor->cur_mode.ae_info.max_integration_line =
 			vts - sensor->cur_mode.ae_info.max_vsintegration_line - 8;
-	}
+	}*/
 	sensor->cur_mode.ae_info.curr_frm_len_lines = vts;
 	return ret;
 }
@@ -694,10 +696,11 @@ static int os08a20_set_ratio(struct os08a20 *sensor, void* pratio)
 
 	if (hdr_ratio.ratio_s_vs != pae_info->hdr_ratio.ratio_s_vs) {
 		pae_info->hdr_ratio.ratio_s_vs = hdr_ratio.ratio_s_vs;
-		if (sensor->cur_mode.hdr_mode != SENSOR_MODE_LINEAR) {
+		/* for os08a20 ghost and noise issue, do not change max_integration_time */
+		/*if (sensor->cur_mode.hdr_mode != SENSOR_MODE_LINEAR) {
 			sensor->cur_mode.ae_info.max_integration_line =
 				pae_info->curr_frm_len_lines - pae_info->max_vsintegration_line - 8;
-		}
+		}*/
 	}
 
 	return 0;
