@@ -99,6 +99,11 @@ static struct viv_video_fmt formats[] = {
 	 .depth = 16,
 	 .bpp = 1,
 	 },
+	 {
+	 .fourcc = V4L2_PIX_FMT_GREY,
+	 .depth = 8,
+	 .bpp = 1,
+	 },
 };
 
 static int bayer_pattern_to_format(unsigned int bayer_pattern,
@@ -1190,7 +1195,8 @@ static int vidioc_s_fmt_vid_cap(struct file *file, void *priv,
 	    (f->fmt.pix.pixelformat == V4L2_PIX_FMT_SBGGR12) ||
 	    (f->fmt.pix.pixelformat == V4L2_PIX_FMT_SGBRG12) ||
 	    (f->fmt.pix.pixelformat == V4L2_PIX_FMT_SGRBG12) ||
-	    (f->fmt.pix.pixelformat == V4L2_PIX_FMT_SRGGB12)) {
+	    (f->fmt.pix.pixelformat == V4L2_PIX_FMT_SRGGB12) ||
+		(f->fmt.pix.pixelformat == V4L2_PIX_FMT_GREY)) {
 		viv_config_dwe(handle, false);
 	}
 

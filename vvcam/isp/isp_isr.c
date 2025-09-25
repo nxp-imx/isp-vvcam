@@ -90,6 +90,9 @@ static int config_dma_buf(struct isp_mi_data_path_context *path,
 		} else
 			return -1;
 		break;
+	case IC_MI_DATAMODE_YUV400:
+		buf->size_y = size + ISP_BUF_GAP;
+		break;
 	case IC_MI_DATAMODE_RAW8:
 		buf->size_y = size + ISP_BUF_GAP;
 		break;
@@ -127,6 +130,7 @@ int update_dma_buffer(struct isp_ic_dev *dev)
 			dev->frame_loss_cnt[i]++;
 			continue;
 		}
+		memset(&dmabuf, 0, sizeof(dmabuf));
 		dmabuf.path = i;
 		if (config_dma_buf(&mi->path[i], buf->dma, &dmabuf)){
 			vvbuf_push_buf(dev->bctx,buf);
