@@ -1079,6 +1079,7 @@ static int vidioc_try_fmt_vid_cap(struct file *file, void *priv,
 	struct viv_video_fmt *format = NULL;
 	int bytesperline, sizeimage;
 	int i;
+	int raw_width = 0, raw_height = 0;
 
 	pr_debug("enter %s\n", __func__);
 
@@ -1088,6 +1089,9 @@ static int vidioc_try_fmt_vid_cap(struct file *file, void *priv,
 	viv_post_simple_event(VIV_VIDEO_EVENT_CREATE_PIPELINE,
 		handle->streamid, &handle->vfh, true);
 
+	raw_width = f->fmt.pix.width;
+	raw_height = f->fmt.pix.height;
+
 	f->fmt.pix.width = clamp_t(u32, f->fmt.pix.width, VIDEO_FRAME_MIN_WIDTH,
 				VIDEO_FRAME_MAX_WIDTH);
 	f->fmt.pix.height = clamp_t(u32, f->fmt.pix.height, VIDEO_FRAME_MIN_HEIGHT,
@@ -1095,6 +1099,16 @@ static int vidioc_try_fmt_vid_cap(struct file *file, void *priv,
 
 	f->fmt.pix.width = ALIGN_UP(f->fmt.pix.width, VIDEO_FRAME_WIDTH_ALIGN);
 	f->fmt.pix.height = ALIGN_UP(f->fmt.pix.height, VIDEO_FRAME_HEIGHT_ALIGN);
+
+	if (!IS_ALIGNED(raw_width, VIDEO_FRAME_WIDTH_ALIGN)   ||
+		!IS_ALIGNED(raw_height, VIDEO_FRAME_HEIGHT_ALIGN) ||
+		raw_width  < VIDEO_FRAME_MIN_WIDTH    ||
+		raw_height < VIDEO_FRAME_MIN_HEIGHT   ||
+		raw_width  > VIDEO_FRAME_MAX_WIDTH    ||
+		raw_height > VIDEO_FRAME_MAX_HEIGHT)
+		pr_warn("%s (%d,%d) align to (%d,%d)\n", __func__,
+			raw_width, raw_height,
+			f->fmt.pix.width, f->fmt.pix.height);
 
 	for (i = 0; i < dev->formatscount; ++i) {
 		if (dev->formats[i].fourcc == f->fmt.pix.pixelformat) {
