@@ -2,23 +2,23 @@
   "SPDXID": "SPDXRef-DOCUMENT",
   "spdxVersion": "SPDX-2.3",
   "creationInfo": {
-    "created": "2025-08-24T08:13:41Z",
+    "created": "2025-11-12T07:02:04Z",
     "creators": [
       "Organization: NXP"
     ],
     "licenseListVersion": "3.20"
   },
-  "name": "isp-vvcam-LF_6.12.34_2.1.0",
+  "name": "isp-vvcam-LF_6.12.49_2.2.0",
   "dataLicense": "CC0-1.0",
-  "documentNamespace": "https://nxp.com/spdx/d364849e-7c97-40de-8bfd-24fdefc06742",
+  "documentNamespace": "https://nxp.com/spdx/abb68f42-5331-4a35-b6bb-49444879b218",
   "packages": [
     {
-      "SPDXID": "SPDXRef-package-d364849e-7c97-40de-8bfd-24fdefc06742",
+      "SPDXID": "SPDXRef-package-abb68f42-5331-4a35-b6bb-49444879b218",
       "name": "isp-vvcam",
-      "versionInfo": "LF_6.12.34_2.1.0",
+      "versionInfo": "LF_6.12.49_2.2.0",
       "licenseConcluded": "(GPL-2.0-only)",
       "licenseDeclared": "(GPL-2.0-only)",
-      "downloadLocation": "https://github.com/nxp-imx/isp-vvcam -b lf-6.12.34-2.1.0",
+      "downloadLocation": "https://github.com/nxp-imx/isp-vvcam -b lf-6.12.49-2.2.0",
       "originator": "Organization: NXP",
       "supplier": "NOASSERTION",
       "externalRefs": [],
@@ -29,7 +29,7 @@
     {
       "spdxElementId": "SPDXRef-DOCUMENT",
       "relationshipType": "DESCRIBES",
-      "relatedSpdxElement": "SPDXRef-package-d364849e-7c97-40de-8bfd-24fdefc06742"
+      "relatedSpdxElement": "SPDXRef-package-abb68f42-5331-4a35-b6bb-49444879b218"
     }
   ]
 }
