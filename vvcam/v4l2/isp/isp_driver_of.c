@@ -828,6 +828,7 @@ module_init(viv_isp_init_module);
 module_exit(viv_isp_exit_module);
 
 MODULE_AUTHOR("Verisilicon ISP SW Team");
+MODULE_DESCRIPTION("Verisilicon V4L2 Isp Driver");
 MODULE_LICENSE("GPL");
 MODULE_ALIAS("Verisilicon-ISP");
 MODULE_VERSION("1.0");

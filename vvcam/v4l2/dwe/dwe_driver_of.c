@@ -575,6 +575,7 @@ module_init(viv_dwe_init_module);
 module_exit(viv_dwe_exit_module);
 
 MODULE_AUTHOR("zhiye.yin@verisilicon.com");
+MODULE_DESCRIPTION("Verisilicon V4L2 Dewarp Driver");
 MODULE_LICENSE("GPL");
 MODULE_ALIAS("Dewarp");
 MODULE_VERSION("1.0");
