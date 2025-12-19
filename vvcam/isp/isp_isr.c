@@ -61,7 +61,7 @@
 extern MrvAllRegister_t *all_regs;
 
 static int config_dma_buf(struct isp_mi_data_path_context *path,
-		dma_addr_t dma, struct isp_buffer_context *buf)
+		dma_addr_t dma, dma_addr_t cbcr_dma, struct isp_buffer_context *buf)
 {
 	u32 size = path->out_width * path->out_height;
 
@@ -79,7 +79,14 @@ static int config_dma_buf(struct isp_mi_data_path_context *path,
 		} else if (path->data_layout ==
 				IC_MI_DATASTORAGE_SEMIPLANAR) {
 			buf->size_y = size + ISP_BUF_GAP;
-			buf->addr_cb = buf->addr_y + size;
+			if (cbcr_dma != 0 &&
+				(path->out_mode == IC_MI_DATAMODE_YUV422)) {
+				/* it only happened when output is grey */
+				buf->addr_cb = cbcr_dma;
+			} else {
+				buf->addr_cb = buf->addr_y + size;
+			}
+
 			if (path->out_mode == IC_MI_DATAMODE_YUV420)
 				buf->size_cb = (size >> 1) + ISP_BUF_GAP;
 			else
@@ -132,7 +139,7 @@ int update_dma_buffer(struct isp_ic_dev *dev)
 		}
 		memset(&dmabuf, 0, sizeof(dmabuf));
 		dmabuf.path = i;
-		if (config_dma_buf(&mi->path[i], buf->dma, &dmabuf)){
+		if (config_dma_buf(&mi->path[i], buf->dma, buf->cbcr_dma, &dmabuf)){
 			vvbuf_push_buf(dev->bctx,buf);
 			continue;
 		}

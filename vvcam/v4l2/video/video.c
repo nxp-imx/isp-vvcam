@@ -318,6 +318,76 @@ static int viv_post_control_event(int streamid, void *fh,
 	return ret;
 }
 
+static int free_cbcr_buffer(struct viv_video_file *handle)
+{
+	int i = 0;
+	struct ext_dma_buf *edb = NULL;
+
+	if (handle->extcbcrqueue) {
+		for (i = 0; i < handle->buf_num; i++) {
+			edb = (struct ext_dma_buf *)(handle->extcbcrqueue + i * sizeof(*edb));
+			if (edb->vaddr)
+				dma_free_coherent(handle->queue.dev,
+					edb->size, edb->vaddr, edb->addr);
+		}
+		kfree(handle->extcbcrqueue);
+		handle->extcbcrqueue = NULL;
+		handle->buf_num = 0;
+	}
+	return 0;
+}
+
+static int alloc_cbcr_buffer(struct viv_video_file *handle, const int num)
+{
+	int ret = 0;
+	int i = 0;
+	struct ext_dma_buf *edb = NULL;
+
+	if (num == 0) {
+		return ret;
+	}
+
+	if (handle->vdev->fmt.fmt.pix.pixelformat == V4L2_PIX_FMT_GREY) {
+
+		if (handle->extcbcrqueue) {
+			free_cbcr_buffer(handle);
+		}
+
+		handle->extcbcrqueue = kzalloc(sizeof(*edb) * num, GFP_KERNEL);
+		if (!handle->extcbcrqueue) {
+			ret = -ENOMEM;
+		} else {
+			handle->buf_num = num;
+			for (i = 0; i < num; i++) {
+				edb = (struct ext_dma_buf *)(handle->extcbcrqueue + i * sizeof(*edb));
+				edb->size = handle->vdev->fmt.fmt.pix.sizeimage / 2; /* 422sp->400 */
+				edb->vaddr = dma_alloc_coherent(handle->queue.dev,
+								edb->size, &(edb->addr), GFP_KERNEL);
+				if (!edb->vaddr) {
+					pr_err("failed to alloc dma buffer!\n");
+					ret = -ENOMEM;
+					break;
+				}
+			}
+		}
+	}
+	return ret;
+}
+
+static dma_addr_t get_cbcr_dma(struct viv_video_file *handle, const int index)
+{
+	struct ext_dma_buf *edb = NULL;
+	if (handle->vdev->fmt.fmt.pix.pixelformat == V4L2_PIX_FMT_GREY) {
+		if (handle->extcbcrqueue && (index < handle->buf_num)) {
+			edb = (struct ext_dma_buf*)(handle->extcbcrqueue + \
+					(sizeof(struct ext_dma_buf) * index));
+			return edb->addr;
+		}
+	}
+
+	return 0;
+}
+
 static int set_stream(struct viv_video_device *vdev, int enable)
 {
 	struct v4l2_subdev *sd;
@@ -387,6 +457,8 @@ static void stop_streaming(struct vb2_queue *vq)
 		if(vq->bufs[i]->state == VB2_BUF_STATE_ACTIVE)
 			vb2_buffer_done(vq->bufs[i], VB2_BUF_STATE_ERROR);
 	}
+
+	free_cbcr_buffer(handle);
 }
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 8, 0)
@@ -451,6 +523,7 @@ static void buffer_queue(struct vb2_buffer *vb)
 		return;
 
 	buf->dma = vb2_dma_contig_plane_dma_addr(vb, DEF_PLANE_NO);
+	buf->cbcr_dma = get_cbcr_dma(handle, vb->index);
 
 	vdev = handle->vdev;
 	if (!vdev)
@@ -600,6 +673,8 @@ static int video_close(struct file *file)
 				}
 			}
 		}
+
+		free_cbcr_buffer(handle);
 
 		vb2_queue_release(&handle->queue);
 		mutex_destroy(&handle->buffer_mutex);
@@ -1152,7 +1227,12 @@ static int viv_post_fmt_event(struct file *file)
 	v_event->file = &handle->vfh;
 	v_event->addr = handle->vdev->fmt.fmt.pix.width;
 	v_event->response = handle->vdev->fmt.fmt.pix.height;
-	v_event->buf_index = handle->vdev->fmt.fmt.pix.pixelformat;
+	if (vdev->fmt.fmt.pix.pixelformat == V4L2_PIX_FMT_GREY) {
+		/* when output is grey, isp/dwe output format force to NV16 */
+		v_event->buf_index = V4L2_PIX_FMT_NV16;
+	} else {
+		v_event->buf_index = vdev->fmt.fmt.pix.pixelformat;
+	}
 	v_event->sync = true;
 	event.type = VIV_VIDEO_EVENT_TYPE;
 	event.id = VIV_VIDEO_EVENT_SET_FMT;
@@ -1208,8 +1288,7 @@ static int vidioc_s_fmt_vid_cap(struct file *file, void *priv,
 	    (f->fmt.pix.pixelformat == V4L2_PIX_FMT_SBGGR12) ||
 	    (f->fmt.pix.pixelformat == V4L2_PIX_FMT_SGBRG12) ||
 	    (f->fmt.pix.pixelformat == V4L2_PIX_FMT_SGRBG12) ||
-	    (f->fmt.pix.pixelformat == V4L2_PIX_FMT_SRGGB12) ||
-		(f->fmt.pix.pixelformat == V4L2_PIX_FMT_GREY)) {
+	    (f->fmt.pix.pixelformat == V4L2_PIX_FMT_SRGGB12)) {
 		viv_config_dwe(handle, false);
 	}
 
@@ -1289,6 +1368,7 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 		vdev->pipeline_status = PIPELINE_REQBUFED;
 	mutex_lock(&handle->buffer_mutex);
 	ret = vb2_reqbufs(&handle->queue, p);
+	ret |= alloc_cbcr_buffer(handle, p->count);
 	mutex_unlock(&handle->buffer_mutex);
 	mutex_unlock(&vdev->mlock);
 	return ret;

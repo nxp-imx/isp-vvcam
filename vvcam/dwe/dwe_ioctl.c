@@ -52,6 +52,7 @@
  *****************************************************************************/
 #include "dwe_ioctl.h"
 #include "dwe_regs.h"
+#include "video/vvbuf.h"
 #ifdef USE_V4L2
 #include <linux/videodev2.h>
 #endif
@@ -211,7 +212,11 @@ int dwe_set_buffer(struct dwe_ic_dev *dev, struct dwe_hw_info *info, u64 addr)
 	u32 reg_dst_uv_base = reg_dst_y_base + reg_y_rbuff_size;
 
 	dwe_write_reg(dev, DST_IMG_Y_BASE, (reg_dst_y_base) >> 4);
-	dwe_write_reg(dev, DST_IMG_UV_BASE, (reg_dst_uv_base) >> 4);
+	if (dev->dst->cbcr_dma != 0) {
+		dwe_write_reg(dev, DST_IMG_UV_BASE, (dev->dst->cbcr_dma) >> 4);
+	} else {
+		dwe_write_reg(dev, DST_IMG_UV_BASE, (reg_dst_uv_base) >> 4);
+	}
 
 	return 0;
 }

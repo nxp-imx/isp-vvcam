@@ -68,6 +68,7 @@ struct vb2_dc_buf {
 	struct media_pad *pad;
 	struct list_head irqlist;
 	dma_addr_t dma;
+	dma_addr_t cbcr_dma;
 	uint64_t timestamp;
 	int flags;
 };

@@ -169,6 +169,9 @@ static int set_scaling(int id, struct isp_ic_dev *dev, bool stabilization)
 	case IC_MI_DATAMODE_YUV420:
 		oh = outputHeight / 2;	/*  scale cbcr */
 		break;
+	case IC_MI_DATAMODE_YUV400:
+		oh = outputHeight;
+		break;
 	default:
 		return -EFAULT;
 	}

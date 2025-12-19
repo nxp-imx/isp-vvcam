@@ -143,7 +143,11 @@ struct viv_video_file {
 	struct list_head entry;
 	struct viv_video_device *vdev;
 	int pipeline;
+#if IS_ENABLED(CONFIG_VIDEOBUF2_DMA_CONTIG)
 	struct list_head extdmaqueue;
+	uint8_t buf_num;
+	void *extcbcrqueue;
+#endif
 };
 
 #define VIDEO_FRAME_MIN_WIDTH 176
