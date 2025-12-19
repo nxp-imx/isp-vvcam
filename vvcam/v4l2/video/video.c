@@ -885,7 +885,7 @@ static long private_ioctl(struct file *file, void *fh,
 	int rc = 0;
 	struct reserved_mem *rmem;
 
-	if (!file || !fh)
+	if (!file)
 		return -EINVAL;
 
 	handle = priv_to_handle(file_to_v4l2_fh(file));
