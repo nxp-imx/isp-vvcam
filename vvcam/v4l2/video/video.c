@@ -500,9 +500,8 @@ static int video_open(struct file *file)
 	handle = kzalloc(sizeof(*handle), GFP_KERNEL);
 
 	v4l2_fh_init(&handle->vfh, dev->video);
-	v4l2_fh_add(&handle->vfh);
+	v4l2_fh_add(&handle->vfh, file);
 
-	file->private_data = &handle->vfh;
 	handle->vdev = dev;
 	handle->queue.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	handle->queue.drv_priv = handle;
@@ -517,7 +516,7 @@ static int video_open(struct file *file)
 	rc = vb2_queue_init(&handle->queue);
 	if (rc) {
 		pr_err("can't init vb queue\n");
-		v4l2_fh_del(&handle->vfh);
+		v4l2_fh_del(&handle->vfh, file);
 		v4l2_fh_exit(&handle->vfh);
 		kfree(handle);
 		return rc;
@@ -536,7 +535,7 @@ static int video_open(struct file *file)
 
 static int video_close(struct file *file)
 {
-	struct viv_video_file *handle = priv_to_handle(file->private_data);
+	struct viv_video_file *handle = priv_to_handle(file_to_v4l2_fh(file));
 	struct viv_video_device *vdev = video_drvdata(file);
 	struct vb2_buffer *vb;
 	struct viv_video_file *ph;
@@ -582,7 +581,7 @@ static int video_close(struct file *file)
 				vb2_buffer_done(vb, VB2_BUF_STATE_ERROR);
 		}
 
-		v4l2_fh_del(&handle->vfh);
+		v4l2_fh_del(&handle->vfh, file);
 		v4l2_fh_exit(&handle->vfh);
 
 		{
@@ -679,7 +678,7 @@ static int unsubscribe_event(struct v4l2_fh *fh,
 static int set_caps_mode_event(struct file *file)
 {
 	struct viv_video_device *dev = video_drvdata(file);
-	struct viv_video_file *handle = priv_to_handle(file->private_data);
+	struct viv_video_file *handle = priv_to_handle(file_to_v4l2_fh(file));
 	struct v4l2_event event;
 	struct viv_video_event *v_event;
 	int ret = 0;
@@ -700,7 +699,7 @@ static int set_caps_mode_event(struct file *file)
 static int get_caps_suppots_event(struct file *file)
 {
 	struct viv_video_device *dev = video_drvdata(file);
-	struct viv_video_file *handle = priv_to_handle(file->private_data);
+	struct viv_video_file *handle = priv_to_handle(file_to_v4l2_fh(file));
 	struct v4l2_event event;
 	struct viv_video_event *v_event;
 	int ret = 0;
@@ -889,7 +888,7 @@ static long private_ioctl(struct file *file, void *fh,
 	if (!file || !fh)
 		return -EINVAL;
 
-	handle = priv_to_handle(file->private_data);
+	handle = priv_to_handle(file_to_v4l2_fh(file));
 	if (!handle || handle->state == -1) {
 		pr_err("call ioctl after file closed\n");
 		return -EINVAL;
@@ -1063,7 +1062,7 @@ static int vidioc_enum_fmt_vid_cap(struct file *file, void *priv,
 static int vidioc_g_fmt_vid_cap(struct file *file, void *priv,
 				struct v4l2_format *f)
 {
-	struct viv_video_file *handle = priv_to_handle(file->private_data);
+	struct viv_video_file *handle = priv_to_handle(file_to_v4l2_fh(file));
 
 	if (f->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
 		return -EINVAL;
@@ -1075,7 +1074,7 @@ static int vidioc_try_fmt_vid_cap(struct file *file, void *priv,
 				  struct v4l2_format *f)
 {
 	struct viv_video_device *dev = video_drvdata(file);
-	struct viv_video_file *handle = priv_to_handle(file->private_data);
+	struct viv_video_file *handle = priv_to_handle(file_to_v4l2_fh(file));
 	struct viv_video_fmt *format = NULL;
 	int bytesperline, sizeimage;
 	int i;
@@ -1132,7 +1131,7 @@ static int vidioc_try_fmt_vid_cap(struct file *file, void *priv,
 static int viv_post_fmt_event(struct file *file)
 {
 	int ret = 0;
-	struct viv_video_file *handle = priv_to_handle(file->private_data);
+	struct viv_video_file *handle = priv_to_handle(file_to_v4l2_fh(file));
 	struct viv_video_device *vdev = handle->vdev;
 
 	struct v4l2_event event;
@@ -1169,7 +1168,7 @@ static int viv_post_fmt_event(struct file *file)
 static int vidioc_s_fmt_vid_cap(struct file *file, void *priv,
 				struct v4l2_format *f)
 {
-	struct viv_video_file *handle = priv_to_handle(file->private_data);
+	struct viv_video_file *handle = priv_to_handle(file_to_v4l2_fh(file));
 	struct viv_video_device *vdev = handle->vdev;
 	int ret;
 	struct v4l2_event event;
@@ -1246,7 +1245,7 @@ static int vidioc_s_fmt_vid_cap(struct file *file, void *priv,
 static int vidioc_reqbufs(struct file *file, void *priv,
 			  struct v4l2_requestbuffers *p)
 {
-	struct viv_video_file *handle = priv_to_handle(file->private_data);
+	struct viv_video_file *handle = priv_to_handle(file_to_v4l2_fh(file));
 	struct viv_video_file *ph;
 	struct viv_video_device *vdev = handle->vdev;
 	unsigned long flags;
@@ -1297,7 +1296,7 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 
 static int vidioc_querybuf(struct file *file, void *priv, struct v4l2_buffer *p)
 {
-	struct viv_video_file *handle = priv_to_handle(file->private_data);
+	struct viv_video_file *handle = priv_to_handle(file_to_v4l2_fh(file));
 	struct vb2_buffer *vb;
 	int rc = 0;
 
@@ -1320,7 +1319,7 @@ static int vidioc_querybuf(struct file *file, void *priv, struct v4l2_buffer *p)
 
 static int vidioc_qbuf(struct file *file, void *priv, struct v4l2_buffer *p)
 {
-	struct viv_video_file *handle = priv_to_handle(file->private_data);
+	struct viv_video_file *handle = priv_to_handle(file_to_v4l2_fh(file));
 	int rc = 0;
 
 	if (p->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
@@ -1337,7 +1336,7 @@ static int vidioc_qbuf(struct file *file, void *priv, struct v4l2_buffer *p)
 
 static int vidioc_dqbuf(struct file *file, void *priv, struct v4l2_buffer *p)
 {
-	struct viv_video_file *handle = priv_to_handle(file->private_data);
+	struct viv_video_file *handle = priv_to_handle(file_to_v4l2_fh(file));
 	int rc = 0;
 
 	if (handle->vdev->pipeline_status != PIPELINE_STREAMOFF) {
@@ -1354,7 +1353,7 @@ static int vidioc_dqbuf(struct file *file, void *priv, struct v4l2_buffer *p)
 static int vidioc_expbuf(struct file *file, void *priv,
 				struct v4l2_exportbuffer *p)
 {
-	struct viv_video_file *handle = priv_to_handle(file->private_data);
+	struct viv_video_file *handle = priv_to_handle(file_to_v4l2_fh(file));
 
 	pr_debug("enter %s\n", __func__);
 	return vb2_expbuf(&handle->queue, p);
@@ -1362,7 +1361,7 @@ static int vidioc_expbuf(struct file *file, void *priv,
 
 static int vidioc_streamon(struct file *file, void *priv, enum v4l2_buf_type i)
 {
-	struct viv_video_file *handle = priv_to_handle(file->private_data);
+	struct viv_video_file *handle = priv_to_handle(file_to_v4l2_fh(file));
 
 	pr_debug("enter %s\n", __func__);
 	return vb2_streamon(&handle->queue, i);
@@ -1370,7 +1369,7 @@ static int vidioc_streamon(struct file *file, void *priv, enum v4l2_buf_type i)
 
 static int vidioc_streamoff(struct file *file, void *priv, enum v4l2_buf_type i)
 {
-	struct viv_video_file *handle = priv_to_handle(file->private_data);
+	struct viv_video_file *handle = priv_to_handle(file_to_v4l2_fh(file));
 	int rc;
 
 	pr_debug("enter %s\n", __func__);
@@ -1408,7 +1407,7 @@ static int vidioc_enum_framesizes(struct file *file, void *priv,
 			    struct v4l2_frmsizeenum *fsize)
 {
 	struct viv_video_device *dev = video_drvdata(file);
-	struct viv_video_file *handle = priv_to_handle(file->private_data);
+	struct viv_video_file *handle = priv_to_handle(file_to_v4l2_fh(file));
 	int i;
 
 	viv_post_simple_event(VIV_VIDEO_EVENT_CREATE_PIPELINE,
@@ -1439,7 +1438,7 @@ static int vidioc_enum_framesizes(struct file *file, void *priv,
 static int vidioc_g_parm(struct file *file, void *fh,
 			    struct v4l2_streamparm *a)
 {
-	struct viv_video_file *handle = priv_to_handle(file->private_data);
+	struct viv_video_file *handle = priv_to_handle(file_to_v4l2_fh(file));
 
 	if (a->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
 		return -EINVAL;
@@ -1453,7 +1452,7 @@ static int vidioc_g_parm(struct file *file, void *fh,
 static int vidioc_s_parm(struct file *file, void *fh,
 			    struct v4l2_streamparm *a)
 {
-	struct viv_video_file *handle = priv_to_handle(file->private_data);
+	struct viv_video_file *handle = priv_to_handle(file_to_v4l2_fh(file));
 	struct viv_video_device *vdev = handle->vdev;
 	struct v4l2_event event;
 	struct viv_video_event *v_event;
@@ -1539,7 +1538,7 @@ static int vidioc_g_pixelaspect(struct file *file, void *fh,
 static int vidioc_g_selection(struct file *file, void *fh,
 				    struct v4l2_selection *s)
 {
-	struct viv_video_file *handle = priv_to_handle(file->private_data);
+	struct viv_video_file *handle = priv_to_handle(file_to_v4l2_fh(file));
 	struct viv_video_device *vdev = handle->vdev;
 
 	if (s->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
@@ -1579,7 +1578,7 @@ static int vidioc_g_selection(struct file *file, void *fh,
 static int vidioc_s_selection(struct file *file, void *fh,
 				    struct v4l2_selection *s)
 {
-	struct viv_video_file *handle = priv_to_handle(file->private_data);
+	struct viv_video_file *handle = priv_to_handle(file_to_v4l2_fh(file));
 	struct viv_video_device *vdev = handle->vdev;
 	struct v4l2_event event;
 	struct viv_video_event *v_event;
@@ -1683,7 +1682,7 @@ static const struct v4l2_ioctl_ops video_ioctl_ops = {
 static int viv_private_mmap(struct file *file, struct vm_area_struct *vma)
 {
 	/* Map reserved video memory. */
-	struct viv_video_file *handle = priv_to_handle(file->private_data);
+	struct viv_video_file *handle = priv_to_handle(file_to_v4l2_fh(file));
 	struct viv_video_device *vdev = video_drvdata(file);
 	int ret  = 0;
 	bool dma_coherent = false;
@@ -1719,7 +1718,7 @@ static int viv_private_mmap(struct file *file, struct vm_area_struct *vma)
 static int vidioc_mmap(struct file *file, struct vm_area_struct *vma)
 {
 	int rc;
-	struct viv_video_file *handle = priv_to_handle(file->private_data);
+	struct viv_video_file *handle = priv_to_handle(file_to_v4l2_fh(file));
 	struct viv_video_device *dev = video_drvdata(file);
 
 	if (dev->dumpbuf != NULL) {
@@ -1736,7 +1735,7 @@ static int vidioc_mmap(struct file *file, struct vm_area_struct *vma)
 static unsigned int video_poll(struct file *file,
 			       struct poll_table_struct *wait)
 {
-	struct viv_video_file *handle = priv_to_handle(file->private_data);
+	struct viv_video_file *handle = priv_to_handle(file_to_v4l2_fh(file));
 	int rc = 0;
 
 	if (handle->streamid < 0) {
