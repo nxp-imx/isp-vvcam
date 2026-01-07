@@ -7,7 +7,7 @@ $(TARGET)-objs += basler-camera-driver-vvcam/basler-camera-driver-vvcam.o
 
 ccflags-y += -I$(PWD)/../../../common/
 ccflags-y += -O2 -Werror -Wmissing-declarations -Wmissing-prototypes
-ccflags-y += -DISP8000NANO_V1802
+ccflags-y += -DISP8000NANO_V1802 -DCONFIG_HARDENED_USERCOPY
 
 ARCH_TYPE ?= arm64
 ANDROID ?= no
