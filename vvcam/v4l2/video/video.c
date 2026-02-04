@@ -544,22 +544,12 @@ static void buffer_queue(struct vb2_buffer *vb)
 	}
 }
 
-static void wait_prepare(struct vb2_queue *q)
-{
-}
-
-static void wait_finish(struct vb2_queue *q)
-{
-}
-
 static struct vb2_ops buffer_ops = {
 	.queue_setup = queue_setup,
 	.buf_init = buffer_init,
 	.buf_queue = buffer_queue,
 	.start_streaming = start_streaming,
 	.stop_streaming = stop_streaming,
-	.wait_prepare = wait_prepare,
-	.wait_finish = wait_finish,
 };
 
 static int video_open(struct file *file)
