@@ -128,6 +128,7 @@ struct viv_video_device {
 	int pipeline_status;
 	struct proc_dir_entry *pde;
 	struct mutex mlock;
+	struct mutex vb2_lock;
 };
 
 struct viv_video_file {

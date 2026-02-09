@@ -565,6 +565,8 @@ static int video_open(struct file *file)
 	v4l2_fh_init(&handle->vfh, dev->video);
 	v4l2_fh_add(&handle->vfh, file);
 
+	mutex_init(&dev->vb2_lock);
+
 	handle->vdev = dev;
 	handle->queue.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	handle->queue.drv_priv = handle;
@@ -573,6 +575,7 @@ static int video_open(struct file *file)
 	handle->queue.mem_ops = &vb2_dma_contig_memops;
 	handle->queue.buf_struct_size = sizeof(struct vb2_dc_buf);
 	handle->queue.timestamp_flags = V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC;
+	handle->queue.lock = &dev->vb2_lock;
 #if LINUX_VERSION_CODE > KERNEL_VERSION(4, 5, 0)
 	handle->queue.dev = dev->v4l2_dev->dev;
 #endif
