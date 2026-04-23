@@ -16,11 +16,11 @@
 #include <linux/delay.h>
 #include <linux/of_graph.h>
 #include <linux/device.h>
+#include <linux/gpio/consumer.h>
 #include <linux/i2c.h>
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/of_device.h>
-#include <linux/of_gpio.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/regulator/consumer.h>
 #include <linux/v4l2-mediabus.h>
@@ -106,8 +106,8 @@ struct os08a20 {
 	struct regulator *io_regulator;
 	struct regulator *core_regulator;
 	struct regulator *analog_regulator;
-	unsigned int pwn_gpio;
-	unsigned int rst_gpio;
+	struct gpio_desc *pwn_gpio;
+	struct gpio_desc *rst_gpio;
 	unsigned int mclk;
 	unsigned int mclk_source;
 	struct clk *sensor_clk;
@@ -328,8 +328,7 @@ static int os08a20_power_on(struct os08a20 *sensor)
 	int ret;
 	pr_debug("enter %s\n", __func__);
 
-	if (gpio_is_valid(sensor->pwn_gpio))
-		gpio_set_value_cansleep(sensor->pwn_gpio, 1);
+	gpiod_set_value_cansleep(sensor->pwn_gpio, 1);
 
 	ret = clk_prepare_enable(sensor->sensor_clk);
 	if (ret < 0)
@@ -341,8 +340,8 @@ static int os08a20_power_on(struct os08a20 *sensor)
 static int os08a20_power_off(struct os08a20 *sensor)
 {
 	pr_debug("enter %s\n", __func__);
-	if (gpio_is_valid(sensor->pwn_gpio))
-		gpio_set_value_cansleep(sensor->pwn_gpio, 0);
+
+	gpiod_set_value_cansleep(sensor->pwn_gpio, 0);
 	clk_disable_unprepare(sensor->sensor_clk);
 
 	return 0;
@@ -1112,13 +1111,11 @@ static int os08a20_set_clk_rate(struct os08a20 *sensor)
 static void os08a20_reset(struct os08a20 *sensor)
 {
 	pr_debug("enter %s\n", __func__);
-	if (!gpio_is_valid(sensor->rst_gpio))
-		return;
 
-	gpio_set_value_cansleep(sensor->rst_gpio, 0);
+	gpiod_set_value_cansleep(sensor->rst_gpio, 0);
 	msleep(20);
 
-	gpio_set_value_cansleep(sensor->rst_gpio, 1);
+	gpiod_set_value_cansleep(sensor->rst_gpio, 1);
 	msleep(20);
 
 	return;
@@ -1193,32 +1190,15 @@ static int os08a20_probe(struct i2c_client *client,
 
 	sensor->i2c_client = client;
 
-	sensor->pwn_gpio = of_get_named_gpio(dev->of_node, "pwn-gpios", 0);
-	if (!gpio_is_valid(sensor->pwn_gpio))
-		dev_warn(dev, "No sensor pwdn pin available");
-	else {
-		retval = devm_gpio_request_one(dev, sensor->pwn_gpio,
-						GPIOF_OUT_INIT_HIGH,
-						"os08a20_mipi_pwdn");
-		if (retval < 0) {
-			dev_warn(dev, "Failed to set power pin\n");
-			dev_warn(dev, "retval=%d\n", retval);
-			return retval;
-		}
-	}
+	sensor->pwn_gpio = devm_gpiod_get_optional(dev, "pwn", GPIOD_OUT_HIGH);
+	if (IS_ERR(sensor->pwn_gpio))
+		return dev_err_probe(dev, PTR_ERR(sensor->pwn_gpio),
+				     "No sensor pwdn pin available\n");
 
-	sensor->rst_gpio = of_get_named_gpio(dev->of_node, "rst-gpios", 0);
-	if (!gpio_is_valid(sensor->rst_gpio))
-		dev_warn(dev, "No sensor reset pin available");
-	else {
-		retval = devm_gpio_request_one(dev, sensor->rst_gpio,
-						GPIOF_OUT_INIT_HIGH,
-						"os08a20_mipi_reset");
-		if (retval < 0) {
-			dev_warn(dev, "Failed to set reset pin\n");
-			return retval;
-		}
-	}
+	sensor->rst_gpio = devm_gpiod_get_optional(dev, "rst", GPIOD_OUT_HIGH);
+	if (IS_ERR(sensor->rst_gpio))
+		return dev_err_probe(dev, PTR_ERR(sensor->rst_gpio),
+				     "No sensor reset pin available\n");
 
 	sensor->sensor_clk = devm_clk_get(dev, "csi_mclk");
 	if (IS_ERR(sensor->sensor_clk)) {
