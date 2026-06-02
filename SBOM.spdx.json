@@ -2,24 +2,24 @@
   "SPDXID": "SPDXRef-DOCUMENT",
   "spdxVersion": "SPDX-2.3",
   "creationInfo": {
-    "created": "2026-01-26T02:14:42Z",
+    "created": "2026-06-02T02:53:13Z",
     "creators": [
       "Organization: NXP"
     ],
     "licenseListVersion": "3.26"
   },
-  "name": "isp-vvcam-LF_6.18.2_1.0.0",
+  "name": "isp-vvcam-lf-6.18.20-2.0.0",
   "dataLicense": "CC0-1.0",
-  "documentNamespace": "https://nxp.com/spdx/abd064ff-580b-4393-9c17-f35cc3307191",
+  "documentNamespace": "https://nxp.com/spdx/5a9aa640-607e-4f30-86c2-f0bbe87ec70c",
   "packages": [
     {
-      "SPDXID": "SPDXRef-package-abd064ff-580b-4393-9c17-f35cc3307191",
+      "SPDXID": "SPDXRef-package-5a9aa640-607e-4f30-86c2-f0bbe87ec70c",
       "name": "isp-vvcam",
-      "versionInfo": "LF_6.18.2_1.0.0",
-      "licenseConcluded": "(GPL-2.0-only)",
-      "licenseDeclared": "(GPL-2.0-only)",
-      "downloadLocation": "https://github.com/nxp-imx/isp-vvcam -b lf-6.18.2-1.0.0",
-      "originator": "Organization: NXP",
+      "versionInfo": "lf-6.18.20-2.0.0",
+      "licenseConcluded": "GPL-2.0-only",
+      "licenseDeclared": "GPL-2.0-only",
+      "downloadLocation": "https://github.com/nxp-imx/isp-vvcam -b lf-6.18.20-2.0.0",
+      "originator": "Organization: ISP8000NANO - VeriSilicon Holdings Co., Ltd. (GPL-2.0)",
       "supplier": "NOASSERTION",
       "externalRefs": [],
       "filesAnalyzed": false
@@ -29,7 +29,7 @@
     {
       "spdxElementId": "SPDXRef-DOCUMENT",
       "relationshipType": "DESCRIBES",
-      "relatedSpdxElement": "SPDXRef-package-abd064ff-580b-4393-9c17-f35cc3307191"
+      "relatedSpdxElement": "SPDXRef-package-5a9aa640-607e-4f30-86c2-f0bbe87ec70c"
     }
   ]
 }
