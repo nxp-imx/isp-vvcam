@@ -2,7 +2,6 @@
 # Copyright 2026 NXP
 #
 # Bazel build configuration for Verisilicon ISP VVCAM drivers
-# Converted from original Makefiles in v4l2/ directory
 #
 # Modules built:
 #   - vvcam-dwe.ko     (Dewarp Engine)
@@ -12,9 +11,9 @@
 #   - basler-camera-driver-vvcam.ko (Basler camera proxy)
 #
 # Usage:
-#   For imx8mp: //verisilicon_sw_isp_vvcam/vvcam:vvcam_modules_imx8mp
-#   For imx:    //verisilicon_sw_isp_vvcam/vvcam:vvcam_modules_imx
-#   Default:    //verisilicon_sw_isp_vvcam/vvcam:vvcam_modules (alias to imx8mp)
+#   //verisilicon_sw_isp_vvcam/vvcam:vvcam_modules_imx8mp
+#
+# Note: Currently only i.MX 8M Plus has ISP hardware.
 
 load("//build/kernel/kleaf:kernel.bzl", "ddk_headers")
 load(":vvcam.bzl", "define_vvcam")
@@ -41,51 +40,11 @@ ddk_headers(
 )
 
 # =============================================================================
-# Module definitions for each kernel build
+# Module definitions (i.MX 8M Plus only - sole platform with ISP)
 # =============================================================================
 
 define_vvcam(
     name_suffix = "imx8mp",
     kernel_build = "//kernel_imx:imx8mp",
     kernel_headers = "//kernel_imx:all_headers_aarch64",
-)
-
-define_vvcam(
-    name_suffix = "imx",
-    kernel_build = "//kernel_imx:imx",
-    kernel_headers = "//kernel_imx:all_headers_aarch64",
-)
-
-# =============================================================================
-# Default aliases (for backward compatibility)
-# =============================================================================
-
-alias(
-    name = "vvcam_modules",
-    actual = ":vvcam_modules_imx8mp",
-)
-
-alias(
-    name = "vvcam-dwe",
-    actual = ":vvcam-dwe_imx8mp",
-)
-
-alias(
-    name = "vvcam-isp",
-    actual = ":vvcam-isp_imx8mp",
-)
-
-alias(
-    name = "vvcam-video",
-    actual = ":vvcam-video_imx8mp",
-)
-
-alias(
-    name = "os08a20",
-    actual = ":os08a20_imx8mp",
-)
-
-alias(
-    name = "basler-camera-driver-vvcam",
-    actual = ":basler-camera-driver-vvcam_imx8mp",
 )
