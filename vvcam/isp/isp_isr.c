@@ -281,14 +281,22 @@ int clean_dma_buffer(struct isp_ic_dev *dev)
 {
 	int i;
 	struct vb2_dc_buf *buf = NULL;
+	struct vb2_dc_buf *tmp = NULL;
 	struct isp_device *isp_dev;
 	struct media_pad *remote_pad;
+	struct list_head drain;
 	unsigned long flags;
 
 	if (!dev->free)
 		return 0;
 
 	isp_dev = container_of(dev, struct isp_device, ic_dev);
+
+	/* Flush any frame-end hard IRQ already running on another CPU. isp_mi_stop()
+	 * has masked mi_imsc and disabled the tasklet, but an in-flight isp_hw_isr can
+	 * still be mutating dmaqueue; draining it concurrently leaves a node with a
+	 * NULL list link and faults the walk below. */
+	synchronize_irq(isp_dev->irq);
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 19, 0)
 	remote_pad = media_entity_remote_pad(&isp_dev->pads[ISP_PAD_SOURCE]);
@@ -303,19 +311,32 @@ int clean_dma_buffer(struct isp_ic_dev *dev)
 		}
 
 		spin_lock_irqsave(&dev->bctx->irqlock, flags);
-		if (!list_empty(&dev->bctx->dmaqueue))
-			list_del_init(&dev->bctx->dmaqueue);
+		/* Splice under irqlock, then walk the private list: unlink each entry (foreign
+		 * vb2-owned, so never free, never the head). Walking the shared queue in place
+		 * races a concurrent enqueue and faults on a NULL list link. */
+		INIT_LIST_HEAD(&drain);
+		list_splice_init(&dev->bctx->dmaqueue, &drain);
 		spin_unlock_irqrestore(&dev->bctx->irqlock, flags);
+
+		list_for_each_entry_safe(buf, tmp, &drain, irqlist)
+			list_del_init(&buf->irqlist);
 
 		return 0;
 	} else {
 		/*if isp connect to subdev, isp buf alloc by isp driver,need free memory*/
-		spin_lock_irqsave(&dev->lock, flags);
-		do {
-			buf = vvbuf_pull_buf(dev->bctx);
-			dev->free(dev, buf);
-		} while(buf);
+		/* dmaqueue is guarded by irqlock (not dev->lock); caller has quiesced IRQ+tasklet.
+		 * Splice under irqlock, free outside since dev->free() may sleep. */
+		INIT_LIST_HEAD(&drain);
+		spin_lock_irqsave(&dev->bctx->irqlock, flags);
+		list_splice_init(&dev->bctx->dmaqueue, &drain);
+		spin_unlock_irqrestore(&dev->bctx->irqlock, flags);
 
+		list_for_each_entry_safe(buf, tmp, &drain, irqlist) {
+			list_del_init(&buf->irqlist);
+			dev->free(dev, buf);
+		}
+
+		spin_lock_irqsave(&dev->lock, flags);
 		for (i = 0; i < MI_PATH_NUM; ++i) {
 			if (dev->mi_buf[i]) {
 				dev->free(dev, dev->mi_buf[i]);

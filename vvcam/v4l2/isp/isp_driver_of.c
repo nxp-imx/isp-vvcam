@@ -332,11 +332,14 @@ static int isp_close(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 		if (isp_dev->state & STATE_DRIVER_STARTED)
 			isp_mi_stop(&isp_dev->ic_dev);
 		isp_dev->state = STATE_STOPPED;
+		/* clean_dma_buffer() calls synchronize_irq(); run it before
+		 * devm_free_irq() so the irq number is still live and the
+		 * synchronize is meaningful. */
+		clean_dma_buffer(&isp_dev->ic_dev);
 		devm_free_irq(sd->dev, isp_dev->irq, &isp_dev->ic_dev);
 		isp_priv_ioctl(&isp_dev->ic_dev, ISPIOC_RESET, NULL);
 		isp_clear_interrupts(&isp_dev->ic_dev);
 		msleep(5);
-		clean_dma_buffer(&isp_dev->ic_dev);
 	}
 
 	pm_runtime_put(sd->dev);
@@ -650,6 +653,10 @@ static int isp_hw_probe(struct platform_device *pdev)
 	spin_lock_init(&isp_dev->ic_dev.lock);
 	spin_lock_init(&isp_dev->ic_dev.irqlock);
 	tasklet_init(&isp_dev->ic_dev.tasklet, isp_isr_tasklet, (unsigned long)(&isp_dev->ic_dev));
+	/* Start disabled; isp_mi_start() enables and isp_mi_stop() disables, keeping the
+	 * refcount balanced. isp_mi_stop() relies on the tasklet being quiesced to drain
+	 * the DMA queue without racing a concurrent double list_del. */
+	tasklet_disable(&isp_dev->ic_dev.tasklet);
 
 	platform_set_drvdata(pdev, isp_dev);
 

@@ -498,7 +498,13 @@ int isp_mi_start(struct isp_ic_dev *dev)
 		     MRV_MI_WRAP_SP_CB_MASK | MRV_MI_WRAP_SP_CR_MASK);
 	}
 
-	*dev->state |= STATE_DRIVER_STARTED;
+	/* Guard the enable the same way stop guards the disable: only transition
+	 * from stopped -> started once, so tasklet_enable/disable refcounts
+	 * stay balanced even if isp_mi_start() is called twice without a stop. */
+	if (!(*dev->state & STATE_DRIVER_STARTED)) {
+		*dev->state |= STATE_DRIVER_STARTED;
+		tasklet_enable(&dev->tasklet);
+	}
 
 	mi_ctrl |= (MRV_MI_INIT_BASE_EN_MASK | MRV_MI_INIT_OFFSET_EN_MASK);
 	REG_SET_SLICE(mi_ctrl, MRV_MI_BURST_LEN_CHROM, mi.burst_len);
@@ -544,6 +550,11 @@ int isp_mi_stop(struct isp_ic_dev *dev)
 
 	if (*dev->state & STATE_DRIVER_STARTED) {
 		*dev->state &= ~STATE_DRIVER_STARTED;
+		/* Quiesce the producer before draining: HW MI IRQ is masked above
+		 * (mi_imsc = 0); stop the self-rescheduling tasklet so update_dma_buffer()
+		 * cannot re-queue on another CPU during clean_dma_buffer(), which would
+		 * otherwise list_del the same buffer twice (LIST_POISON BUG -> panic). */
+		tasklet_disable(&dev->tasklet);
 		clean_dma_buffer(dev);
 	}
 
